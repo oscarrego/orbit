@@ -52,6 +52,11 @@
   text-align: center;
 }
 
+.final-section {
+  justify-content: flex-start;
+  padding-top: 250px;
+}
+
 .right-align {
   align-items: flex-end;
   padding-right: 10%;
@@ -175,14 +180,14 @@
   -webkit-backdrop-filter: blur(30px);
   border: 1px solid rgba(255, 255, 255, 0.08);
   padding: 56px;
-  border-radius: 4px; /* sharper, more cinematic */
-  max-width: 520px;
+  border-radius: 4px;
+  width: 500px;
+  max-width: 700px;
   box-shadow: 0 40px 80px rgba(0, 0, 0, 0.8);
   position: relative;
   overflow: hidden;
   text-align: left;
 }
-
 .massive-panel {
   max-width: 760px;
   padding: 80px;
@@ -270,6 +275,63 @@
   color: #ffffff;
 }
 
+.stats-grid .stat-card:nth-child(1) .stat-icon {
+  animation: radarGlow 2.8s infinite ease-in-out;
+}
+
+@keyframes radarGlow {
+
+  0% {
+    opacity: 0.3;
+    transform: scale(1);
+    filter: drop-shadow(0 0 0px rgba(255,255,255,0));
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.12);
+    filter: drop-shadow(0 0 8px rgba(255,255,255,0.6));
+  }
+
+  100% {
+    opacity: 0.3;
+    transform: scale(1);
+    filter: drop-shadow(0 0 0px rgba(255,255,255,0));
+  }
+}
+
+.stats-grid .stat-card:nth-child(2) .stat-icon {
+  animation: radarGlow 2.8s infinite ease-in-out;
+}
+@keyframes heartbeatPulse {
+
+  0% {
+    transform: scale(1);
+    opacity: 0.3;
+  }
+
+  15% {
+    transform: scale(1.25);
+    opacity: 1;
+  }
+
+  30% {
+    transform: scale(1);
+    opacity: 0.4;
+  }
+
+  45% {
+    transform: scale(1.15);
+    opacity: 0.8;
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 0.3;
+  }
+}
+
+
 .stat-val {
   font-size: 24px;
   font-weight: 300;
@@ -293,6 +355,7 @@
   justify-content: center;
   gap: 16px;
   margin-top: 32px;
+  transition: background 0.08s linear;
 }
 
 .alert-pulse {
@@ -315,6 +378,16 @@
   font-weight: 500;
   letter-spacing: 3px;
   text-transform: uppercase;
+
+  position: relative;
+  z-index: 2;
+
+  text-shadow:
+    0 0 8px rgba(0,0,0,0.9),
+    0 0 16px rgba(0,0,0,0.8);
+
+    overflow: hidden;
+position: relative;
 }
 
 /* --- THE TERMINAL UI --- */
@@ -503,6 +576,9 @@ backdrop-filter: blur(32px);
   text-transform: uppercase;
 }
 
+
+
+
 /* --- RESPONSIVE --- */
 @media (max-width: 768px) {
   .cinematic-section {
@@ -649,3 +725,76 @@ backdrop-filter: blur(32px);
     margin-top: 24px;
   }
 }
+
+
+
+
+
+
+.pressure-bar {
+  width: 180px;
+  height: 3px;
+  background: rgba(255,255,255,0.08);
+  overflow: hidden;
+  position: relative;
+}
+
+.pressure-fill {
+  height: 100%;
+  width: 0%;
+  background: rgba(255,255,255,0.95);
+  box-shadow: 0 0 10px rgba(255,255,255,0.8);
+  transition: width 0.08s linear;
+}
+
+
+
+.sos-icon {
+  position: relative;
+}
+
+.sos-icon::before,
+.sos-icon::after {
+  content: '';
+
+  position: absolute;
+  inset: -8px;
+
+  border-radius: 50%;
+
+border: 1px solid rgba(255,255,255,0.35);
+  animation: emergencyWave 3s infinite;
+
+  box-shadow:
+  0 0 12px rgba(255,255,255,0.35),
+  0 0 30px rgba(255,255,255,0.12);
+}
+
+.sos-icon::after {
+  animation-delay: 1.5s;
+
+  box-shadow:
+  0 0 12px rgba(255,255,255,0.35),
+  0 0 30px rgba(255,255,255,0.12);
+}
+
+.sos-icon svg {
+ filter:
+  drop-shadow(0 0 8px rgba(255,255,255,0.7))
+  drop-shadow(0 0 22px rgba(255,255,255,0.25));
+}
+
+@keyframes emergencyWave {
+
+  0% {
+    transform: scale(1);
+    opacity: 0.75;
+  }
+
+  100% {
+    transform: scale(1.9);
+    opacity: 0;
+  }
+}
+
+

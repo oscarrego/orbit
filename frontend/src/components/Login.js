@@ -4,12 +4,16 @@ import { Stars, Float, Sphere, Sparkles, Instances, Instance } from '@react-thre
 import * as THREE from 'three';
 import { motion } from 'framer-motion';
 import Lenis from 'lenis';
-import { Aperture, Activity, ShieldAlert, Crosshair, Fingerprint, MapPin, RadioReceiver, Network, Radar, Lock } from 'lucide-react';
+import { Aperture, Activity, ShieldAlert, Crosshair, Fingerprint, MapPin, RadioReceiver, Network, ScanSearch, Lock } from 'lucide-react';
 import './Login.css';
 
 // --- GLOBAL SCROLL STATE FOR 3D ---
 const scrollState = { current: 0 };
 const mouseState = { x: 0, y: 0 };
+let emergencyBoost = 0;
+let boosting = false;
+
+
 
 // --- 3D COMPONENTS ---
 
@@ -21,6 +25,7 @@ const DiskMaterial = new THREE.ShaderMaterial({
     colorMid: { value: new THREE.Color('#aaaaaa') },
     colorOuter: { value: new THREE.Color('#222222') },
     isSOS: { value: 0.0 },
+    emergencyIntensity: { value: 0.0 },
     sosColor: { value: new THREE.Color('#ff003c') }
   },
   transparent: true,
@@ -42,6 +47,7 @@ const DiskMaterial = new THREE.ShaderMaterial({
     uniform vec3 colorMid;
     uniform vec3 colorOuter;
     uniform float isSOS;
+    uniform float emergencyIntensity;
     uniform vec3 sosColor;
     varying vec2 vUv;
     varying vec3 vPos;
@@ -93,8 +99,16 @@ const DiskMaterial = new THREE.ShaderMaterial({
       alpha *= (intensity * 0.5 + rings * 0.5) * 0.8;
 
       // SOS Overrides
-      finalColor = mix(finalColor, sosColor, isSOS * 0.6);
-      alpha = mix(alpha, alpha * 1.5, isSOS);
+     finalColor = mix(
+  finalColor,
+  sosColor,
+  (isSOS * 0.4) + (emergencyIntensity * 0.9)
+);
+      alpha = mix(
+  alpha,
+  alpha * (1.5 + emergencyIntensity * 1.2),
+  isSOS
+);
 
       gl_FragColor = vec4(finalColor, alpha);
     }
@@ -341,13 +355,19 @@ const BlackHole = () => {
     DiskMaterial.uniforms.time.value = state.clock.elapsedTime;
     const isSOS = p >= 0.6 && p < 0.8;
     DiskMaterial.uniforms.isSOS.value = THREE.MathUtils.lerp(DiskMaterial.uniforms.isSOS.value, isSOS ? 1.0 : 0.0, 0.05);
+    DiskMaterial.uniforms.emergencyIntensity.value =
+  THREE.MathUtils.lerp(
+    DiskMaterial.uniforms.emergencyIntensity.value,
+    emergencyBoost,
+    0.05
+  );
 
     // Black Hole Object transforms
     let targetX = 0, targetY = 0, targetTiltX = 0, targetTiltY = 0;
 
     // Drift based on mouse
-    const mouseDriftX = mouseState.x * 0.5;
-    const mouseDriftY = mouseState.y * 0.5;
+    const mouseDriftX = mouseState.x * 1.2;
+const mouseDriftY = mouseState.y * 0.8;
 
     if (p < 0.2) {
       // Sec 1: Distant black hole
@@ -366,17 +386,47 @@ const BlackHole = () => {
       targetX = 0; targetY = 2.0; targetTiltX = Math.PI * 0.45; targetTiltY = 0;
     }
 
-    if (bhRef.current) {
-      bhRef.current.position.x = THREE.MathUtils.lerp(bhRef.current.position.x, targetX + mouseDriftX, 0.02);
-      bhRef.current.position.y = THREE.MathUtils.lerp(bhRef.current.position.y, targetY + mouseDriftY, 0.02);
-      
-      bhRef.current.rotation.x = THREE.MathUtils.lerp(bhRef.current.rotation.x, targetTiltX, 0.02);
-      bhRef.current.rotation.y = THREE.MathUtils.lerp(bhRef.current.rotation.y, targetTiltY, 0.02);
-    }
+   if (bhRef.current) {
+
+  bhRef.current.position.x = THREE.MathUtils.lerp(
+    bhRef.current.position.x,
+    targetX + mouseDriftX,
+    0.02
+  );
+
+  bhRef.current.position.y = THREE.MathUtils.lerp(
+    bhRef.current.position.y,
+    targetY + mouseDriftY,
+    0.02
+  );
+
+  bhRef.current.rotation.x = THREE.MathUtils.lerp(
+    bhRef.current.rotation.x,
+    targetTiltX,
+    0.02
+  );
+
+  bhRef.current.rotation.y = THREE.MathUtils.lerp(
+    bhRef.current.rotation.y,
+    targetTiltY,
+    0.02
+  );
+
+  const pulse =
+    1 +
+    Math.sin(state.clock.elapsedTime * 8) *
+    emergencyBoost *
+    0.08;
+
+  bhRef.current.scale.set(pulse, pulse, pulse);
+}
   });
 
   return (
-    <group ref={bhRef}>
+   <group
+  ref={bhRef}
+  scale={1 + emergencyBoost * 0.15}
+>
       {/* Event Horizon */}
       <Sphere args={[2, 64, 64]}>
         <meshBasicMaterial color="#000000" />
@@ -414,8 +464,10 @@ const CameraController = () => {
     const p = scrollState.current;
     
     // Z descent: start at 14, end at 4 (very close)
-    const targetZ = 16 - (p * 12);
-    // FOV shift: start narrow, get wide as we approach for distorted warp effect
+const targetZ =
+  16 -
+  (p * 12) -
+  (emergencyBoost * 8 )  // FOV shift: start narrow, get wide as we approach for distorted warp effect
     const targetFOV = 40 + (p * 30);
 
     camera.position.z = THREE.MathUtils.lerp(camera.position.z, targetZ, 0.03);
@@ -423,13 +475,45 @@ const CameraController = () => {
     camera.updateProjectionMatrix();
 
     // Subtle camera shake on SOS
-    if (p >= 0.6 && p < 0.8) {
-      camera.position.x = (Math.random() - 0.5) * 0.05;
-      camera.position.y = (Math.random() - 0.5) * 0.05;
-    } else {
-      camera.position.x = THREE.MathUtils.lerp(camera.position.x, 0, 0.1);
-      camera.position.y = THREE.MathUtils.lerp(camera.position.y, 0, 0.1);
-    }
+  if (p >= 0.6 && p < 0.8) {
+const targetBoost = boosting ? 0.5 : 0;
+ emergencyBoost = THREE.MathUtils.lerp(
+  emergencyBoost,
+  targetBoost,
+   0.004
+);
+
+  const intensity =
+    0.015 + (emergencyBoost * 0.45)
+
+  camera.position.x =
+    (Math.random() - 0.5) * intensity;
+
+  camera.position.y =
+    (Math.random() - 0.5) * intensity;
+
+} else {
+
+  boosting = false;
+
+  emergencyBoost = THREE.MathUtils.lerp(
+    emergencyBoost,
+    0,
+    0.08
+  );
+
+  camera.position.x = THREE.MathUtils.lerp(
+    camera.position.x,
+    0,
+    0.1
+  );
+
+  camera.position.y = THREE.MathUtils.lerp(
+    camera.position.y,
+    0,
+    0.1
+  );
+}
   });
   return null;
 };
@@ -464,6 +548,26 @@ const BackgroundScene = () => {
 const Login = ({ onLogin }) => {
   const [username, setUsername] = useState('');
   const [isFocused, setIsFocused] = useState(false);
+  const [onlineUsers, setOnlineUsers] = useState(12);
+const [latency, setLatency] = useState(8);
+
+
+useEffect(() => {
+
+  const usersInterval = setInterval(() => {
+    setOnlineUsers(Math.floor(Math.random() * 17) + 8);
+  }, 1800);
+
+  const latencyInterval = setInterval(() => {
+    setLatency(Math.floor(Math.random() * 16) + 5);
+  }, 500);
+
+  return () => {
+    clearInterval(usersInterval);
+    clearInterval(latencyInterval);
+  };
+
+}, []);
 
   // Setup Lenis for Genuine Smooth Scrolling
   useEffect(() => {
@@ -493,9 +597,34 @@ const Login = ({ onLogin }) => {
     };
     window.addEventListener('mousemove', handleMouseMove);
 
+    const handleOrientation = (e) => {
+
+  const tiltX = e.gamma || 0;
+  const tiltY = e.beta || 0;
+
+  mouseState.x = tiltX / 45;
+  mouseState.y = -tiltY / 90;
+
+};
+
+if (
+  typeof DeviceOrientationEvent !== 'undefined'
+) {
+
+  window.addEventListener(
+    'deviceorientation',
+    handleOrientation
+  );
+
+}
+
     return () => {
       lenis.destroy();
       window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener(
+  'deviceorientation',
+  handleOrientation
+);
     };
   }, []);
 
@@ -518,9 +647,17 @@ const Login = ({ onLogin }) => {
 
   // Animation variants for scroll reveals
   const revealUp = {
-    hidden: { opacity: 0, y: 80, filter: 'blur(10px)' },
-    visible: { opacity: 1, y: 0, filter: 'blur(0px)', transition: { duration: 1.4, ease: [0.16, 1, 0.3, 1] } }
-  };
+  hidden: { opacity: 0, y: 30, filter: 'blur(6px)' },
+  visible: {
+    opacity: 1,
+    y: 0,
+    filter: 'blur(0px)',
+    transition: {
+      duration: 0.7,
+      ease: [0.16, 1, 0.3, 1]
+    }
+  }
+};
 
   const revealStagger = {
     hidden: { opacity: 0 },
@@ -551,8 +688,9 @@ const Login = ({ onLogin }) => {
               <Aperture size={12} className="inline-icon" />
               <span>LIVE NETWORK SYNCHRONIZATION</span>
             </motion.div>
-            <motion.h1 variants={revealUp} className="hero-title">REALTIME <span className="bold-text">HUMAN</span><br/>PRESENCE</motion.h1>
-            <motion.p variants={revealUp} className="hero-subtitle">See nearby people live. Orbit visualizes human activity instantly, synchronizing your surroundings in realtime.</motion.p>
+            <motion.h1 variants={revealUp} className="hero-title">REALTIME <span className="bold-text">ORBIT</span><br/>NETWORK</motion.h1>
+            <motion.p variants={revealUp} className="hero-subtitle">A live network of synchronized human presence.
+              <br></br> Discover, connect, and respond in realtime. </motion.p>
             
             <motion.div variants={revealUp} className="scroll-indicator">
               <div className="scroll-mouse">
@@ -570,26 +708,27 @@ const Login = ({ onLogin }) => {
             variants={revealUp}
             initial="hidden"
             whileInView="visible"
-            viewport={{ once: false, margin: "-20%" }}
+            viewport={{ once: false, margin: "5%" }}
           >
             <div className="glass-panel">
               <div className="panel-glow-effect"></div>
               <div className="icon-wrapper">
                 <Network size={24} />
               </div>
-              <h2 className="section-title">LIVE LOCATION<br/>SYNCHRONIZATION</h2>
-              <p className="section-desc">Presence, mapped live. When you move, the network updates instantly. Discover who is sharing your exact physical location at this very second.</p>
+              <h2 className="section-title">LIVE LOCATION<br/>AWARENESS</h2>
+              <p className="section-desc">Every movement updates the network.
+              <br></br>Orbit visualizes nearby activity as it happens.</p>
               
               <div className="stats-grid">
                 <div className="stat-card">
-                  <MapPin size={16} className="stat-icon" />
+                  <ScanSearch size={16} className="stat-icon" />
                   <span className="stat-val">ACTIVE</span>
-                  <span className="stat-label">Nearby Users</span>
+                 <span className="stat-label">{onlineUsers} ONLINE</span>
                 </div>
                 <div className="stat-card">
                   <Activity size={16} className="stat-icon" />
                   <span className="stat-val">LIVE</span>
-                  <span className="stat-label">Data Stream</span>
+                  <span className="stat-label">{latency}ms LATENCY</span>
                 </div>
               </div>
             </div>
@@ -603,15 +742,16 @@ const Login = ({ onLogin }) => {
             variants={revealUp}
             initial="hidden"
             whileInView="visible"
-            viewport={{ once: false, margin: "-20%" }}
+            viewport={{ once: false, margin: "5%" }}
           >
             <div className="glass-panel">
               <div className="panel-glow-effect"></div>
               <div className="icon-wrapper">
                 <Lock size={24} />
               </div>
-              <h2 className="section-title">SYNCHRONIZED<br/>PRIVATE ROOMS</h2>
-              <p className="section-desc">Communicate privately within secure perimeters. Create rooms, join via passcodes, and synchronize exclusively with selected users in realtime.</p>
+              <h2 className="section-title">SECURE PRIVATE ROOMS</h2>
+              <p className="section-desc">Encrypted room-based communication built for synchronized teams,
+                  private coordination, and live collaboration.</p>
             </div>
           </motion.div>
         </section>
@@ -623,19 +763,54 @@ const Login = ({ onLogin }) => {
             variants={revealUp}
             initial="hidden"
             whileInView="visible"
-            viewport={{ once: false, margin: "-20%" }}
+            viewport={{ once: false, margin: "5%" }}
           >
             <div className="glass-panel massive-panel">
               <div className="panel-glow-effect"></div>
-              <div className="icon-wrapper large-icon">
+<div className="icon-wrapper large-icon sos-icon">
                 <ShieldAlert size={32} />
               </div>
-              <h2 className="section-title text-center">WHEN A SIGNAL IS SENT,<br/>NEARBY PEOPLE RESPOND</h2>
-              <p className="section-desc text-center" style={{ maxWidth: '600px', margin: '0 auto 40px auto' }}>Orbit is built for safety. Activate an SOS to instantly alert nearby users. The network coordinates a human response through live location sharing.</p>
+              <h2 className="section-title text-center">WHEN A SIGNAL IS SENT,NEARBY USERS RESPOND</h2>
+              <p className="section-desc text-center" style={{ maxWidth: '600px', margin: '0 auto 40px auto' }}>Orbit instantly broadcasts emergency signals to nearby connected
+users using live location synchronization and realtime alerts.</p>
               
-              <div className="alert-bar">
+<div
+  className="alert-bar"
+  style={{
+   
+    
+  }}
+
+  onMouseDown={() => {
+    boosting = true;
+  }}
+
+  onMouseUp={() => {
+    boosting = false;
+  }}
+
+  onMouseLeave={() => {
+    boosting = false;
+  }}
+
+  onTouchStart={() => {
+    boosting = true;
+  }}
+
+  onTouchEnd={() => {
+    boosting = false;
+  }}
+>
                 <div className="alert-pulse"></div>
-                <span>REALTIME DISTRESS COORDINATION ACTIVE</span>
+                <span>HOLD TO AMPLIFY</span>
+                <div className="pressure-bar">
+  <div
+    className="pressure-fill"
+    style={{
+      width: `${emergencyBoost * 200}%`
+    }}
+  />
+</div>
               </div>
             </div>
           </motion.div>
@@ -644,7 +819,7 @@ const Login = ({ onLogin }) => {
         {/* SECTION 5: ENTER ORBIT (TERMINAL) */}
         <section className="cinematic-section enter-section">
           <motion.div 
-            className="section-inner center-align"
+            className="section-inner center-align final-section"
             variants={revealUp}
             initial="hidden"
             whileInView="visible"
@@ -694,7 +869,7 @@ const Login = ({ onLogin }) => {
                 </button>
                 <div className="encryption-notice">
                   <RadioReceiver size={12} />
-                  <span>SECURE CONNECTION</span>
+                  <span>Developed by OSCAR</span>
                 </div>
               </div>
             </div>
