@@ -1,6 +1,8 @@
 import { useEffect, useRef, forwardRef, useImperativeHandle, useState } from "react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
+import { getThemeConfig, getRoadColor, getLabelColor, getBackgroundColor, getMapFilters } from "../theme/themeHelpers";
+import { customLightMapStyle } from "../theme/customLightMapStyle";
 
 const MARKER_PALETTE = [
   "#FF3B30", // Red
@@ -40,6 +42,22 @@ const getDeterministicColor = (userId) => {
 };
 
 const decorationCache = new Map();
+
+const applyThemeToMap = (mapInstance, themeId) => {
+  if (!mapInstance || !mapInstance.isStyleLoaded()) {
+    return;
+  }
+
+  const bgColor = getBackgroundColor(themeId);
+  const filter = getMapFilters(themeId);
+
+  const container = mapInstance.getContainer();
+  if (container) {
+    container.style.transition = "background-color 400ms ease, filter 400ms ease, color 400ms ease";
+    container.style.filter = filter;
+    container.style.backgroundColor = bgColor;
+  }
+};
 
 const getDecorations = (id) => {
   if (!decorationCache.has(id)) {
@@ -192,7 +210,7 @@ const MapView = forwardRef(({ users, userLocation, theme, isFollowing, setIsFoll
 
   const styles = {
     dark: "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json",
-    light: "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",
+    light: customLightMapStyle,
   };
 
   useEffect(() => {
@@ -230,10 +248,28 @@ const MapView = forwardRef(({ users, userLocation, theme, isFollowing, setIsFoll
     map.current.on("error", (e) => console.error("MapLibre Error:", e));
   }, []);
 
+  const prevTheme = useRef(theme);
+
   // 🌓 Handle Theme Change
   useEffect(() => {
     if (!map.current) return;
-    map.current.setStyle(styles[theme]);
+    
+    const handleStyleData = () => {
+      applyThemeToMap(map.current, theme);
+    };
+
+    map.current.on('styledata', handleStyleData);
+    
+    if (prevTheme.current !== theme) {
+      map.current.setStyle(styles[theme]);
+      prevTheme.current = theme;
+    } else if (map.current.isStyleLoaded()) {
+      applyThemeToMap(map.current, theme);
+    }
+
+    return () => {
+      map.current.off('styledata', handleStyleData);
+    };
   }, [theme]);
 
   useImperativeHandle(ref, () => ({
