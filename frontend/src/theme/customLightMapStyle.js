@@ -1,3 +1,5 @@
+import { getBuildingLight, getBuildingPaint } from "./mapBuildingStyle";
+
 export const customLightMapStyle = {
   "version": 8,
   "name": "Positron",
@@ -10,6 +12,7 @@ export const customLightMapStyle = {
   },
   "sprite": "https://tiles.basemaps.cartocdn.com/gl/positron-gl-style/sprite",
   "glyphs": "https://tiles.basemaps.cartocdn.com/fonts/{fontstack}/{range}.pbf",
+  "light": getBuildingLight("light"),
   "layers": [
     {
       "id": "background",
@@ -3546,28 +3549,14 @@ export const customLightMapStyle = {
     },
     {
       "id": "building",
-      "type": "fill",
+      "type": "fill-extrusion",
       "source": "carto",
       "source-layer": "building",
+      "minzoom": 13,
       "layout": {
         "visibility": "visible"
       },
-      "paint": {
-        "fill-color": {
-          "base": 1,
-          "stops": [
-            [
-              15.5,
-              "#dfdfdf"
-            ],
-            [
-              16,
-              "#dfdfdf"
-            ]
-          ]
-        },
-        "fill-antialias": true
-      }
+      "paint": getBuildingPaint("light")
     },
     {
       "id": "building-top",
@@ -3575,7 +3564,7 @@ export const customLightMapStyle = {
       "source": "carto",
       "source-layer": "building",
       "layout": {
-        "visibility": "visible"
+        "visibility": "none"
       },
       "paint": {
         "fill-translate": {
@@ -3597,8 +3586,8 @@ export const customLightMapStyle = {
             ]
           ]
         },
-        "fill-outline-color": "#dfdfdf",
-        "fill-color": "#ededed",
+        "fill-outline-color": "#7a7979",
+        "fill-color": "#7a7979",
         "fill-opacity": {
           "base": 1,
           "stops": [

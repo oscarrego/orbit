@@ -1,8 +1,9 @@
-import { useEffect, useRef, forwardRef, useImperativeHandle, useState } from "react";
+import { useEffect, useRef, forwardRef, useImperativeHandle } from "react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { getThemeConfig, getRoadColor, getLabelColor, getBackgroundColor, getMapFilters } from "../theme/themeHelpers";
+import { getBackgroundColor, getMapFilters } from "../theme/themeHelpers";
 import { customLightMapStyle } from "../theme/customLightMapStyle";
+import { BUILDING_LAYER_ID, BUILDING_MIN_ZOOM, getBuildingLight, getBuildingPaint } from "../theme/mapBuildingStyle";
 
 const MARKER_PALETTE = [
   "#FF3B30", // Red
@@ -42,6 +43,39 @@ const getDeterministicColor = (userId) => {
 };
 
 const decorationCache = new Map();
+const DARK_MAP_STYLE_URL = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
+
+const cloneMapStyle = (style) =>
+  typeof style === "string" ? style : JSON.parse(JSON.stringify(style));
+
+const getMapStyleForTheme = (themeId) =>
+  themeId === "light" ? cloneMapStyle(customLightMapStyle) : DARK_MAP_STYLE_URL;
+
+const isBuildingSourceLayer = (layer) =>
+  Boolean(
+    layer?.source &&
+      typeof layer["source-layer"] === "string" &&
+      layer["source-layer"].toLowerCase().includes("building")
+  );
+
+const applyBuildingLighting = (mapInstance, themeId) => {
+  try {
+    mapInstance.setLight(getBuildingLight(themeId));
+  } catch (error) {
+    console.warn("Unable to apply building lighting:", error);
+  }
+};
+
+const applyBuildingPaint = (mapInstance, layerId, themeId) => {
+  if (!mapInstance.getLayer(layerId)) return;
+
+  const paint = getBuildingPaint(themeId);
+  Object.entries(paint).forEach(([property, value]) => {
+    mapInstance.setPaintProperty(layerId, property, value);
+  });
+  mapInstance.setLayoutProperty(layerId, "visibility", "visible");
+  applyBuildingLighting(mapInstance, themeId);
+};
 
 const applyThemeToMap = (mapInstance, themeId) => {
   if (!mapInstance || !mapInstance.isStyleLoaded()) {
@@ -57,6 +91,8 @@ const applyThemeToMap = (mapInstance, themeId) => {
     container.style.filter = filter;
     container.style.backgroundColor = bgColor;
   }
+
+  applyBuildingLighting(mapInstance, themeId);
 };
 
 const getDecorations = (id) => {
@@ -208,44 +244,58 @@ const MapView = forwardRef(({ users, userLocation, theme, isFollowing, setIsFoll
   const userMarker = useRef(null);
   const initialCenterSet = useRef(false);
 
-  const styles = {
-    dark: "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json",
-    light: customLightMapStyle,
-  };
+  const themeRef = useRef(theme);
+  const onAutoDisableFollowingRef = useRef(onAutoDisableFollowing);
+
+  useEffect(() => {
+    onAutoDisableFollowingRef.current = onAutoDisableFollowing;
+  }, [onAutoDisableFollowing]);
 
   useEffect(() => {
     if (map.current) return;
 
     map.current = new maplibregl.Map({
       container: mapContainer.current,
-      style: styles[theme] || styles.dark,
+      style: getMapStyleForTheme(themeRef.current),
       center: [77.5946, 12.9716],
       zoom: 15,
       pitch: 60,
       bearing: -20,
+      antialias: true,
+      maxPitch: 85,
     });
     
 
     // 🏗️ RELIABLE LAYER RESTORATION
     // 'styledata' fires when style changes, ensuring 3D layers are always re-added
-    map.current.on("styledata", () => {
+    const restoreMapLayers = () => {
+      applyThemeToMap(map.current, themeRef.current);
       add3D();
-    });
+    };
+
+    map.current.on("style.load", restoreMapLayers);
+    map.current.on("styledata", restoreMapLayers);
+    map.current.on("idle", restoreMapLayers);
 
     // 📍 Auto-disable follow mode on user interaction
     map.current.on("dragstart", () => {
-      if (onAutoDisableFollowing) onAutoDisableFollowing();
+      if (onAutoDisableFollowingRef.current) onAutoDisableFollowingRef.current();
     });
 
     map.current.on("zoomstart", () => {
-      if (onAutoDisableFollowing) onAutoDisableFollowing();
+      if (onAutoDisableFollowingRef.current) onAutoDisableFollowingRef.current();
     });
 
     map.current.on("rotatestart", () => {
-      if (onAutoDisableFollowing) onAutoDisableFollowing();
+      if (onAutoDisableFollowingRef.current) onAutoDisableFollowingRef.current();
     });
 
     map.current.on("error", (e) => console.error("MapLibre Error:", e));
+
+    return () => {
+      map.current?.remove();
+      map.current = null;
+    };
   }, []);
 
   const prevTheme = useRef(theme);
@@ -253,23 +303,14 @@ const MapView = forwardRef(({ users, userLocation, theme, isFollowing, setIsFoll
   // 🌓 Handle Theme Change
   useEffect(() => {
     if (!map.current) return;
-    
-    const handleStyleData = () => {
-      applyThemeToMap(map.current, theme);
-    };
-
-    map.current.on('styledata', handleStyleData);
-    
+    themeRef.current = theme;
     if (prevTheme.current !== theme) {
-      map.current.setStyle(styles[theme]);
+      map.current.setStyle(getMapStyleForTheme(theme));
       prevTheme.current = theme;
     } else if (map.current.isStyleLoaded()) {
       applyThemeToMap(map.current, theme);
+      add3D();
     }
-
-    return () => {
-      map.current.off('styledata', handleStyleData);
-    };
   }, [theme]);
 
   useImperativeHandle(ref, () => ({
@@ -395,68 +436,60 @@ const MapView = forwardRef(({ users, userLocation, theme, isFollowing, setIsFoll
   const add3D = () => {
     if (!map.current || !map.current.isStyleLoaded()) return;
 
-    if (map.current.getLayer("3d-buildings")) return;
-
     const style = map.current.getStyle();
-    console.log(style.sources);
-    console.log(style.layers);
-
-    const buildingLayer = style.layers.find(
-      l =>
-        l.type === "fill" &&
-        l["source-layer"] &&
-        l["source-layer"].includes("building")
+    const layers = style.layers || [];
+    const buildingLayers = layers.filter(isBuildingSourceLayer);
+    const existingExtrusionLayer = buildingLayers.find(
+      (layer) => layer.id === BUILDING_LAYER_ID || layer.type === "fill-extrusion"
     );
 
+    if (existingExtrusionLayer) {
+      buildingLayers.forEach((layer) => {
+        if (layer.id !== existingExtrusionLayer.id && map.current.getLayer(layer.id)) {
+          map.current.removeLayer(layer.id);
+        }
+      });
+      applyBuildingPaint(map.current, existingExtrusionLayer.id, themeRef.current);
+      return;
+    }
+
+    const buildingLayer = buildingLayers.find((layer) => layer.source && layer["source-layer"]);
     if (!buildingLayer) {
-      console.warn("No valid building layer found");
       return;
     }
 
     const source = buildingLayer.source;
     const sourceLayer = buildingLayer["source-layer"];
+    const lastBuildingIndex = layers.reduce(
+      (lastIndex, layer, index) => (isBuildingSourceLayer(layer) ? index : lastIndex),
+      -1
+    );
+    const beforeLayerId = layers.slice(lastBuildingIndex + 1).find((layer) => !isBuildingSourceLayer(layer))?.id;
 
-    console.log("Using source:", source);
-    console.log("Using source-layer:", sourceLayer);
+    buildingLayers.forEach((layer) => {
+      if (map.current.getLayer(layer.id)) {
+        map.current.removeLayer(layer.id);
+      }
+    });
 
-    const labelLayerId = style.layers.find(
-      (layer) => layer.type === "symbol" && layer.layout && layer.layout["text-field"]
-    )?.id;
-
-    map.current.addLayer({
-      id: "3d-buildings",
+    const extrusionLayer = {
+      id: BUILDING_LAYER_ID,
       source: source,
       "source-layer": sourceLayer,
       type: "fill-extrusion",
-      minzoom: 14,
-      paint: {
-        "fill-extrusion-color": "#bfbfbf",
-        "fill-extrusion-height": [
-          "interpolate",
-          ["linear"],
-          ["zoom"],
-          14, 0,
-          15, 80,
-          16, 200,
-          17, 400,
-          18, 800
-        ],
-        "fill-extrusion-base": 0,
-        "fill-extrusion-opacity": 1,
-        "fill-extrusion-vertical-gradient": true
-      }
-    }, labelLayerId);
+      minzoom: BUILDING_MIN_ZOOM,
+      layout: {
+        visibility: "visible",
+      },
+      paint: getBuildingPaint(themeRef.current),
+      ...(buildingLayer.filter ? { filter: buildingLayer.filter } : {}),
+    };
 
-    map.current.setLight({
-      anchor: "viewport",
-      position: [1.2, 80, 60],
-      color: "#ffffff",
-      intensity: 0.8
-    });
-
-    map.current.setPitch(65);
-    map.current.setBearing(40);
-    map.current.setZoom(17);
+    map.current.addLayer(
+      extrusionLayer,
+      beforeLayerId && map.current.getLayer(beforeLayerId) ? beforeLayerId : undefined
+    );
+    applyBuildingLighting(map.current, themeRef.current);
   };
 
   useEffect(() => {
