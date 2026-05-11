@@ -304,67 +304,67 @@ const cinematicHighwayLayers = [
 ];
 
 const styleGroundAndWater = (mapInstance) => {
-  setPaint(mapInstance, "background", "background-color", "#1c2128");
+  setPaint(mapInstance, "background", "background-color", "#171817");
 
   setPaint(mapInstance, "landcover", "fill-color", [
     "interpolate",
     ["linear"],
     ["zoom"],
     8,
-    "#1b2027",
+    "#1b1c19",
     12,
-    "#20252d",
+    "#22231f",
     16,
-    "#252a33"
+    "#2a2a25"
   ]);
-  setPaint(mapInstance, "landcover", "fill-opacity", 0.72);
+  setPaint(mapInstance, "landcover", "fill-opacity", 0.82);
 
   setPaint(mapInstance, "landuse_residential", "fill-color", [
     "interpolate",
     ["linear"],
     ["zoom"],
     6,
-    "#1a1f26",
+    "#1c1d1a",
     12,
-    "#20252d",
+    "#24241f",
     16,
-    "#252a33"
+    "#2c2b25"
   ]);
   setPaint(mapInstance, "landuse_residential", "fill-opacity", [
     "interpolate",
     ["linear"],
     ["zoom"],
     6,
-    0.55,
+    0.62,
     12,
-    0.82,
+    0.88,
     16,
-    0.92
+    0.96
   ]);
 
-  setPaint(mapInstance, "landuse", "fill-color", "#222b30");
-  setPaint(mapInstance, "landuse", "fill-opacity", 0.64);
+  setPaint(mapInstance, "landuse", "fill-color", "#252720");
+  setPaint(mapInstance, "landuse", "fill-opacity", 0.7);
 
-  setPaint(mapInstance, "park_national_park", "fill-color", "#203027");
-  setPaint(mapInstance, "park_nature_reserve", "fill-color", "#203027");
+  setPaint(mapInstance, "park_national_park", "fill-color", "#223026");
+  setPaint(mapInstance, "park_nature_reserve", "fill-color", "#223026");
 
   setPaint(mapInstance, "water", "fill-color", [
     "interpolate",
     ["linear"],
     ["zoom"],
     0,
-    "#0b1726",
+    "#0d1418",
     10,
-    "#10233a",
+    "#101b20",
     14,
-    "#13263d",
+    "#132229",
     17,
-    "#15304d"
+    "#172a31"
   ]);
-  setPaint(mapInstance, "water", "fill-outline-color", "#1a3654");
+  setPaint(mapInstance, "water", "fill-outline-color", "#21383a");
   setPaint(mapInstance, "water", "fill-opacity", 1);
 
-  setPaint(mapInstance, "water_shadow", "fill-color", "#1a3654");
+  setPaint(mapInstance, "water_shadow", "fill-color", "#21383a");
   setPaint(mapInstance, "water_shadow", "fill-opacity", [
     "interpolate",
     ["linear"],
@@ -377,7 +377,7 @@ const styleGroundAndWater = (mapInstance) => {
     0.58
   ]);
 
-  setPaint(mapInstance, "waterway", "line-color", "#1a3654");
+  setPaint(mapInstance, "waterway", "line-color", "#21383a");
   setPaint(mapInstance, "waterway", "line-opacity", 0.82);
   setPaint(mapInstance, "waterway", "line-width", [
     "interpolate",
@@ -418,21 +418,21 @@ const styleRoadHierarchy = (mapInstance) => {
     }
 
     if (isSecondary) {
-      setPaint(mapInstance, id, "line-color", isCase ? "#303744" : "#667284");
+      setPaint(mapInstance, id, "line-color", isCase ? "#303330" : "#6d706a");
       setPaint(mapInstance, id, "line-opacity", isTunnel ? 0.28 : isBridge ? 0.78 : 0.66);
       setPaint(mapInstance, id, "line-blur", isCase ? 0.55 : 0.12);
       return;
     }
 
     if (isMinor) {
-      setPaint(mapInstance, id, "line-color", isCase ? "#242a33" : "#48515f");
+      setPaint(mapInstance, id, "line-color", isCase ? "#252724" : "#4c504c");
       setPaint(mapInstance, id, "line-opacity", isTunnel ? 0.18 : isBridge ? 0.58 : 0.46);
       setPaint(mapInstance, id, "line-blur", isCase ? 0.45 : 0);
       return;
     }
 
     if (id.includes("rail")) {
-      setPaint(mapInstance, id, "line-color", "#354150");
+      setPaint(mapInstance, id, "line-color", "#3b403b");
       setPaint(mapInstance, id, "line-opacity", 0.34);
     }
   });
@@ -485,7 +485,7 @@ const styleLabels = (mapInstance) => {
     }
 
     if (isRoadName) {
-      setPaint(mapInstance, id, "text-color", "#aeb8c6");
+      setPaint(mapInstance, id, "text-color", "#b2b8b3");
       return;
     }
 

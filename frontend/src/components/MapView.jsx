@@ -3,7 +3,14 @@ import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { getBackgroundColor, getMapFilters } from "../theme/themeHelpers";
 import { customLightMapStyle } from "../theme/customLightMapStyle";
-import { BUILDING_LAYER_ID, BUILDING_MIN_ZOOM, getBuildingLight, getBuildingPaint } from "../theme/mapBuildingStyle";
+import {
+  BUILDING_ACCENT_LAYER_IDS,
+  BUILDING_LAYER_ID,
+  BUILDING_MIN_ZOOM,
+  getBuildingAccentLayers,
+  getBuildingLight,
+  getBuildingPaint
+} from "../theme/mapBuildingStyle";
 import { DARK_MAP_STYLE_URL, applyCinematicDarkMapStyle } from "../theme/cinematicDarkMapStyle";
 
 const MARKER_PALETTE = [
@@ -60,6 +67,39 @@ const getNextCameraMode = (mode) => {
 const cloneMapStyle = (style) =>
   typeof style === "string" ? style : JSON.parse(JSON.stringify(style));
 
+const CLEAR_SKY_STYLE = {
+  "sky-color": "rgba(0, 0, 0, 0)",
+  "horizon-color": "rgba(0, 0, 0, 0)",
+  "fog-color": "rgba(0, 0, 0, 0)",
+  "fog-ground-blend": 1,
+  "horizon-fog-blend": 1,
+  "sky-horizon-blend": 1,
+  "atmosphere-blend": 0
+};
+
+const IMMERSIVE_SKY_STYLE = {
+  "sky-color": "rgba(8, 9, 8, 0)",
+  "horizon-color": "rgba(25, 26, 22, 0.24)",
+  "fog-color": "rgba(43, 44, 38, 0.28)",
+  "fog-ground-blend": 0.88,
+  "horizon-fog-blend": 0.94,
+  "sky-horizon-blend": 0.86,
+  "atmosphere-blend": 0.1
+};
+
+const applyCameraAtmosphere = (mapInstance, cameraMode, themeId) => {
+  if (!mapInstance?.setSky) return;
+
+  try {
+    mapInstance.setSky(
+      cloneMapStyle(themeId === "dark" && cameraMode === CAMERA_MODES.IMMERSIVE ? IMMERSIVE_SKY_STYLE : CLEAR_SKY_STYLE),
+      { validate: false }
+    );
+  } catch (error) {
+    console.warn("Unable to apply camera atmosphere:", error);
+  }
+};
+
 const getMapStyleForTheme = (themeId) =>
   themeId === "light" ? cloneMapStyle(customLightMapStyle) : DARK_MAP_STYLE_URL;
 
@@ -89,7 +129,47 @@ const applyBuildingPaint = (mapInstance, layerId, themeId) => {
   applyBuildingLighting(mapInstance, themeId);
 };
 
-const applyThemeToMap = (mapInstance, themeId) => {
+const removeBuildingAccentLayers = (mapInstance) => {
+  BUILDING_ACCENT_LAYER_IDS.forEach((layerId) => {
+    if (mapInstance.getLayer(layerId)) {
+      mapInstance.removeLayer(layerId);
+    }
+  });
+};
+
+const syncBuildingAccentLayers = (mapInstance, source, sourceLayer, baseFilter, themeId, beforeLayerId) => {
+  const accentLayers = getBuildingAccentLayers(themeId, source, sourceLayer, baseFilter);
+  const accentLayerIds = new Set(accentLayers.map((layer) => layer.id));
+
+  BUILDING_ACCENT_LAYER_IDS.forEach((layerId) => {
+    if (!accentLayerIds.has(layerId) && mapInstance.getLayer(layerId)) {
+      mapInstance.removeLayer(layerId);
+    }
+  });
+
+  accentLayers.forEach((layer) => {
+    const layerSpec = cloneMapStyle(layer);
+    if (!layerSpec.filter) {
+      delete layerSpec.filter;
+    }
+
+    if (!mapInstance.getLayer(layer.id)) {
+      mapInstance.addLayer(
+        layerSpec,
+        beforeLayerId && mapInstance.getLayer(beforeLayerId) ? beforeLayerId : undefined
+      );
+      return;
+    }
+
+    Object.entries(layer.paint || {}).forEach(([property, value]) => {
+      mapInstance.setPaintProperty(layer.id, property, cloneMapStyle(value));
+    });
+    mapInstance.setFilter(layer.id, layer.filter ? cloneMapStyle(layer.filter) : null);
+    mapInstance.setLayoutProperty(layer.id, "visibility", "visible");
+  });
+};
+
+const applyThemeToMap = (mapInstance, themeId, cameraMode) => {
   if (!mapInstance || !mapInstance.isStyleLoaded()) {
     return;
   }
@@ -111,6 +191,8 @@ const applyThemeToMap = (mapInstance, themeId) => {
   } else {
     mapInstance.__orbitCinematicDarkApplied = false;
   }
+
+  applyCameraAtmosphere(mapInstance, cameraMode, themeId);
 };
 
 const getDecorations = (id) => {
@@ -263,6 +345,7 @@ const MapView = forwardRef(({ users, userLocation, theme, isFollowing, setIsFoll
   const initialCenterSet = useRef(false);
 
   const themeRef = useRef(theme);
+  const cameraModeRef = useRef(cameraMode);
   const onAutoDisableFollowingRef = useRef(onAutoDisableFollowing);
 
   useEffect(() => {
@@ -287,7 +370,7 @@ const MapView = forwardRef(({ users, userLocation, theme, isFollowing, setIsFoll
     // 🏗️ RELIABLE LAYER RESTORATION
     // 'styledata' fires when style changes, ensuring 3D layers are always re-added
     const restoreMapLayers = () => {
-      applyThemeToMap(map.current, themeRef.current);
+      applyThemeToMap(map.current, themeRef.current, cameraModeRef.current);
       add3D();
     };
 
@@ -331,10 +414,17 @@ const MapView = forwardRef(({ users, userLocation, theme, isFollowing, setIsFoll
       map.current.setStyle(getMapStyleForTheme(theme));
       prevTheme.current = theme;
     } else if (map.current.isStyleLoaded()) {
-      applyThemeToMap(map.current, theme);
+      applyThemeToMap(map.current, theme, cameraModeRef.current);
       add3D();
     }
   }, [theme]);
+
+  useEffect(() => {
+    cameraModeRef.current = cameraMode;
+    if (map.current && map.current.isStyleLoaded()) {
+      applyCameraAtmosphere(map.current, cameraMode, themeRef.current);
+    }
+  }, [cameraMode]);
 
   useImperativeHandle(ref, () => ({
     handleRecenter: () => {
@@ -473,34 +563,47 @@ const MapView = forwardRef(({ users, userLocation, theme, isFollowing, setIsFoll
     const style = map.current.getStyle();
     const layers = style.layers || [];
     const buildingLayers = layers.filter(isBuildingSourceLayer);
-    const existingExtrusionLayer = buildingLayers.find(
+    const baseBuildingLayers = buildingLayers.filter(
+      (layer) => !BUILDING_ACCENT_LAYER_IDS.includes(layer.id)
+    );
+    const existingExtrusionLayer = baseBuildingLayers.find(
       (layer) => layer.id === BUILDING_LAYER_ID || layer.type === "fill-extrusion"
     );
 
     if (existingExtrusionLayer) {
-      buildingLayers.forEach((layer) => {
+      baseBuildingLayers.forEach((layer) => {
         if (layer.id !== existingExtrusionLayer.id && map.current.getLayer(layer.id)) {
           map.current.removeLayer(layer.id);
         }
       });
       applyBuildingPaint(map.current, existingExtrusionLayer.id, themeRef.current);
+      syncBuildingAccentLayers(
+        map.current,
+        existingExtrusionLayer.source,
+        existingExtrusionLayer["source-layer"],
+        existingExtrusionLayer.filter,
+        themeRef.current,
+        layers.slice(layers.indexOf(existingExtrusionLayer) + 1).find((layer) => !isBuildingSourceLayer(layer))?.id
+      );
       return;
     }
 
-    const buildingLayer = buildingLayers.find((layer) => layer.source && layer["source-layer"]);
+    const buildingLayer = baseBuildingLayers.find((layer) => layer.source && layer["source-layer"]);
     if (!buildingLayer) {
+      removeBuildingAccentLayers(map.current);
       return;
     }
 
     const source = buildingLayer.source;
     const sourceLayer = buildingLayer["source-layer"];
     const lastBuildingIndex = layers.reduce(
-      (lastIndex, layer, index) => (isBuildingSourceLayer(layer) ? index : lastIndex),
+      (lastIndex, layer, index) =>
+        isBuildingSourceLayer(layer) && !BUILDING_ACCENT_LAYER_IDS.includes(layer.id) ? index : lastIndex,
       -1
     );
     const beforeLayerId = layers.slice(lastBuildingIndex + 1).find((layer) => !isBuildingSourceLayer(layer))?.id;
 
-    buildingLayers.forEach((layer) => {
+    baseBuildingLayers.forEach((layer) => {
       if (map.current.getLayer(layer.id)) {
         map.current.removeLayer(layer.id);
       }
@@ -524,6 +627,14 @@ const MapView = forwardRef(({ users, userLocation, theme, isFollowing, setIsFoll
       beforeLayerId && map.current.getLayer(beforeLayerId) ? beforeLayerId : undefined
     );
     applyBuildingLighting(map.current, themeRef.current);
+    syncBuildingAccentLayers(
+      map.current,
+      source,
+      sourceLayer,
+      buildingLayer.filter,
+      themeRef.current,
+      beforeLayerId
+    );
   };
 
   useEffect(() => {
@@ -614,11 +725,17 @@ const MapView = forwardRef(({ users, userLocation, theme, isFollowing, setIsFoll
   }, [sosAlerts]);
 
     return (
-      <div 
-        ref={mapContainer} 
-        className="map-viewport" 
-        style={{ width: "100%", height: "100vh", position: "relative" }} 
-      />
+      <div
+        className={`map-stage ${cameraMode === CAMERA_MODES.IMMERSIVE ? "immersive-atmosphere" : ""}`}
+        style={{ width: "100%", height: "100vh", position: "relative" }}
+      >
+        <div
+          ref={mapContainer}
+          className="map-viewport"
+          style={{ position: "absolute", inset: 0 }}
+        />
+        <div className="immersive-fog-overlay" aria-hidden="true" />
+      </div>
     );
   });
   export default MapView;

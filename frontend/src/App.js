@@ -39,7 +39,7 @@ const getInitialTheme = () => {
 };
 
 const LIGHT_MODE_MAINTENANCE_MESSAGE =
-  "Light mode is currently undergoing improvements while we continue refining the cinematic dark-mode experience. It will return later.";
+  "Light mode is currently undergoing improvements. It will return soon.";
 
 const CameraModeIcon = ({ mode }) => {
   if (mode === CAMERA_MODES.IMMERSIVE) {
