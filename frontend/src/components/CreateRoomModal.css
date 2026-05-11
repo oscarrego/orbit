@@ -7,9 +7,9 @@
   inset: 0;
   width: 100vw;
   height: 100dvh; /* Dynamic viewport height for keyboard safety */
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  background: rgba(0, 0, 0, 0.52);
+  backdrop-filter: blur(18px) saturate(1.08);
+  -webkit-backdrop-filter: blur(18px) saturate(1.08);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -34,15 +34,16 @@
   flex-shrink: 0;
   width: min(340px, 100%); /* Fluid adaptive width */
   max-width: 100%;
-  background: linear-gradient(180deg, rgba(45, 45, 50, 0.72), rgba(55, 55, 60, 0.65)); /* Smoky Gray Mica */
-  backdrop-filter: blur(22px) saturate(160%);
-  -webkit-backdrop-filter: blur(22px) saturate(160%);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: linear-gradient(180deg, rgba(27, 28, 29, 0.88), rgba(11, 12, 13, 0.82));
+  backdrop-filter: blur(26px) saturate(138%);
+  -webkit-backdrop-filter: blur(26px) saturate(138%);
+  border: 1px solid rgba(232, 224, 205, 0.13);
   border-radius: 20px;
   padding: clamp(24px, 6vw, 28px) clamp(20px, 5vw, 24px);
   box-shadow: 
-    0 12px 40px rgba(0, 0, 0, 0.6),
-    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    0 26px 70px rgba(0, 0, 0, 0.58),
+    0 6px 18px rgba(0, 0, 0, 0.34),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
   color: white;
   animation: modalSlideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
   position: relative;
@@ -62,8 +63,8 @@
 .header-icon {
   width: 36px;
   height: 36px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.025));
+  border: 1px solid rgba(232, 224, 205, 0.12);
   border-radius: 10px;
   display: flex;
   align-items: center;
@@ -114,8 +115,8 @@
 }
 
 .input-group input:not(.otp-box) {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.24);
+  border: 1px solid rgba(232, 224, 205, 0.12);
   border-radius: 10px;
   padding: 10px 14px;
   color: white;
@@ -126,9 +127,9 @@
 }
 
 .input-group input:not(.otp-box):focus {
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.15); /* Soft white border */
-  box-shadow: 0 0 15px rgba(255, 255, 255, 0.1); /* Subtle white glow */
+  background: rgba(10, 12, 14, 0.5);
+  border-color: rgba(255, 211, 107, 0.38);
+  box-shadow: 0 0 0 3px rgba(255, 211, 107, 0.09), inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 /* ── OTP Container ───────────────────────────────────── */
@@ -143,8 +144,8 @@
   flex: 1;
   max-width: 58px;
   height: clamp(48px, 15vw, 52px);
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.24);
+  border: 1px solid rgba(232, 224, 205, 0.12);
   border-radius: 10px;
   color: white;
   font-size: clamp(18px, 5vw, 20px);
@@ -156,9 +157,9 @@
 }
 
 .otp-box:focus {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.15); /* Soft white border */
-  box-shadow: 0 0 15px rgba(255, 255, 255, 0.1); /* Subtle white glow */
+  background: rgba(10, 12, 14, 0.5);
+  border-color: rgba(255, 211, 107, 0.38);
+  box-shadow: 0 0 0 3px rgba(255, 211, 107, 0.09), inset 0 1px 0 rgba(255, 255, 255, 0.08);
   transform: translateY(-1px);
 }
 
@@ -227,9 +228,9 @@
 }
 
 .cancel-btn {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.055);
+  border: 1px solid rgba(232, 224, 205, 0.1);
+  color: rgba(255, 255, 255, 0.62);
 }
 
 .cancel-btn:hover {
@@ -238,17 +239,17 @@
 }
 
 .create-btn {
-  background: #3b82f6; /* Standard Orbit Blue */
+  background: linear-gradient(180deg, rgba(52, 105, 158, 0.94), rgba(24, 67, 112, 0.94));
   color: white;
   box-shadow: 
-    0 4px 12px rgba(37, 99, 235, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    0 12px 24px rgba(0, 0, 0, 0.34),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16);
 }
 
 .create-btn:hover:not(:disabled) {
-  background: #60a5fa;
+  background: linear-gradient(180deg, rgba(70, 124, 180, 0.96), rgba(30, 78, 124, 0.96));
   transform: translateY(-1px);
-  box-shadow: 0 0 15px rgba(59, 130, 246, 0.3);
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.38), 0 0 18px rgba(96, 165, 250, 0.18);
 }
 
 .create-btn:active {
@@ -271,6 +272,8 @@
   .create-room-modal {
     width: 92%;
     border-radius: 18px;
+    max-height: calc(100dvh - 40px);
+    overflow-y: auto;
   }
 }
 

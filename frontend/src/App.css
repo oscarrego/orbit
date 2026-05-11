@@ -1535,3 +1535,343 @@ body.light-mode::before {
     filter: drop-shadow(0 0 10px rgba(255,95,95,0.7));
   }
 }
+
+/* ============================================================
+   Dark Mode Tactical UI Polish
+   ============================================================ */
+.dark-mode {
+  --orbit-panel-bg: linear-gradient(180deg, rgba(22, 23, 24, 0.82), rgba(11, 12, 13, 0.74));
+  --orbit-panel-border: rgba(232, 224, 205, 0.13);
+  --orbit-panel-shadow: 0 22px 60px rgba(0, 0, 0, 0.56), 0 4px 16px rgba(0, 0, 0, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  --orbit-button-bg: linear-gradient(180deg, rgba(34, 35, 35, 0.78), rgba(12, 13, 14, 0.72));
+  --orbit-button-border: rgba(232, 224, 205, 0.16);
+  --orbit-focus: rgba(255, 211, 107, 0.58);
+  --orbit-muted-text: rgba(226, 232, 240, 0.68);
+}
+
+.dark-mode .control-btn,
+.dark-mode .fab-main,
+.dark-mode .chat-toggle,
+.dark-mode .users-indicator,
+.dark-mode .profile-btn .avatar {
+  background: var(--orbit-button-bg);
+  border: 1px solid var(--orbit-button-border);
+  color: rgba(248, 250, 252, 0.96);
+  -webkit-backdrop-filter: blur(18px) saturate(1.18);
+  backdrop-filter: blur(18px) saturate(1.18);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.48), 0 2px 8px rgba(0, 0, 0, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.11);
+  transform: translateZ(0);
+}
+
+.dark-mode .control-btn,
+.dark-mode .fab-main,
+.dark-mode .chat-toggle,
+.dark-mode .users-indicator,
+.dark-mode .profile-btn {
+  transition: transform 160ms ease, background 180ms ease, border-color 180ms ease, box-shadow 180ms ease, opacity 180ms ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .dark-mode .control-btn:hover,
+  .dark-mode .fab-main:hover,
+  .dark-mode .users-indicator:hover,
+  .dark-mode .profile-btn:hover .avatar,
+  .dark-mode .chat-toggle:hover {
+    background: linear-gradient(180deg, rgba(48, 49, 47, 0.84), rgba(16, 17, 18, 0.8));
+    border-color: rgba(255, 226, 168, 0.28);
+    box-shadow: 0 18px 42px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 211, 107, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  }
+}
+
+.dark-mode .control-btn:active,
+.dark-mode .fab-main:active,
+.dark-mode .chat-toggle:active,
+.dark-mode .users-indicator:active {
+  transform: scale(0.96) translateZ(0);
+}
+
+.dark-mode .control-btn:focus-visible,
+.dark-mode .fab-main:focus-visible,
+.dark-mode .chat-toggle:focus-visible,
+.dark-mode .users-indicator:focus-visible,
+.dark-mode .profile-btn:focus-visible {
+  outline: 2px solid var(--orbit-focus);
+  outline-offset: 3px;
+}
+
+.dark-mode .control-btn.active,
+.dark-mode .fab-container .control-btn.active {
+  background: linear-gradient(180deg, rgba(55, 128, 185, 0.86), rgba(24, 70, 111, 0.86)) !important;
+  border: 1px solid rgba(154, 205, 255, 0.35) !important;
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.56), 0 0 22px rgba(84, 159, 230, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.18) !important;
+}
+
+.dark-mode .sos-btn {
+  background: linear-gradient(180deg, #ff5555 0%, #d73737 55%, #a81f1f 100%);
+  border: 1px solid rgba(255, 214, 214, 0.28);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.54), 0 8px 24px rgba(198, 36, 36, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.34);
+  transition: transform 180ms ease, background 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.dark-mode .sos-btn:hover {
+  background: linear-gradient(180deg, #ff6666 0%, #e14141 55%, #b92626 100%);
+  box-shadow: 0 22px 50px rgba(0, 0, 0, 0.58), 0 10px 28px rgba(210, 42, 42, 0.36), inset 0 1px 0 rgba(255, 255, 255, 0.38);
+}
+
+.dark-mode .sos-btn.active {
+  background: linear-gradient(180deg, #35d176 0%, #18984f 100%);
+  border-color: rgba(187, 247, 208, 0.3);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.54), 0 8px 22px rgba(34, 197, 94, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.dark-mode .toast {
+  background: rgba(13, 14, 15, 0.82);
+  border: 1px solid rgba(232, 224, 205, 0.14);
+  -webkit-backdrop-filter: blur(22px) saturate(1.12);
+  backdrop-filter: blur(22px) saturate(1.12);
+  box-shadow: 0 18px 46px rgba(0, 0, 0, 0.48), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  transition: transform 180ms ease, background 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.dark-mode .chat-panel,
+.dark-mode .users-panel,
+.dark-mode .profile-modal {
+  background: var(--orbit-panel-bg);
+  border: 1px solid var(--orbit-panel-border);
+  -webkit-backdrop-filter: blur(24px) saturate(1.16);
+  backdrop-filter: blur(24px) saturate(1.16);
+  box-shadow: var(--orbit-panel-shadow);
+  contain: layout paint;
+}
+
+.dark-mode .chat-panel {
+  border-radius: 18px;
+}
+
+.dark-mode .chat-header,
+.dark-mode .room-controls,
+.dark-mode .chat-input-container {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.012));
+  border-color: rgba(232, 224, 205, 0.1);
+}
+
+.dark-mode .chat-header span,
+.dark-mode .profile-label,
+.dark-mode .modal-subtitle,
+.dark-mode .jr-subtitle {
+  color: var(--orbit-muted-text);
+}
+
+.dark-mode .room-input,
+.dark-mode .chat-panel input,
+.dark-mode .profile-name-input,
+.dark-mode .profile-box {
+  background: rgba(0, 0, 0, 0.24) !important;
+  border-color: rgba(232, 224, 205, 0.13) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.045), inset 0 -12px 24px rgba(0, 0, 0, 0.12);
+}
+
+.dark-mode .room-input:focus,
+.dark-mode .chat-panel input:focus,
+.dark-mode .profile-name-input:focus {
+  background: rgba(10, 12, 14, 0.48) !important;
+  border-color: rgba(255, 211, 107, 0.36) !important;
+  box-shadow: 0 0 0 3px rgba(255, 211, 107, 0.09), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.dark-mode .join-btn,
+.dark-mode .send-btn,
+.dark-mode .close-btn {
+  background: linear-gradient(180deg, rgba(52, 105, 158, 0.92), rgba(24, 67, 112, 0.92));
+  border: 1px solid rgba(158, 206, 255, 0.18);
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.16);
+}
+
+.dark-mode .create-room-trigger {
+  color: rgba(226, 232, 240, 0.62);
+}
+
+.dark-mode .create-room-trigger:hover {
+  color: #ffd36b;
+}
+
+.dark-mode .chat-bubble {
+  border: 1px solid rgba(255, 255, 255, 0.075);
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.dark-mode .mine .chat-bubble {
+  background: linear-gradient(180deg, rgba(42, 135, 84, 0.92), rgba(24, 97, 62, 0.92));
+}
+
+.dark-mode .other .chat-bubble {
+  background: linear-gradient(180deg, rgba(43, 44, 42, 0.86), rgba(24, 25, 24, 0.86));
+  color: #e5e7eb;
+}
+
+.dark-mode .users-panel {
+  padding: 14px;
+}
+
+.dark-mode .users-panel h3 {
+  color: rgba(248, 250, 252, 0.86);
+  margin-bottom: 10px;
+}
+
+.dark-mode .user-item {
+  padding: 10px;
+  border: 1px solid transparent;
+}
+
+.dark-mode .user-item:hover,
+.dark-mode .user-item.current {
+  background: rgba(255, 255, 255, 0.055);
+  border-color: rgba(232, 224, 205, 0.1);
+}
+
+.dark-mode .user-status {
+  color: rgba(226, 232, 240, 0.58);
+}
+
+.dark-mode .profile-overlay {
+  background: rgba(0, 0, 0, 0.46);
+  -webkit-backdrop-filter: blur(18px) saturate(1.08);
+  backdrop-filter: blur(18px) saturate(1.08);
+}
+
+.dark-mode .floating-logout-btn {
+  background: rgba(14, 13, 13, 0.66);
+  border-color: rgba(248, 113, 113, 0.26);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+@media (max-width: 768px) {
+  .dark-mode {
+    --mobile-edge: max(14px, env(safe-area-inset-left));
+    --mobile-bottom: max(14px, env(safe-area-inset-bottom));
+  }
+
+  .dark-mode .chat-panel {
+    top: calc(70px + env(safe-area-inset-top));
+    left: var(--mobile-edge);
+    width: min(88vw, 320px);
+    height: min(62dvh, calc(100dvh - 170px));
+    max-height: none;
+    border-radius: 18px;
+  }
+
+  .dark-mode .chat-toggle {
+    left: min(calc(88vw + 16px), 340px);
+    width: 34px;
+    height: 56px;
+  }
+
+  .dark-mode .chat-toggle.closed {
+    left: max(8px, env(safe-area-inset-left));
+  }
+
+  .dark-mode .users-indicator {
+    top: calc(16px + env(safe-area-inset-top));
+    left: var(--mobile-edge);
+    max-width: calc(100vw - 96px - env(safe-area-inset-right));
+    min-height: 40px;
+    padding: 8px 12px;
+  }
+
+  .dark-mode .users-indicator span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .dark-mode .users-panel {
+    top: calc(64px + env(safe-area-inset-top));
+    left: var(--mobile-edge);
+    width: min(320px, calc(100vw - 28px - env(safe-area-inset-left) - env(safe-area-inset-right)));
+    max-height: min(46dvh, 360px);
+  }
+
+  .dark-mode .profile-btn {
+    top: calc(16px + env(safe-area-inset-top));
+    right: max(14px, env(safe-area-inset-right));
+  }
+
+  .dark-mode .fab-container {
+    right: max(14px, env(safe-area-inset-right));
+    bottom: var(--mobile-bottom);
+    z-index: 10002;
+  }
+
+  .dark-mode .sos-btn {
+    bottom: calc(16px + env(safe-area-inset-bottom));
+    min-height: 52px;
+    max-width: calc(100vw - 112px - env(safe-area-inset-left) - env(safe-area-inset-right));
+    padding: 13px 28px;
+    font-size: 16px;
+    letter-spacing: 0.7px;
+  }
+
+  .dark-mode .fab-actions {
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .dark-mode .fab-container .control-btn,
+  .dark-mode .fab-main {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    -webkit-backdrop-filter: blur(14px) saturate(1.08);
+    backdrop-filter: blur(14px) saturate(1.08);
+  }
+
+  .dark-mode .fab-main {
+    border-radius: 50%;
+  }
+
+  .dark-mode .chat-header {
+    padding: 12px 14px;
+  }
+
+  .dark-mode .chat-messages {
+    padding: 12px;
+    gap: 9px;
+  }
+
+  .dark-mode .chat-input-container {
+    padding: 10px;
+  }
+}
+
+@media (max-width: 420px) {
+  .dark-mode .chat-panel {
+    width: min(90vw, 310px);
+  }
+
+  .dark-mode .chat-toggle {
+    left: min(calc(90vw + 14px), 326px);
+  }
+}
+
+@media (max-width: 768px) and (orientation: landscape), (max-height: 520px) {
+  .dark-mode .chat-panel {
+    top: calc(58px + env(safe-area-inset-top));
+    height: min(70dvh, calc(100dvh - 86px));
+  }
+
+  .dark-mode .users-panel {
+    max-height: min(58dvh, 280px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dark-mode .control-btn,
+  .dark-mode .fab-main,
+  .dark-mode .chat-toggle,
+  .dark-mode .chat-panel,
+  .dark-mode .users-panel,
+  .dark-mode .profile-modal {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}

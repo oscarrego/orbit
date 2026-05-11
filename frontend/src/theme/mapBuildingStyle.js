@@ -2,6 +2,12 @@ export const BUILDING_LAYER_ID = "orbit-3d-buildings";
 export const BUILDING_ROOF_LAYER_ID = "orbit-3d-building-roofs";
 export const SKYSCRAPER_UPPER_LIGHT_LAYER_ID = "orbit-skyscraper-upper-light";
 export const SKYSCRAPER_CROWN_LIGHT_LAYER_ID = "orbit-skyscraper-crown-light";
+export const SKYSCRAPER_WINDOW_BAND_LAYER_IDS = [
+  "orbit-skyscraper-window-band-a",
+  "orbit-skyscraper-window-band-b",
+  "orbit-skyscraper-window-band-c",
+  "orbit-skyscraper-window-band-d"
+];
 export const SKYSCRAPER_BAND_LAYER_IDS = [
   "orbit-skyscraper-shadow-band-a",
   "orbit-skyscraper-shadow-band-b",
@@ -11,6 +17,7 @@ export const BUILDING_ACCENT_LAYER_IDS = [
   BUILDING_ROOF_LAYER_ID,
   SKYSCRAPER_UPPER_LIGHT_LAYER_ID,
   SKYSCRAPER_CROWN_LIGHT_LAYER_ID,
+  ...SKYSCRAPER_WINDOW_BAND_LAYER_IDS,
   ...SKYSCRAPER_BAND_LAYER_IDS
 ];
 export const BUILDING_SOURCE_LAYER = "building";
@@ -177,13 +184,13 @@ const SKYSCRAPER_UPPER_LIGHT_COLOR_EXPRESSION = [
     ["linear"],
     ["var", "height"],
     48,
-    "#3c3b36",
+    "#252520",
     90,
-    "#56534b",
+    "#333229",
     150,
-    "#747067",
+    "#403d32",
     220,
-    "#918b81"
+    "#4d493c"
   ]
 ];
 
@@ -196,13 +203,13 @@ const SKYSCRAPER_CROWN_LIGHT_COLOR_EXPRESSION = [
     ["linear"],
     ["var", "height"],
     48,
-    "#5b5851",
+    "#3b3930",
     110,
-    "#7a746a",
+    "#4f4a3e",
     180,
-    "#9a9286",
+    "#625c4d",
     250,
-    "#b7aea1"
+    "#756e5d"
   ]
 ];
 
@@ -260,6 +267,47 @@ const getSkyscraperBandLayer = (id, ratio, source, sourceLayer, baseFilter) => {
   };
 };
 
+const getSkyscraperWindowBandLayer = (
+  id,
+  ratio,
+  thickness,
+  color,
+  maxOpacity,
+  source,
+  sourceLayer,
+  baseFilter
+) => {
+  const bandBase = buildingHeightAtRatio(ratio);
+
+  return {
+    id,
+    source,
+    "source-layer": sourceLayer,
+    type: "fill-extrusion",
+    minzoom: BUILDING_MIN_ZOOM + 1,
+    filter: mergeFilters(baseFilter, TALL_BUILDING_FILTER),
+    paint: {
+      "fill-extrusion-color": color,
+      "fill-extrusion-height": ["+", bandBase, thickness],
+      "fill-extrusion-base": bandBase,
+      "fill-extrusion-opacity": [
+        "interpolate",
+        ["linear"],
+        ["zoom"],
+        14,
+        0,
+        15.25,
+        ["*", maxOpacity, 0.54],
+        17,
+        maxOpacity,
+        19,
+        ["*", maxOpacity, 1.08]
+      ],
+      "fill-extrusion-vertical-gradient": false
+    }
+  };
+};
+
 export const getBuildingPaint = (themeId) => ({
   "fill-extrusion-color":
     themeId === "light" ? LIGHT_BUILDING_COLOR : cloneExpression(DARK_BUILDING_COLOR_EXPRESSION),
@@ -306,11 +354,11 @@ export const getBuildingAccentLayers = (themeId, source, sourceLayer, baseFilter
           14,
           0,
           15,
-          0.16,
+          0.06,
           17,
-          0.28,
+          0.1,
           19,
-          0.32
+          0.12
         ],
         "fill-extrusion-vertical-gradient": true
       }
@@ -333,15 +381,55 @@ export const getBuildingAccentLayers = (themeId, source, sourceLayer, baseFilter
           14,
           0,
           15.5,
-          0.12,
+          0.07,
           17,
-          0.22,
+          0.12,
           19,
-          0.26
+          0.15
         ],
         "fill-extrusion-vertical-gradient": true
       }
     },
+    getSkyscraperWindowBandLayer(
+      SKYSCRAPER_WINDOW_BAND_LAYER_IDS[0],
+      0.54,
+      2.2,
+      "#8f8879",
+      0.22,
+      source,
+      sourceLayer,
+      baseFilter
+    ),
+    getSkyscraperWindowBandLayer(
+      SKYSCRAPER_WINDOW_BAND_LAYER_IDS[1],
+      0.67,
+      2.4,
+      "#b4ac9b",
+      0.3,
+      source,
+      sourceLayer,
+      baseFilter
+    ),
+    getSkyscraperWindowBandLayer(
+      SKYSCRAPER_WINDOW_BAND_LAYER_IDS[2],
+      0.8,
+      2.1,
+      "#9f9788",
+      0.26,
+      source,
+      sourceLayer,
+      baseFilter
+    ),
+    getSkyscraperWindowBandLayer(
+      SKYSCRAPER_WINDOW_BAND_LAYER_IDS[3],
+      0.92,
+      2.6,
+      "#c4bcaa",
+      0.34,
+      source,
+      sourceLayer,
+      baseFilter
+    ),
     getSkyscraperBandLayer(SKYSCRAPER_BAND_LAYER_IDS[0], 0.56, source, sourceLayer, baseFilter),
     getSkyscraperBandLayer(SKYSCRAPER_BAND_LAYER_IDS[1], 0.71, source, sourceLayer, baseFilter),
     getSkyscraperBandLayer(SKYSCRAPER_BAND_LAYER_IDS[2], 0.84, source, sourceLayer, baseFilter),

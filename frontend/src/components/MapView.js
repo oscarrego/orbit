@@ -568,6 +568,16 @@ const MapView = forwardRef(({ users, userLocation, theme, isFollowing, setIsFoll
     const existingExtrusionLayer = baseBuildingLayers.find(
       (layer) => layer.id === BUILDING_LAYER_ID || layer.type === "fill-extrusion"
     );
+    const accentLayersReady =
+      themeRef.current !== "dark" || BUILDING_ACCENT_LAYER_IDS.every((layerId) => map.current.getLayer(layerId));
+
+    if (
+      existingExtrusionLayer?.id === BUILDING_LAYER_ID &&
+      accentLayersReady &&
+      map.current.__orbitBuildingThemeApplied === themeRef.current
+    ) {
+      return;
+    }
 
     if (existingExtrusionLayer) {
       baseBuildingLayers.forEach((layer) => {
@@ -584,12 +594,14 @@ const MapView = forwardRef(({ users, userLocation, theme, isFollowing, setIsFoll
         themeRef.current,
         layers.slice(layers.indexOf(existingExtrusionLayer) + 1).find((layer) => !isBuildingSourceLayer(layer))?.id
       );
+      map.current.__orbitBuildingThemeApplied = themeRef.current;
       return;
     }
 
     const buildingLayer = baseBuildingLayers.find((layer) => layer.source && layer["source-layer"]);
     if (!buildingLayer) {
       removeBuildingAccentLayers(map.current);
+      map.current.__orbitBuildingThemeApplied = null;
       return;
     }
 
@@ -634,6 +646,7 @@ const MapView = forwardRef(({ users, userLocation, theme, isFollowing, setIsFoll
       themeRef.current,
       beforeLayerId
     );
+    map.current.__orbitBuildingThemeApplied = themeRef.current;
   };
 
   useEffect(() => {
