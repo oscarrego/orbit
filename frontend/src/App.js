@@ -839,7 +839,51 @@ showToast({
             onClick={handleRecenter}
             title="Toggle camera mode"
           >
-            <CameraModeIcon mode={cameraMode} />
+            <svg
+  viewBox="0 0 100 100"
+  style={{
+    width: "22px",
+    height: "22px",
+    transform: `rotate(${userLocation?.heading || 0}deg)`,
+    transition: "transform 0.4s ease-out",
+  }}
+>
+  {/* Outer Ring */}
+  <circle
+    cx="50"
+    cy="50"
+    r="42"
+    stroke="rgba(255,215,120,0.7)"
+    strokeWidth="4"
+    fill="rgba(255,255,255,0.02)"
+  />
+
+  {/* Compass Needle */}
+  <path
+    d="M50 18 L58 50 L50 82 L42 50 Z"
+    fill="rgba(255,215,120,0.95)"
+  />
+
+  {/* Center Core */}
+  <circle
+    cx="50"
+    cy="50"
+    r="6"
+    fill="rgba(255,255,255,0.95)"
+  />
+
+  {/* North Mark */}
+  <text
+    x="50"
+    y="12"
+    textAnchor="middle"
+    fill="rgba(255,215,120,0.9)"
+    fontSize="10"
+    fontWeight="bold"
+  >
+    N
+  </text>
+</svg>
           </button>
 
           <button 
@@ -909,8 +953,66 @@ showToast({
           onClick={handleRecenter}
           title="Toggle camera mode"
         >
-          <CameraModeIcon mode={cameraMode} />
-        </button>
+<svg
+  viewBox="0 0 100 100"
+  style={{
+    width: "24px",
+    height: "24px",
+    filter: "drop-shadow(0 0 6px rgba(255,255,255,0.15))",
+  }}
+>
+  {/* Outer Ring */}
+  <circle
+    cx="50"
+    cy="50"
+    r="44"
+    fill="rgba(0,0,0,0.45)"
+    stroke="rgba(255,255,255,0.18)"
+    strokeWidth="3"
+  />
+
+  {/* North Marker */}
+  <text
+    x="50"
+    y="18"
+    textAnchor="middle"
+    fill="#ff453a"
+    fontSize="11"
+    fontWeight="bold"
+  >
+    N
+  </text>
+
+  {/* Compass Needle */}
+  <g
+    style={{
+      transform: `rotate(${userLocation?.heading || 0}deg)`,
+      transformOrigin: "50px 50px",
+      transition: "transform 0.25s linear",
+    }}
+  >
+    {/* Red Top */}
+    <polygon
+      points="50,18 56,50 50,42 44,50"
+      fill="#ff453a"
+    />
+
+    {/* White Bottom */}
+    <polygon
+      points="50,82 56,50 50,58 44,50"
+      fill="rgba(255,255,255,0.95)"
+    />
+
+    {/* Center Dot */}
+    <circle
+      cx="50"
+      cy="50"
+      r="4"
+      fill="white"
+    />
+  </g>
+</svg>
+</button> 
 
         <button 
           className="control-btn" 
