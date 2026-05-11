@@ -69,6 +69,98 @@ const CameraModeIcon = ({ mode }) => {
   );
 };
 
+// ── Premium Live Compass Icon ─────────────────────────────────────────────────
+let _compassInstanceId = 0;
+const LiveCompassIcon = ({ bearing, cameraMode }) => {
+  // Stable instance ID (created once per component mount)
+  const idRef = useRef(null);
+  if (idRef.current === null) {
+    idRef.current = ++_compassInstanceId;
+  }
+  const uid = idRef.current;
+
+  // Needle counter-rotates so North always points up
+  const needleAngle = -bearing;
+
+  const modeColor =
+    cameraMode === CAMERA_MODES.IMMERSIVE ? "#c084fc" :
+    cameraMode === CAMERA_MODES.CINEMATIC ? "#FFD76A" :
+    "#94a3b8";
+  const modeGlow =
+    cameraMode === CAMERA_MODES.IMMERSIVE ? "rgba(192,132,252,0.55)" :
+    cameraMode === CAMERA_MODES.CINEMATIC ? "rgba(255,215,100,0.55)" :
+    "rgba(148,163,184,0.4)";
+
+  const bgId   = `cBg-${uid}`;
+  const glowId = `cGlow-${uid}`;
+
+  return (
+    <svg
+      viewBox="0 0 100 100"
+      style={{
+        width: "26px",
+        height: "26px",
+        filter: `drop-shadow(0 0 7px ${modeGlow})`,
+        display: "block",
+      }}
+    >
+      <defs>
+        <radialGradient id={bgId} cx="50%" cy="40%" r="60%">
+          <stop offset="0%" stopColor="#1a1b1c" />
+          <stop offset="100%" stopColor="#09090B" />
+        </radialGradient>
+        <radialGradient id={glowId} cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor={modeColor} stopOpacity="0.18" />
+          <stop offset="100%" stopColor={modeColor} stopOpacity="0" />
+        </radialGradient>
+      </defs>
+
+      {/* Base disc */}
+      <circle cx="50" cy="50" r="44" fill={`url(#${bgId})`} />
+
+      {/* Soft inner glow */}
+      <circle cx="50" cy="50" r="40" fill={`url(#${glowId})`} />
+
+      {/* Outer ring */}
+      <circle cx="50" cy="50" r="44" fill="none"
+        stroke={modeColor} strokeOpacity="0.22" strokeWidth="2.5" />
+
+      {/* Cardinal tick marks */}
+      {[0, 90, 180, 270].map((deg) => {
+        const r1 = 38, r2 = 43;
+        const rad = (deg - 90) * Math.PI / 180;
+        return (
+          <line key={deg}
+            x1={50 + Math.cos(rad) * r1} y1={50 + Math.sin(rad) * r1}
+            x2={50 + Math.cos(rad) * r2} y2={50 + Math.sin(rad) * r2}
+            stroke={modeColor} strokeOpacity="0.55" strokeWidth="2" strokeLinecap="round"
+          />
+        );
+      })}
+
+      {/* Needle — rotates with map bearing */}
+      <g
+        style={{
+          transform: `rotate(${needleAngle}deg)`,
+          transformOrigin: "50px 50px",
+          transition: "transform 0.18s cubic-bezier(0.25, 0.46, 0.45, 0.94)",
+        }}
+      >
+        {/* North blade */}
+        <path d="M50 16 L56.5 50 L50 44 L43.5 50 Z" fill={modeColor} opacity="0.95" />
+        {/* South blade */}
+        <path d="M50 84 L56.5 50 L50 57 L43.5 50 Z" fill="rgba(230,230,240,0.55)" />
+        {/* Center pivot */}
+        <circle cx="50" cy="50" r="5.5" fill={modeColor} opacity="0.9" />
+        <circle cx="50" cy="50" r="2.5" fill="#09090B" />
+      </g>
+
+      {/* North indicator dot (static) */}
+      <circle cx="50" cy="9" r="3.2" fill="#FF453A" opacity="0.9" />
+    </svg>
+  );
+};
+
 function App() {
   const [users, setUsers] = useState([]);
   const [toast, setToast] = useState(null);
@@ -84,6 +176,7 @@ function App() {
   const [showCreateRoomModal, setShowCreateRoomModal] = useState(false);
   const [showEasterEgg, setShowEasterEgg] = useState(false);
   const [cameraMode, setCameraMode] = useState(CAMERA_MODES.CINEMATIC);
+  const [mapBearing, setMapBearing] = useState(0);
   const [isInvisible, setIsInvisible] = useState(() => localStorage.getItem("invisibleMode") === "true");
 
   // 🔑 Join-room passcode modal state
@@ -626,6 +719,7 @@ showToast({
         sosAlerts={sosAlerts}
         cameraMode={cameraMode}
         setCameraMode={setCameraMode}
+        onBearingChange={setMapBearing}
       />
 
       {/* 💬 CHAT PANEL (Mica Dark) */}
@@ -839,80 +933,7 @@ showToast({
             onClick={handleRecenter}
             title="Toggle camera mode"
           >
-<svg
-  viewBox="0 0 100 100"
-  style={{
-    width: "26px",
-    height: "26px",
-    filter: "drop-shadow(0 0 8px rgba(255,215,120,0.45))",
-  }}
->
-  {/* Dark Base */}
-  <circle
-    cx="50"
-    cy="50"
-    r="42"
-    fill="#09090B"
-    stroke="rgba(255,215,120,0.28)"
-    strokeWidth="3"
-  />
-
-  {/* Gold Ring */}
-  <circle
-    cx="50"
-    cy="50"
-    r="34"
-    fill="none"
-    stroke="#FFD76A"
-    strokeOpacity="0.75"
-    strokeWidth="2.5"
-  />
-
-  {/* Rotating Needle */}
-  <g
-    style={{
-      transform: `rotate(${userLocation?.heading || 0}deg)`,
-      transformOrigin: "50px 50px",
-      transition: "transform 0.12s linear",
-    }}
-  >
-    {/* Main Gold Needle */}
-    <path
-      d="M50 18 L61 50 L50 43 L39 50 Z"
-      fill="#FFD76A"
-    />
-
-    {/* Rear Needle */}
-    <path
-      d="M50 82 L57 50 L50 58 L43 50 Z"
-      fill="rgba(255,240,200,0.95)"
-    />
-
-    {/* Inner Glow */}
-    <circle
-      cx="50"
-      cy="50"
-      r="8"
-      fill="#FFD76A"
-    />
-
-    {/* Core */}
-    <circle
-      cx="50"
-      cy="50"
-      r="3"
-      fill="#09090B"
-    />
-  </g>
-
-  {/* North Indicator */}
-  <circle
-    cx="50"
-    cy="12"
-    r="3.5"
-    fill="#FF453A"
-  />
-</svg>
+            <LiveCompassIcon bearing={mapBearing} cameraMode={cameraMode} />
           </button>
 
           <button 
@@ -982,83 +1003,8 @@ showToast({
           onClick={handleRecenter}
           title="Toggle camera mode"
         >
-
-<svg
-  viewBox="0 0 100 100"
-  style={{
-    width: "26px",
-    height: "26px",
-    filter: "drop-shadow(0 0 8px rgba(255,215,120,0.45))",
-  }}
->
-  {/* Dark Base */}
-  <circle
-    cx="50"
-    cy="50"
-    r="42"
-    fill="#09090B"
-    stroke="rgba(255,215,120,0.28)"
-    strokeWidth="3"
-  />
-
-  {/* Gold Ring */}
-  <circle
-    cx="50"
-    cy="50"
-    r="34"
-    fill="none"
-    stroke="#FFD76A"
-    strokeOpacity="0.75"
-    strokeWidth="2.5"
-  />
-
-  {/* Rotating Needle */}
-  <g
-    style={{
-      transform: `rotate(${userLocation?.heading || 0}deg)`,
-      transformOrigin: "50px 50px",
-      transition: "transform 0.12s linear",
-    }}
-  >
-    {/* Main Gold Needle */}
-    <path
-      d="M50 18 L61 50 L50 43 L39 50 Z"
-      fill="#FFD76A"
-    />
-
-    {/* Rear Needle */}
-    <path
-      d="M50 82 L57 50 L50 58 L43 50 Z"
-      fill="rgba(255,240,200,0.95)"
-    />
-
-    {/* Inner Glow */}
-    <circle
-      cx="50"
-      cy="50"
-      r="8"
-      fill="#FFD76A"
-    />
-
-    {/* Core */}
-    <circle
-      cx="50"
-      cy="50"
-      r="3"
-      fill="#09090B"
-    />
-  </g>
-
-  {/* North Indicator */}
-  <circle
-    cx="50"
-    cy="12"
-    r="3.5"
-    fill="#FF453A"
-  />
-</svg>
-
-</button> 
+          <LiveCompassIcon bearing={mapBearing} cameraMode={cameraMode} />
+        </button> 
 
 
 
@@ -1091,18 +1037,30 @@ showToast({
         className={`sos-btn ${isSOSActive ? "active" : ""}`}
         onClick={handleSOS}
       >
-        {/* 👇 Show icon ONLY when NOT active */}
-        {!isSOSActive && (
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
-            strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
-            style={{ width: 20, height: 20 }}>
-            <circle cx="12" cy="12" r="10" />
-            <line x1="12" y1="8" x2="12" y2="12" />
-            <line x1="12" y1="16" x2="12.01" y2="16" />
-          </svg>
+        {!isSOSActive ? (
+          <>
+            {/* Premium SOS warning icon */}
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"
+              style={{ width: 18, height: 18, flexShrink: 0 }}>
+              <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+              <line x1="12" y1="9" x2="12" y2="13" />
+              <line x1="12" y1="17" x2="12.01" y2="17" />
+            </svg>
+            <span>SOS</span>
+          </>
+        ) : (
+          <>
+            {/* Premium cancel X icon */}
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+              style={{ width: 16, height: 16, flexShrink: 0 }}>
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+            <span>CANCEL</span>
+          </>
         )}
-
-        <span>{isSOSActive ? "CANCEL" : "SOS"}</span>
       </button>
 
       {toast && (
