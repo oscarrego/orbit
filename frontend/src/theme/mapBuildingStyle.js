@@ -3,6 +3,11 @@ export const BUILDING_SOURCE_LAYER = "building";
 export const BUILDING_MIN_ZOOM = 13;
 export const LIGHT_BUILDING_COLOR = "#7a7979";
 
+const BUILDING_ID_NUMBER_EXPRESSION = [
+  "abs",
+  ["case", ["==", ["id"], null], 17, ["to-number", ["id"], 17]]
+];
+
 const DARK_BUILDING_COLOR_EXPRESSION = [
   "let",
   "height",
@@ -12,21 +17,16 @@ const DARK_BUILDING_COLOR_EXPRESSION = [
     ["linear"],
     ["var", "height"],
     0,
-    "#5f3424",
+    "#2b2f38",
     18,
-    "#7a432b",
+    "#2b2f38",
     45,
-    "#925431",
+    "#31353f",
     90,
-    "#a8663c",
+    "#353a44",
     160,
-    "#bd7b4a"
+    "#3a3f49"
   ]
-];
-
-const BUILDING_ID_NUMBER_EXPRESSION = [
-  "abs",
-  ["case", ["==", ["id"], null], 17, ["to-number", ["id"], 17]]
 ];
 
 const PROCEDURAL_BUILDING_HEIGHT_EXPRESSION = [
@@ -144,7 +144,7 @@ export const getBuildingLight = (themeId) =>
       }
     : {
         anchor: "viewport",
-        position: [1.1, 58, 42],
-        color: "#ffa55a",
-        intensity: 0.42
+        position: [1.35, 62, 48],
+        color: "#d8e4ff",
+        intensity: 0.34
       };

@@ -27,6 +27,48 @@ const getPersistentUser = () => {
   return { username: savedName, userId: savedId, avatarSeed: savedSeed || savedName };
 };
 
+const CAMERA_MODES = {
+  TOP: "top",
+  CINEMATIC: "cinematic",
+  IMMERSIVE: "immersive",
+};
+
+const getInitialTheme = () => {
+  const savedTheme = localStorage.getItem("theme");
+  return savedTheme === "dark" ? savedTheme : "dark";
+};
+
+const LIGHT_MODE_MAINTENANCE_MESSAGE =
+  "Light mode is currently undergoing improvements while we continue refining the cinematic dark-mode experience. It will return later.";
+
+const CameraModeIcon = ({ mode }) => {
+  if (mode === CAMERA_MODES.IMMERSIVE) {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 3l7 18-7-4-7 4 7-18z" />
+        <path d="M12 3v14" />
+        <path d="M8.5 18.5 12 17l3.5 1.5" />
+      </svg>
+    );
+  }
+
+  if (mode === CAMERA_MODES.CINEMATIC) {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3 10l9-5 9 5-9 5-9-5z" />
+        <path d="M3 14l9 5 9-5" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2V6z" />
+      <path d="M9 4v14M15 6v14" />
+    </svg>
+  );
+};
+
 function App() {
   const [users, setUsers] = useState([]);
   const [toast, setToast] = useState(null);
@@ -34,14 +76,14 @@ function App() {
   const [isSOSActive, setIsSOSActive] = useState(false);
   const [userLocation, setUserLocation] = useState(null);
     
-  const [theme, setTheme] = useState(localStorage.getItem("theme") || "dark");
+  const [theme, setTheme] = useState(getInitialTheme);
   const [isFollowing, setIsFollowing] = useState(true);
   const [fabOpen, setFabOpen] = useState(false);
   const [activePanel, setActivePanel] = useState(null); // 'chat', 'users', or null
   const [showProfile, setShowProfile] = useState(false);
   const [showCreateRoomModal, setShowCreateRoomModal] = useState(false);
   const [showEasterEgg, setShowEasterEgg] = useState(false);
-  const [is3DView, setIs3DView] = useState(false);
+  const [cameraMode, setCameraMode] = useState(CAMERA_MODES.CINEMATIC);
   const [isInvisible, setIsInvisible] = useState(() => localStorage.getItem("invisibleMode") === "true");
 
   // 🔑 Join-room passcode modal state
@@ -557,6 +599,19 @@ showToast({
   }
 };
 
+  const handleThemeToggle = () => {
+    if (theme === "dark") {
+      localStorage.setItem("theme", "dark");
+      showToast({
+        message: LIGHT_MODE_MAINTENANCE_MESSAGE,
+        type: "maintenance",
+      });
+      return;
+    }
+
+    setTheme("dark");
+  };
+
   return (
     <div style={{ width: "100vw", height: "100vh", position: "relative", overflow: "hidden" }} className={`${theme}-mode`}>
       <MapView 
@@ -569,8 +624,8 @@ showToast({
         onAutoDisableFollowing={handleAutoDisableFollowing}
         currentUserId={user.userId}
         sosAlerts={sosAlerts}
-        is3DView={is3DView}
-        setIs3DView={setIs3DView}
+        cameraMode={cameraMode}
+        setCameraMode={setCameraMode}
       />
 
       {/* 💬 CHAT PANEL (Mica Dark) */}
@@ -757,7 +812,7 @@ showToast({
         <div className="fab-actions">
           <button 
             className="control-btn" 
-            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            onClick={handleThemeToggle}
             title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
           >
             {theme === "dark" ? (
@@ -784,17 +839,7 @@ showToast({
             onClick={handleRecenter}
             title="Toggle camera mode"
           >
-            {is3DView ? (
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M3 10l9-5 9 5-9 5-9-5z" />
-                <path d="M3 14l9 5 9-5" />
-              </svg>
-            ) : (
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2V6z"/>
-                <path d="M9 4v14M15 6v14"/>
-              </svg>
-            )}
+            <CameraModeIcon mode={cameraMode} />
           </button>
 
           <button 
@@ -864,22 +909,12 @@ showToast({
           onClick={handleRecenter}
           title="Toggle camera mode"
         >
-          {is3DView ? (
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M3 10l9-5 9 5-9 5-9-5z" />
-              <path d="M3 14l9 5 9-5" />
-            </svg>
-          ) : (
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-  <path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2V6z"/>
-  <path d="M9 4v14M15 6v14"/>
-</svg>
-          )}
+          <CameraModeIcon mode={cameraMode} />
         </button>
 
         <button 
           className="control-btn" 
-          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+          onClick={handleThemeToggle}
           title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
         >
           {theme === "dark" ? (
@@ -1018,6 +1053,16 @@ showToast({
     <circle cx="12" cy="11" r="2" fill="white" />
   </svg>
 )}
+
+          {toast.type === "maintenance" && (
+            <svg className="icon" viewBox="0 0 24 24" fill="none">
+              <path d="M12 3v3" stroke="white" strokeWidth="2" strokeLinecap="round" />
+              <path d="M12 18v3" stroke="white" strokeWidth="2" strokeLinecap="round" />
+              <path d="M3 12h3" stroke="white" strokeWidth="2" strokeLinecap="round" />
+              <path d="M18 12h3" stroke="white" strokeWidth="2" strokeLinecap="round" />
+              <circle cx="12" cy="12" r="4" stroke="white" strokeWidth="2" />
+            </svg>
+          )}
 
           <span className="text">{toast.message}</span>
 

@@ -4,6 +4,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import { getBackgroundColor, getMapFilters } from "../theme/themeHelpers";
 import { customLightMapStyle } from "../theme/customLightMapStyle";
 import { BUILDING_LAYER_ID, BUILDING_MIN_ZOOM, getBuildingLight, getBuildingPaint } from "../theme/mapBuildingStyle";
+import { DARK_MAP_STYLE_URL, applyCinematicDarkMapStyle } from "../theme/cinematicDarkMapStyle";
 
 const MARKER_PALETTE = [
   "#FF3B30", // Red
@@ -43,7 +44,18 @@ const getDeterministicColor = (userId) => {
 };
 
 const decorationCache = new Map();
-const DARK_MAP_STYLE_URL = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
+
+const CAMERA_MODES = {
+  TOP: "top",
+  CINEMATIC: "cinematic",
+  IMMERSIVE: "immersive",
+};
+
+const getNextCameraMode = (mode) => {
+  if (mode === CAMERA_MODES.TOP) return CAMERA_MODES.CINEMATIC;
+  if (mode === CAMERA_MODES.CINEMATIC) return CAMERA_MODES.IMMERSIVE;
+  return CAMERA_MODES.TOP;
+};
 
 const cloneMapStyle = (style) =>
   typeof style === "string" ? style : JSON.parse(JSON.stringify(style));
@@ -93,6 +105,12 @@ const applyThemeToMap = (mapInstance, themeId) => {
   }
 
   applyBuildingLighting(mapInstance, themeId);
+
+  if (themeId === "dark") {
+    applyCinematicDarkMapStyle(mapInstance);
+  } else {
+    mapInstance.__orbitCinematicDarkApplied = false;
+  }
 };
 
 const getDecorations = (id) => {
@@ -236,7 +254,7 @@ const { r, g, b } = hexToRgb(color);
   loop();
 };
 
-const MapView = forwardRef(({ users, userLocation, theme, isFollowing, setIsFollowing, onAutoDisableFollowing, currentUserId, sosAlerts, is3DView, setIs3DView }, ref) => {
+const MapView = forwardRef(({ users, userLocation, theme, isFollowing, setIsFollowing, onAutoDisableFollowing, currentUserId, sosAlerts, cameraMode, setCameraMode }, ref) => {
   const mapContainer = useRef(null);
   const map = useRef(null);
   const markers = useRef({});
@@ -290,7 +308,11 @@ const MapView = forwardRef(({ users, userLocation, theme, isFollowing, setIsFoll
       if (onAutoDisableFollowingRef.current) onAutoDisableFollowingRef.current();
     });
 
-    map.current.on("error", (e) => console.error("MapLibre Error:", e));
+    map.current.on("error", (e) => {
+      const message = e?.error?.message || e?.message || "";
+      if (/abort|cancel/i.test(message)) return;
+      console.error("MapLibre Error:", message || e);
+    });
 
     return () => {
       map.current?.remove();
@@ -317,10 +339,11 @@ const MapView = forwardRef(({ users, userLocation, theme, isFollowing, setIsFoll
     handleRecenter: () => {
       if (map.current && userLocation) {
         const { lngOffset, latOffset } = getDecorations(currentUserId);
+        const nextCameraMode = getNextCameraMode(cameraMode);
 
 
 
-        if (is3DView) {
+        if (nextCameraMode === CAMERA_MODES.TOP) {
   // TOP VIEW
       map.current.easeTo({
         center: [userLocation.lng + lngOffset, userLocation.lat + latOffset],
@@ -330,7 +353,7 @@ const MapView = forwardRef(({ users, userLocation, theme, isFollowing, setIsFoll
         duration: 800,
         essential: true,
       });
-    } else {
+    } else if (nextCameraMode === CAMERA_MODES.CINEMATIC) {
       // 3D VIEW
       map.current.easeTo({
         center: [userLocation.lng + lngOffset, userLocation.lat + latOffset],
@@ -340,9 +363,19 @@ const MapView = forwardRef(({ users, userLocation, theme, isFollowing, setIsFoll
         duration: 800,
         essential: true,
       });
+    } else {
+      // IMMERSIVE VIEW
+      map.current.easeTo({
+        center: [userLocation.lng + lngOffset, userLocation.lat + latOffset],
+        zoom: 18.25,
+        pitch: 78,
+        bearing: userLocation.heading || 0,
+        duration: 1000,
+        essential: true,
+      });
     }
 
-    setIs3DView(prev => !prev);
+    setCameraMode(nextCameraMode);
 
 
 
@@ -431,7 +464,7 @@ const MapView = forwardRef(({ users, userLocation, theme, isFollowing, setIsFoll
         essential: true,
       });
     }
-  }, [userLocation, theme, isFollowing, currentUserId, is3DView]);
+  }, [userLocation, theme, isFollowing, currentUserId, cameraMode]);
 
   const add3D = () => {
     if (!map.current || !map.current.isStyleLoaded()) return;
