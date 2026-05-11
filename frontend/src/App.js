@@ -839,50 +839,79 @@ showToast({
             onClick={handleRecenter}
             title="Toggle camera mode"
           >
-            <svg
+<svg
   viewBox="0 0 100 100"
   style={{
-    width: "22px",
-    height: "22px",
-    transform: `rotate(${userLocation?.heading || 0}deg)`,
-    transition: "transform 0.4s ease-out",
+    width: "26px",
+    height: "26px",
+    filter: "drop-shadow(0 0 8px rgba(255,215,120,0.45))",
   }}
 >
-  {/* Outer Ring */}
+  {/* Dark Base */}
   <circle
     cx="50"
     cy="50"
     r="42"
-    stroke="rgba(255,215,120,0.7)"
-    strokeWidth="4"
-    fill="rgba(255,255,255,0.02)"
+    fill="#09090B"
+    stroke="rgba(255,215,120,0.28)"
+    strokeWidth="3"
   />
 
-  {/* Compass Needle */}
-  <path
-    d="M50 18 L58 50 L50 82 L42 50 Z"
-    fill="rgba(255,215,120,0.95)"
-  />
-
-  {/* Center Core */}
+  {/* Gold Ring */}
   <circle
     cx="50"
     cy="50"
-    r="6"
-    fill="rgba(255,255,255,0.95)"
+    r="34"
+    fill="none"
+    stroke="#FFD76A"
+    strokeOpacity="0.75"
+    strokeWidth="2.5"
   />
 
-  {/* North Mark */}
-  <text
-    x="50"
-    y="12"
-    textAnchor="middle"
-    fill="rgba(255,215,120,0.9)"
-    fontSize="10"
-    fontWeight="bold"
+  {/* Rotating Needle */}
+  <g
+    style={{
+      transform: `rotate(${userLocation?.heading || 0}deg)`,
+      transformOrigin: "50px 50px",
+      transition: "transform 0.12s linear",
+    }}
   >
-    N
-  </text>
+    {/* Main Gold Needle */}
+    <path
+      d="M50 18 L61 50 L50 43 L39 50 Z"
+      fill="#FFD76A"
+    />
+
+    {/* Rear Needle */}
+    <path
+      d="M50 82 L57 50 L50 58 L43 50 Z"
+      fill="rgba(255,240,200,0.95)"
+    />
+
+    {/* Inner Glow */}
+    <circle
+      cx="50"
+      cy="50"
+      r="8"
+      fill="#FFD76A"
+    />
+
+    {/* Core */}
+    <circle
+      cx="50"
+      cy="50"
+      r="3"
+      fill="#09090B"
+    />
+  </g>
+
+  {/* North Indicator */}
+  <circle
+    cx="50"
+    cy="12"
+    r="3.5"
+    fill="#FF453A"
+  />
 </svg>
           </button>
 
@@ -953,65 +982,82 @@ showToast({
           onClick={handleRecenter}
           title="Toggle camera mode"
         >
+
 <svg
   viewBox="0 0 100 100"
   style={{
-    width: "24px",
-    height: "24px",
-    filter: "drop-shadow(0 0 6px rgba(255,255,255,0.15))",
+    width: "26px",
+    height: "26px",
+    filter: "drop-shadow(0 0 8px rgba(255,215,120,0.45))",
   }}
 >
-  {/* Outer Ring */}
+  {/* Dark Base */}
   <circle
     cx="50"
     cy="50"
-    r="44"
-    fill="rgba(0,0,0,0.45)"
-    stroke="rgba(255,255,255,0.18)"
+    r="42"
+    fill="#09090B"
+    stroke="rgba(255,215,120,0.28)"
     strokeWidth="3"
   />
 
-  {/* North Marker */}
-  <text
-    x="50"
-    y="18"
-    textAnchor="middle"
-    fill="#ff453a"
-    fontSize="11"
-    fontWeight="bold"
-  >
-    N
-  </text>
+  {/* Gold Ring */}
+  <circle
+    cx="50"
+    cy="50"
+    r="34"
+    fill="none"
+    stroke="#FFD76A"
+    strokeOpacity="0.75"
+    strokeWidth="2.5"
+  />
 
-  {/* Compass Needle */}
+  {/* Rotating Needle */}
   <g
     style={{
       transform: `rotate(${userLocation?.heading || 0}deg)`,
       transformOrigin: "50px 50px",
-      transition: "transform 0.25s linear",
+      transition: "transform 0.12s linear",
     }}
   >
-    {/* Red Top */}
-    <polygon
-      points="50,18 56,50 50,42 44,50"
-      fill="#ff453a"
+    {/* Main Gold Needle */}
+    <path
+      d="M50 18 L61 50 L50 43 L39 50 Z"
+      fill="#FFD76A"
     />
 
-    {/* White Bottom */}
-    <polygon
-      points="50,82 56,50 50,58 44,50"
-      fill="rgba(255,255,255,0.95)"
+    {/* Rear Needle */}
+    <path
+      d="M50 82 L57 50 L50 58 L43 50 Z"
+      fill="rgba(255,240,200,0.95)"
     />
 
-    {/* Center Dot */}
+    {/* Inner Glow */}
     <circle
       cx="50"
       cy="50"
-      r="4"
-      fill="white"
+      r="8"
+      fill="#FFD76A"
+    />
+
+    {/* Core */}
+    <circle
+      cx="50"
+      cy="50"
+      r="3"
+      fill="#09090B"
     />
   </g>
+
+  {/* North Indicator */}
+  <circle
+    cx="50"
+    cy="12"
+    r="3.5"
+    fill="#FF453A"
+  />
 </svg>
+
 </button> 
 
 
