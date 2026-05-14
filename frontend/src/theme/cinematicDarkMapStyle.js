@@ -243,17 +243,17 @@ const cinematicHighwayLayers = [
 // ── Terrain & Environment ─────────────────────────────────────────────────────
 // Key principle: avoid pure black (#000). Use very dark warm/cool greys with
 // subtle saturation so depth gradients and atmospheric perspective read correctly.
-const styleGroundAndWater = (mapInstance) => {
-  // Base background — deep warm-grey, not black
-  setPaint(mapInstance, "background", "background-color", "#1c2024");
+const styleGroundAndWater = (mapInstance, env) => {
+  const bg=env?.background||"#1c2024", lcL=env?.landcoverLow||"#20242a", lcH=env?.landcoverHigh||"#343a43";
+  const rlL=env?.residentialLow||"#232830", rlH=env?.residentialHigh||"#3a414b", lu=env?.landuse||"#333941";
+  const pk=env?.park||"#263628", wL=env?.waterLow||"#101b24", wH=env?.waterHigh||"#203746";
+  const wO=env?.waterOutline||"#2b4658", wS=env?.waterShadow||"#25465a", ww=env?.waterway||"#2b5668";
+  setPaint(mapInstance, "background", "background-color", bg);
 
   // Landcover — subtly visible, layered with depth
   setPaint(mapInstance, "landcover", "fill-color", [
     "interpolate", ["linear"], ["zoom"],
-    6,  "#20242a",
-    10, "#252a31",
-    13, "#2c323a",
-    16, "#343a43"
+    6, lcL, 10, lcL, 13, lcL, 16, lcH
   ]);
   setPaint(mapInstance, "landcover", "fill-opacity", [
     "interpolate", ["linear"], ["zoom"],
@@ -263,9 +263,7 @@ const styleGroundAndWater = (mapInstance) => {
   // Residential areas — slightly lighter than base, warm grey
   setPaint(mapInstance, "landuse_residential", "fill-color", [
     "interpolate", ["linear"], ["zoom"],
-    6,  "#232830",
-    12, "#303640",
-    16, "#3a414b"
+    6, rlL, 12, rlL, 16, rlH
   ]);
   setPaint(mapInstance, "landuse_residential", "fill-opacity", [
     "interpolate", ["linear"], ["zoom"],
@@ -273,33 +271,30 @@ const styleGroundAndWater = (mapInstance) => {
   ]);
 
   // General landuse — warm-toned dark grey
-  setPaint(mapInstance, "landuse", "fill-color", "#333941");
+  setPaint(mapInstance, "landuse", "fill-color", lu);
   setPaint(mapInstance, "landuse", "fill-opacity", 0.82);
 
   // Parks — dark muted green, not pitch black
-  setPaint(mapInstance, "park_national_park", "fill-color", "#263628");
-  setPaint(mapInstance, "park_nature_reserve", "fill-color", "#263628");
+  setPaint(mapInstance, "park_national_park", "fill-color", pk);
+  setPaint(mapInstance, "park_nature_reserve", "fill-color", pk);
 
   // Water — deep atmospheric teal, no pure black
   setPaint(mapInstance, "water", "fill-color", [
     "interpolate", ["linear"], ["zoom"],
-    0,  "#101b24",
-    8,  "#142331",
-    12, "#182b3b",
-    16, "#203746"
+    0, wL, 8, wL, 12, wL, 16, wH
   ]);
-  setPaint(mapInstance, "water", "fill-outline-color", "#2b4658");
+  setPaint(mapInstance, "water", "fill-outline-color", wO);
   setPaint(mapInstance, "water", "fill-opacity", 1);
 
   // Water shadow — soft atmospheric glow at edges
-  setPaint(mapInstance, "water_shadow", "fill-color", "#25465a");
+  setPaint(mapInstance, "water_shadow", "fill-color", wS);
   setPaint(mapInstance, "water_shadow", "fill-opacity", [
     "interpolate", ["linear"], ["zoom"],
     8, 0.22, 13, 0.44, 17, 0.66
   ]);
 
   // Waterways — atmospheric teal-blue
-  setPaint(mapInstance, "waterway", "line-color", "#2b5668");
+  setPaint(mapInstance, "waterway", "line-color", ww);
   setPaint(mapInstance, "waterway", "line-opacity", 0.84);
   setPaint(mapInstance, "waterway", "line-width", [
     "interpolate", ["exponential", 1.3], ["zoom"],
@@ -437,16 +432,21 @@ const addCinematicRoadLayers = (mapInstance) => {
   cinematicHighwayLayers.forEach((layer) => addLineLayer(mapInstance, layer, beforeLayerId));
 };
 
-export const applyCinematicDarkMapStyle = (mapInstance) => {
+export const applyCinematicDarkMapStyle = (mapInstance, env) => {
   if (!mapInstance || !mapInstance.isStyleLoaded()) return;
 
   const cinematicLayersReady = cinematicHighwayLayers.every((layer) => mapInstance.getLayer(layer.id));
-  if (mapInstance.__orbitCinematicDarkApplied && cinematicLayersReady) return;
+  if (mapInstance.__orbitCinematicDarkApplied && cinematicLayersReady && !env) return;
 
-  styleGroundAndWater(mapInstance);
+  styleGroundAndWater(mapInstance, env);
   styleRoadHierarchy(mapInstance);
   styleLabels(mapInstance);
   addCinematicRoadLayers(mapInstance);
 
   mapInstance.__orbitCinematicDarkApplied = true;
+};
+
+export const applyEnvironmentToMap = (mapInstance, env) => {
+  if (!mapInstance || !mapInstance.isStyleLoaded()) return;
+  styleGroundAndWater(mapInstance, env);
 };

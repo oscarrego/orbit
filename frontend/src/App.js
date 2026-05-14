@@ -63,97 +63,51 @@ const CameraModeIcon = ({ mode }) => {
   );
 };
 
-// ── Premium Live Compass Icon ─────────────────────────────────────────────────
+// ── Watch-face compass button icon (matches reference image) ──────────────────
 let _compassInstanceId = 0;
-const LiveCompassIcon = ({ bearing, cameraMode }) => {
-  // Stable instance ID (created once per component mount)
+const LiveCompassIcon = ({ bearing, compassHeading, sensorActive }) => {
   const idRef = useRef(null);
-  if (idRef.current === null) {
-    idRef.current = ++_compassInstanceId;
-  }
+  if (idRef.current === null) idRef.current = ++_compassInstanceId;
   const uid = idRef.current;
-
-  // Needle counter-rotates so North always points up
-  const needleAngle = -bearing;
-
-  const modeColor =
-    cameraMode === CAMERA_MODES.IMMERSIVE ? "#c084fc" :
-    cameraMode === CAMERA_MODES.CINEMATIC ? "#FFD76A" :
-    "#94a3b8";
-  const modeGlow =
-    cameraMode === CAMERA_MODES.IMMERSIVE ? "rgba(192,132,252,0.55)" :
-    cameraMode === CAMERA_MODES.CINEMATIC ? "rgba(255,215,100,0.55)" :
-    "rgba(148,163,184,0.4)";
-
-  const bgId   = `cBg-${uid}`;
-  const glowId = `cGlow-${uid}`;
-
+  const needleAngle = sensorActive ? -compassHeading : -bearing;
+  const ticks = Array.from({ length: 72 }, (_, i) => i * 5);
   return (
-    <svg
-      viewBox="0 0 100 100"
-      style={{
-        width: "26px",
-        height: "26px",
-        filter: `drop-shadow(0 0 7px ${modeGlow})`,
-        display: "block",
-      }}
-    >
+    <svg viewBox="0 0 100 100" style={{ width: 32, height: 32, display: 'block' }}>
       <defs>
-        <radialGradient id={bgId} cx="50%" cy="40%" r="60%">
-          <stop offset="0%" stopColor="#1a1b1c" />
-          <stop offset="100%" stopColor="#09090B" />
+        <radialGradient id={`cb-${uid}`} cx="50%" cy="45%" r="58%">
+          <stop offset="0%" stopColor="#2a2b2c" />
+          <stop offset="100%" stopColor="#080808" />
         </radialGradient>
-        <radialGradient id={glowId} cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor={modeColor} stopOpacity="0.18" />
-          <stop offset="100%" stopColor={modeColor} stopOpacity="0" />
-        </radialGradient>
+        <linearGradient id={`cr-${uid}`} x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="rgba(255,255,255,0.35)" />
+          <stop offset="100%" stopColor="rgba(255,255,255,0.02)" />
+        </linearGradient>
       </defs>
-
-      {/* Base disc */}
-      <circle cx="50" cy="50" r="44" fill={`url(#${bgId})`} />
-
-      {/* Soft inner glow */}
-      <circle cx="50" cy="50" r="40" fill={`url(#${glowId})`} />
-
-      {/* Outer ring */}
-      <circle cx="50" cy="50" r="44" fill="none"
-        stroke={modeColor} strokeOpacity="0.22" strokeWidth="2.5" />
-
-      {/* Cardinal tick marks */}
-      {[0, 90, 180, 270].map((deg) => {
-        const r1 = 38, r2 = 43;
-        const rad = (deg - 90) * Math.PI / 180;
-        return (
-          <line key={deg}
-            x1={50 + Math.cos(rad) * r1} y1={50 + Math.sin(rad) * r1}
-            x2={50 + Math.cos(rad) * r2} y2={50 + Math.sin(rad) * r2}
-            stroke={modeColor} strokeOpacity="0.55" strokeWidth="2" strokeLinecap="round"
-          />
-        );
-      })}
-
-      {/* Needle — rotates with map bearing */}
-      <g
-        style={{
-          transform: `rotate(${needleAngle}deg)`,
-          transformOrigin: "50px 50px",
-          transition: "transform 0.18s cubic-bezier(0.25, 0.46, 0.45, 0.94)",
-        }}
-      >
-        {/* North blade */}
-        <path d="M50 16 L56.5 50 L50 44 L43.5 50 Z" fill={modeColor} opacity="0.95" />
-        {/* South blade */}
-        <path d="M50 84 L56.5 50 L50 57 L43.5 50 Z" fill="rgba(230,230,240,0.55)" />
-        {/* Center pivot */}
-        <circle cx="50" cy="50" r="5.5" fill={modeColor} opacity="0.9" />
-        <circle cx="50" cy="50" r="2.5" fill="#09090B" />
+      <circle cx="50" cy="50" r="48" fill={`url(#cb-${uid})`} />
+      <circle cx="50" cy="50" r="47.5" fill="none" stroke={`url(#cr-${uid})`} strokeWidth="1.5" />
+      <circle cx="50" cy="50" r="38" fill="none" stroke="rgba(255,255,255,0.10)" strokeWidth="0.6" />
+      <g style={{ transform: `rotate(${needleAngle}deg)`, transformOrigin: '50px 50px', transition: sensorActive ? 'transform 80ms linear' : 'transform 150ms ease' }}>
+        {ticks.map((deg) => {
+          const isCard = deg % 90 === 0, isMaj = deg % 30 === 0;
+          const r1 = isCard ? 33 : isMaj ? 35 : 37, r2 = 44;
+          const rad = (deg - 90) * Math.PI / 180;
+          return <line key={deg} x1={50+Math.cos(rad)*r1} y1={50+Math.sin(rad)*r1} x2={50+Math.cos(rad)*r2} y2={50+Math.sin(rad)*r2} stroke={isCard ? 'rgba(255,255,255,0.85)' : isMaj ? 'rgba(255,255,255,0.45)' : 'rgba(255,255,255,0.22)'} strokeWidth={isCard ? 1.4 : isMaj ? 0.9 : 0.55} strokeLinecap="round" />;
+        })}
+        {[{l:'N',d:0},{l:'E',d:90},{l:'S',d:180},{l:'W',d:270}].map(({l,d}) => {
+          const rad=(d-90)*Math.PI/180, r=27;
+          return <text key={l} x={50+Math.cos(rad)*r} y={50+Math.sin(rad)*r} textAnchor="middle" dominantBaseline="central" fill={l==='N'?'#ff3b30':'rgba(255,255,255,0.82)'} fontSize="8" fontWeight="700">{l}</text>;
+        })}
+        <path d="M50 13 L54 42 L50 39 L46 42 Z" fill="#ff3b30" opacity="0.96" />
+        <path d="M50 87 L54 58 L50 61 L46 58 Z" fill="rgba(230,230,235,0.60)" />
       </g>
-
-      {/* North indicator dot (static) */}
-      <circle cx="50" cy="9" r="3.2" fill="#FF453A" opacity="0.9" />
+      <line x1="50" y1="2" x2="50" y2="10" stroke="rgba(255,255,255,0.28)" strokeWidth="1.2" strokeLinecap="round" />
+      <circle cx="50" cy="50" r="6" fill="rgba(255,255,255,0.12)" />
+      <circle cx="50" cy="50" r="3" fill="rgba(255,255,255,0.88)" />
+      <circle cx="50" cy="5" r="2.6" fill="#ff3b30" opacity="0.9" />
     </svg>
   );
 };
+
 
 const COMPASS_TICK_DEGREES = Array.from({ length: 72 }, (_, index) => index * 5);
 const COMPASS_NUMERAL_DEGREES = Array.from({ length: 12 }, (_, index) => index * 30);
@@ -303,46 +257,47 @@ const FullscreenCompassDial = ({ bearing }) => {
   );
 };
 
-const CompassFullscreen = ({ bearing, userLocation, cameraMode, onClose }) => {
-  const heading = normalizeDegrees(bearing);
-  const cardinal = getCardinalDirection(heading);
+const CompassFullscreen = ({ bearing, compassHeading, sensorActive, sensorStatus, userLocation, cameraMode, onClose }) => {
+  // Use real sensor heading when available, else fall back to map bearing
+  const displayHeading = sensorActive ? normalizeDegrees(compassHeading) : normalizeDegrees(bearing);
+  const cardinal = getCardinalDirection(displayHeading);
   const latText = userLocation ? formatCoordinate(userLocation.lat, "N", "S") : "--";
   const lngText = userLocation ? formatCoordinate(userLocation.lng, "E", "W") : "--";
   const elevation = formatElevation(userLocation?.altitude);
   const cameraLabel =
     cameraMode === CAMERA_MODES.IMMERSIVE ? "IMMERSIVE" :
-    cameraMode === CAMERA_MODES.CINEMATIC ? "CINEMATIC" :
-    "OVERVIEW";
+    cameraMode === CAMERA_MODES.CINEMATIC ? "CINEMATIC" : "OVERVIEW";
 
   return (
     <div className="compass-fullscreen" role="dialog" aria-modal="true" aria-label="Compass" onClick={onClose}>
-      <div className="compass-fullscreen-shell" onClick={(event) => event.stopPropagation()}>
+      <div className="compass-fullscreen-shell" onClick={(e) => e.stopPropagation()}>
         <button className="compass-close-btn" type="button" onClick={onClose} aria-label="Close compass">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
             <line x1="6" y1="6" x2="18" y2="18" />
             <line x1="18" y1="6" x2="6" y2="18" />
           </svg>
         </button>
-
         <div className="compass-status-row">
           <span>ORBIT NAV</span>
-          <span>{cameraLabel}</span>
+          <span>{sensorActive ? '● LIVE' : cameraLabel}</span>
         </div>
-
         <div className="compass-hero-dial">
-          <FullscreenCompassDial bearing={bearing} />
+          <FullscreenCompassDial bearing={displayHeading} />
         </div>
-
         <div className="compass-bearing-readout">
-          <span className="compass-bearing-number">{heading}</span>
+          <span className="compass-bearing-number">{displayHeading}</span>
           <span className="compass-degree-mark">{"\u00b0"}</span>
           <span className="compass-cardinal-mark">{cardinal}</span>
         </div>
-
         <div className="compass-coordinate-readout">
           <span>{latText} {lngText}</span>
           <span>{elevation}</span>
         </div>
+        {sensorStatus && (
+          <div style={{ marginTop: 10, fontSize: 11, color: 'rgba(255,255,255,0.38)', textAlign: 'center', letterSpacing: '0.8px' }}>
+            {sensorStatus}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -358,7 +313,7 @@ function App() {
   const theme = DARK_THEME_ID;
   const [isFollowing, setIsFollowing] = useState(true);
   const [fabOpen, setFabOpen] = useState(false);
-  const [activePanel, setActivePanel] = useState(null); // 'chat', 'users', or null
+  const [activePanel, setActivePanel] = useState(null);
   const [showProfile, setShowProfile] = useState(false);
   const [showCreateRoomModal, setShowCreateRoomModal] = useState(false);
   const [showEasterEgg, setShowEasterEgg] = useState(false);
@@ -366,6 +321,10 @@ function App() {
   const [cameraMode, setCameraMode] = useState(CAMERA_MODES.CINEMATIC);
   const [mapBearing, setMapBearing] = useState(0);
   const [isInvisible, setIsInvisible] = useState(() => localStorage.getItem("invisibleMode") === "true");
+  const [compassHeading, setCompassHeading] = useState(0);
+  const [sensorActive, setSensorActive] = useState(false);
+  const [sensorStatus, setSensorStatus] = useState('');
+  const compassFilterRef = useRef(0);
 
   // 🔑 Join-room passcode modal state
   const [joinModal, setJoinModal] = useState(null);  // null | { roomName, loading, error }
@@ -864,6 +823,50 @@ showToast({
     }, 5000);
   };
 
+  // 🧭 Device orientation / compass sensor
+  useEffect(() => {
+    const ALPHA = 0.15; // low-pass smoothing
+    const handleOrientation = (e) => {
+      let heading = null;
+      if (e.webkitCompassHeading != null) {
+        heading = e.webkitCompassHeading; // iOS
+      } else if (e.absolute && e.alpha != null) {
+        heading = 360 - e.alpha; // Android absolute
+      } else if (e.alpha != null) {
+        heading = 360 - e.alpha; // fallback
+      }
+      if (heading == null) return;
+      compassFilterRef.current = compassFilterRef.current * (1 - ALPHA) + heading * ALPHA;
+      setCompassHeading(Math.round(compassFilterRef.current));
+      setSensorActive(true);
+      setSensorStatus('');
+    };
+
+    const tryListen = () => {
+      window.addEventListener('deviceorientationabsolute', handleOrientation, true);
+      window.addEventListener('deviceorientation', handleOrientation, true);
+    };
+
+    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+      // iOS 13+
+      DeviceOrientationEvent.requestPermission()
+        .then(state => {
+          if (state === 'granted') { tryListen(); setSensorStatus(''); }
+          else setSensorStatus('SENSOR PERMISSION DENIED');
+        })
+        .catch(() => setSensorStatus('SENSOR UNAVAILABLE'));
+    } else if (typeof DeviceOrientationEvent !== 'undefined') {
+      tryListen();
+    } else {
+      setSensorStatus('NO SENSOR — SHOWING MAP BEARING');
+    }
+
+    return () => {
+      window.removeEventListener('deviceorientationabsolute', handleOrientation, true);
+      window.removeEventListener('deviceorientation', handleOrientation, true);
+    };
+  }, []);
+
   // 🛸 If no username, show Login Page
   const handleOpenCompass = () => {
     setIsCompassOpen(true);
@@ -944,6 +947,9 @@ showToast({
       {isCompassOpen && (
         <CompassFullscreen
           bearing={mapBearing}
+          compassHeading={compassHeading}
+          sensorActive={sensorActive}
+          sensorStatus={sensorStatus}
           userLocation={userLocation}
           cameraMode={cameraMode}
           onClose={handleCloseCompass}
@@ -1137,7 +1143,7 @@ showToast({
             onClick={handleOpenCompass}
             title="Open compass"
           >
-            <LiveCompassIcon bearing={mapBearing} cameraMode={cameraMode} />
+            <LiveCompassIcon bearing={mapBearing} compassHeading={compassHeading} sensorActive={sensorActive} />
           </button>
 
           <button 
@@ -1225,7 +1231,7 @@ showToast({
           onClick={handleOpenCompass}
           title="Open compass"
         >
-          <LiveCompassIcon bearing={mapBearing} cameraMode={cameraMode} />
+          <LiveCompassIcon bearing={mapBearing} compassHeading={compassHeading} sensorActive={sensorActive} />
         </button>
       </div>
 

@@ -375,19 +375,23 @@ const getSkyscraperWindowBandLayer = (
   };
 };
 
-export const getBuildingPaint = () => ({
-  "fill-extrusion-color": cloneExpression(DARK_BUILDING_COLOR_EXPRESSION),
-  "fill-extrusion-height": cloneExpression(BUILDING_HEIGHT_EXPRESSION),
-  "fill-extrusion-base": cloneExpression(BUILDING_BASE_EXPRESSION),
-  "fill-extrusion-opacity": cloneExpression(BUILDING_OPACITY_EXPRESSION),
-  "fill-extrusion-vertical-gradient": true
-});
+export const getBuildingPaint = (themeId, env) => {
+  const dayFactor = env?.dayFactor ?? 0;
+  const dayExpr = ["let","height",["max",10,["to-number",["get","render_height"],24]],"tone",["%",["abs",["case",["==",["id"],null],17,["to-number",["id"],17]]],6],["case",["<",["var","tone"],2],["interpolate",["linear"],["var","height"],0,"#c4b8a8",22,"#bfb2a0",55,"#b8aa98",105,"#ae9f8c",180,"#a09080"],["<",["var","tone"],4],["interpolate",["linear"],["var","height"],0,"#c2b6a6",22,"#bcaf9d",55,"#b6a895",105,"#ac9d89",180,"#9e8e7c"],["interpolate",["linear"],["var","height"],0,"#c0b4a4",22,"#bab19e",55,"#b4a796",105,"#aa9c88",180,"#9d8d7b"]]];
+  return {
+    "fill-extrusion-color": cloneExpression(dayFactor > 0.5 ? dayExpr : DARK_BUILDING_COLOR_EXPRESSION),
+    "fill-extrusion-height": cloneExpression(BUILDING_HEIGHT_EXPRESSION),
+    "fill-extrusion-base": cloneExpression(BUILDING_BASE_EXPRESSION),
+    "fill-extrusion-opacity": cloneExpression(BUILDING_OPACITY_EXPRESSION),
+    "fill-extrusion-vertical-gradient": true
+  };
+};
 
-export const getBuildingLight = () => ({
+export const getBuildingLight = (themeId, env) => ({
   anchor: "viewport",
   position: [1.45, 50, 52],
-  color: "#e5e9f1",
-  intensity: 0.54
+  color: env?.buildingLightColor || "#e5e9f1",
+  intensity: env?.buildingLightIntensity ?? 0.54
 });
 
 export const getBuildingAccentLayers = (themeId, source, sourceLayer, baseFilter) => {

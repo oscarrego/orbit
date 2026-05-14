@@ -10,7 +10,8 @@ import {
   getBuildingLight,
   getBuildingPaint
 } from "../theme/mapBuildingStyle";
-import { DARK_MAP_STYLE_URL, applyCinematicDarkMapStyle } from "../theme/cinematicDarkMapStyle";
+import { DARK_MAP_STYLE_URL, applyCinematicDarkMapStyle, applyEnvironmentToMap } from "../theme/cinematicDarkMapStyle";
+import { getDayFactor, getEnvironmentValues, interpolateSkyStyle, DAY_SKY_STYLES } from "../theme/environmentSystem";
 
 const MARKER_PALETTE = [
   "#FF3B30", "#FF9500", "#FFCC00", "#34C759",
@@ -98,16 +99,49 @@ const IMMERSIVE_SKY_STYLE = {
   "atmosphere-blend": 0.28
 };
 
-const getSkyStyleForMode = (cameraMode) => {
-  if (cameraMode === CAMERA_MODES.IMMERSIVE)  return cloneMapStyle(IMMERSIVE_SKY_STYLE);
-  if (cameraMode === CAMERA_MODES.CINEMATIC)  return cloneMapStyle(CINEMATIC_SKY_STYLE);
-  return cloneMapStyle(TOP_SKY_STYLE);
+const NIGHT_SKY_STYLES = {
+  top: {
+    "sky-color":        "rgba(14, 16, 22, 0.0)",
+    "horizon-color":    "rgba(18, 20, 28, 0.0)",
+    "fog-color":        "rgba(14, 16, 22, 0.0)",
+    "fog-ground-blend": 1,
+    "horizon-fog-blend":1,
+    "sky-horizon-blend":1,
+    "atmosphere-blend": 0
+  },
+  cinematic: {
+    "sky-color":        "rgba(12, 14, 20, 0.88)",
+    "horizon-color":    "rgba(32, 30, 24, 0.72)",
+    "fog-color":        "rgba(24, 22, 18, 0.54)",
+    "fog-ground-blend": 0.82,
+    "horizon-fog-blend":0.88,
+    "sky-horizon-blend":0.78,
+    "atmosphere-blend": 0.18
+  },
+  immersive: {
+    "sky-color":        "rgba(10, 12, 18, 0.94)",
+    "horizon-color":    "rgba(38, 34, 26, 0.80)",
+    "fog-color":        "rgba(32, 28, 22, 0.64)",
+    "fog-ground-blend": 0.76,
+    "horizon-fog-blend":0.90,
+    "sky-horizon-blend":0.82,
+    "atmosphere-blend": 0.28
+  },
 };
 
-const applyCameraAtmosphere = (mapInstance, cameraMode) => {
+const getSkyStyleForMode = (cameraMode, dayFactor = 0) => {
+  const key = cameraMode === CAMERA_MODES.IMMERSIVE ? "immersive" :
+              cameraMode === CAMERA_MODES.CINEMATIC  ? "cinematic" : "top";
+  const night = NIGHT_SKY_STYLES[key];
+  const day   = DAY_SKY_STYLES[key];
+  if (!day || dayFactor === 0) return cloneMapStyle(night);
+  return interpolateSkyStyle(night, day, dayFactor);
+};
+
+const applyCameraAtmosphere = (mapInstance, cameraMode, dayFactor = 0) => {
   if (!mapInstance?.setSky) return;
   try {
-    mapInstance.setSky(getSkyStyleForMode(cameraMode), { validate: false });
+    mapInstance.setSky(getSkyStyleForMode(cameraMode, dayFactor), { validate: false });
   } catch (error) {
     console.warn("Unable to apply camera atmosphere:", error);
   }
@@ -123,22 +157,22 @@ const isBuildingSourceLayer = (layer) =>
       layer["source-layer"].toLowerCase().includes("building")
   );
 
-const applyBuildingLighting = (mapInstance, themeId) => {
+const applyBuildingLighting = (mapInstance, themeId, env) => {
   try {
-    mapInstance.setLight(getBuildingLight(themeId));
+    mapInstance.setLight(getBuildingLight(themeId, env));
   } catch (error) {
     console.warn("Unable to apply building lighting:", error);
   }
 };
 
-const applyBuildingPaint = (mapInstance, layerId, themeId) => {
+const applyBuildingPaint = (mapInstance, layerId, themeId, env) => {
   if (!mapInstance.getLayer(layerId)) return;
-  const paint = getBuildingPaint(themeId);
+  const paint = getBuildingPaint(themeId, env);
   Object.entries(paint).forEach(([property, value]) => {
     mapInstance.setPaintProperty(layerId, property, value);
   });
   mapInstance.setLayoutProperty(layerId, "visibility", "visible");
-  applyBuildingLighting(mapInstance, themeId);
+  applyBuildingLighting(mapInstance, themeId, env);
 };
 
 const removeBuildingAccentLayers = (mapInstance) => {
@@ -179,7 +213,7 @@ const syncBuildingAccentLayers = (mapInstance, source, sourceLayer, baseFilter, 
   });
 };
 
-const applyThemeToMap = (mapInstance, themeId, cameraMode) => {
+const applyThemeToMap = (mapInstance, themeId, cameraMode, env) => {
   if (!mapInstance || !mapInstance.isStyleLoaded()) return;
 
   const bgColor = getBackgroundColor(themeId);
@@ -192,11 +226,11 @@ const applyThemeToMap = (mapInstance, themeId, cameraMode) => {
     container.style.backgroundColor = bgColor;
   }
 
-  applyBuildingLighting(mapInstance, themeId);
+  applyBuildingLighting(mapInstance, themeId, env);
 
-  applyCinematicDarkMapStyle(mapInstance);
+  applyCinematicDarkMapStyle(mapInstance, env);
 
-  applyCameraAtmosphere(mapInstance, cameraMode);
+  applyCameraAtmosphere(mapInstance, cameraMode, env?.dayFactor ?? 0);
 };
 
 const getDecorations = (id) => {
@@ -368,6 +402,7 @@ const MapView = forwardRef(({
   const sosMarkers = useRef({});
   const userMarker = useRef(null);
   const initialCenterSet = useRef(false);
+  const envRef = useRef(getEnvironmentValues(getDayFactor()));
 
   const themeRef = useRef(theme);
   const cameraModeRef = useRef(cameraMode);
@@ -377,6 +412,21 @@ const MapView = forwardRef(({
     onAutoDisableFollowingRef.current = onAutoDisableFollowing;
   }, [onAutoDisableFollowing]);
 
+  // Environment tick - smooth day/night shift every 60s
+  useEffect(() => {
+    const tick = () => {
+      const env = getEnvironmentValues(getDayFactor());
+      envRef.current = env;
+      if (map.current && map.current.isStyleLoaded()) {
+        applyEnvironmentToMap(map.current, env);
+        applyBuildingLighting(map.current, themeRef.current, env);
+        applyCameraAtmosphere(map.current, cameraModeRef.current, env.dayFactor);
+      }
+    };
+    tick();
+    const id = setInterval(tick, 60000);
+    return () => clearInterval(id);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (map.current) return;
 
@@ -393,7 +443,7 @@ const MapView = forwardRef(({
 
     // 🏗️ Reliable layer restoration
     const restoreMapLayers = () => {
-      applyThemeToMap(map.current, themeRef.current, cameraModeRef.current);
+      applyThemeToMap(map.current, themeRef.current, cameraModeRef.current, envRef.current);
       add3D();
     };
 
@@ -435,7 +485,7 @@ const MapView = forwardRef(({
       map.current.setStyle(getMapStyleForTheme(theme));
       prevTheme.current = theme;
     } else if (map.current.isStyleLoaded()) {
-      applyThemeToMap(map.current, theme, cameraModeRef.current);
+      applyThemeToMap(map.current, theme, cameraModeRef.current, envRef.current);
       add3D();
     }
   }, [theme]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -443,7 +493,7 @@ const MapView = forwardRef(({
   useEffect(() => {
     cameraModeRef.current = cameraMode;
     if (map.current && map.current.isStyleLoaded()) {
-      applyCameraAtmosphere(map.current, cameraMode, themeRef.current);
+      applyCameraAtmosphere(map.current, cameraMode, envRef.current?.dayFactor ?? 0);
     }
   }, [cameraMode]);
 
