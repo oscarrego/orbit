@@ -2,7 +2,6 @@ import { useEffect, useRef, forwardRef, useImperativeHandle } from "react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { getBackgroundColor, getMapFilters } from "../theme/themeHelpers";
-import { customLightMapStyle } from "../theme/customLightMapStyle";
 import {
   BUILDING_ACCENT_LAYER_IDS,
   BUILDING_LAYER_ID,
@@ -14,16 +13,9 @@ import {
 import { DARK_MAP_STYLE_URL, applyCinematicDarkMapStyle } from "../theme/cinematicDarkMapStyle";
 
 const MARKER_PALETTE = [
-  "#FF3B30", // Red
-  "#FF9500", // Orange
-  "#FFCC00", // Yellow
-  "#34C759", // Green
-  "#5AC8FA", // Light Blue
-  "#007AFF", // Blue
-  "#5856D6", // Purple
-  "#FF2D55", // Pink
-  "#AF52DE", // Indigo
-  "#FF6B6B", // Coral
+  "#FF3B30", "#FF9500", "#FFCC00", "#34C759",
+  "#5AC8FA", "#007AFF", "#5856D6", "#FF2D55",
+  "#AF52DE", "#FF6B6B",
 ];
 
 const hashString = (str) => {
@@ -38,7 +30,7 @@ const hashString = (str) => {
 const getDeterministicOffset = (userId) => {
   const hash = hashString(userId);
   const angle = (hash % 360) * (Math.PI / 180);
-  const radius = 0.00003; // ~3 meters
+  const radius = 0.00003;
   return {
     lngOffset: Math.cos(angle) * radius,
     latOffset: Math.sin(angle) * radius,
@@ -67,9 +59,15 @@ const getNextCameraMode = (mode) => {
 const cloneMapStyle = (style) =>
   typeof style === "string" ? style : JSON.parse(JSON.stringify(style));
 
+// ── Sky & Atmosphere presets ─────────────────────────────────────────────────
+//
+// Design intent: cloudy urban night — overcast cloud deck trapping city glow,
+// no stars, no sci-fi. The horizon should feel like a distant metropolitan
+// skyline viewed through humid air rather than pure void.
+//
 // TOP mode: minimal atmosphere — almost clean for overview readability
 const TOP_SKY_STYLE = {
-  "sky-color":        "rgba(14, 16, 22, 0.0)",
+  "sky-color":        "rgba(14, 16, 22, 0.0)",   // transparent
   "horizon-color":    "rgba(18, 20, 28, 0.0)",
   "fog-color":        "rgba(14, 16, 22, 0.0)",
   "fog-ground-blend": 1,
@@ -80,9 +78,9 @@ const TOP_SKY_STYLE = {
 
 // CINEMATIC mode: dark overcast sky with soft warm horizon — city glow from below
 const CINEMATIC_SKY_STYLE = {
-  "sky-color":        "rgba(12, 14, 20, 0.88)",
-  "horizon-color":    "rgba(32, 30, 24, 0.72)",
-  "fog-color":        "rgba(24, 22, 18, 0.54)",
+  "sky-color":        "rgba(12, 14, 20, 0.88)",   // deep blue-black cloud ceiling
+  "horizon-color":    "rgba(32, 30, 24, 0.72)",   // warm amber horizon haze
+  "fog-color":        "rgba(24, 22, 18, 0.54)",   // ground-level city warmth
   "fog-ground-blend": 0.82,
   "horizon-fog-blend":0.88,
   "sky-horizon-blend":0.78,
@@ -91,34 +89,32 @@ const CINEMATIC_SKY_STYLE = {
 
 // IMMERSIVE mode: deep volumetric fog — humid cloudy night close to ground level
 const IMMERSIVE_SKY_STYLE = {
-  "sky-color":        "rgba(10, 12, 18, 0.94)",
-  "horizon-color":    "rgba(38, 34, 26, 0.80)",
-  "fog-color":        "rgba(32, 28, 22, 0.64)",
+  "sky-color":        "rgba(10, 12, 18, 0.94)",   // almost opaque cloud ceiling
+  "horizon-color":    "rgba(38, 34, 26, 0.80)",   // warm amber city-glow horizon
+  "fog-color":        "rgba(32, 28, 22, 0.64)",   // volumetric ground haze
   "fog-ground-blend": 0.76,
   "horizon-fog-blend":0.90,
   "sky-horizon-blend":0.82,
   "atmosphere-blend": 0.28
 };
 
-const getSkyStyleForMode = (cameraMode, themeId) => {
-  if (themeId !== "dark") return cloneMapStyle(TOP_SKY_STYLE);
+const getSkyStyleForMode = (cameraMode) => {
   if (cameraMode === CAMERA_MODES.IMMERSIVE)  return cloneMapStyle(IMMERSIVE_SKY_STYLE);
   if (cameraMode === CAMERA_MODES.CINEMATIC)  return cloneMapStyle(CINEMATIC_SKY_STYLE);
   return cloneMapStyle(TOP_SKY_STYLE);
 };
 
-const applyCameraAtmosphere = (mapInstance, cameraMode, themeId) => {
+const applyCameraAtmosphere = (mapInstance, cameraMode) => {
   if (!mapInstance?.setSky) return;
   try {
-    mapInstance.setSky(getSkyStyleForMode(cameraMode, themeId), { validate: false });
+    mapInstance.setSky(getSkyStyleForMode(cameraMode), { validate: false });
   } catch (error) {
     console.warn("Unable to apply camera atmosphere:", error);
   }
 };
 
 
-const getMapStyleForTheme = (themeId) =>
-  themeId === "light" ? cloneMapStyle(customLightMapStyle) : DARK_MAP_STYLE_URL;
+const getMapStyleForTheme = () => DARK_MAP_STYLE_URL;
 
 const isBuildingSourceLayer = (layer) =>
   Boolean(
@@ -137,7 +133,6 @@ const applyBuildingLighting = (mapInstance, themeId) => {
 
 const applyBuildingPaint = (mapInstance, layerId, themeId) => {
   if (!mapInstance.getLayer(layerId)) return;
-
   const paint = getBuildingPaint(themeId);
   Object.entries(paint).forEach(([property, value]) => {
     mapInstance.setPaintProperty(layerId, property, value);
@@ -166,9 +161,7 @@ const syncBuildingAccentLayers = (mapInstance, source, sourceLayer, baseFilter, 
 
   accentLayers.forEach((layer) => {
     const layerSpec = cloneMapStyle(layer);
-    if (!layerSpec.filter) {
-      delete layerSpec.filter;
-    }
+    if (!layerSpec.filter) delete layerSpec.filter;
 
     if (!mapInstance.getLayer(layer.id)) {
       mapInstance.addLayer(
@@ -187,9 +180,7 @@ const syncBuildingAccentLayers = (mapInstance, source, sourceLayer, baseFilter, 
 };
 
 const applyThemeToMap = (mapInstance, themeId, cameraMode) => {
-  if (!mapInstance || !mapInstance.isStyleLoaded()) {
-    return;
-  }
+  if (!mapInstance || !mapInstance.isStyleLoaded()) return;
 
   const bgColor = getBackgroundColor(themeId);
   const filter = getMapFilters(themeId);
@@ -203,13 +194,9 @@ const applyThemeToMap = (mapInstance, themeId, cameraMode) => {
 
   applyBuildingLighting(mapInstance, themeId);
 
-  if (themeId === "dark") {
-    applyCinematicDarkMapStyle(mapInstance);
-  } else {
-    mapInstance.__orbitCinematicDarkApplied = false;
-  }
+  applyCinematicDarkMapStyle(mapInstance);
 
-  applyCameraAtmosphere(mapInstance, cameraMode, themeId);
+  applyCameraAtmosphere(mapInstance, cameraMode);
 };
 
 const getDecorations = (id) => {
@@ -222,128 +209,145 @@ const getDecorations = (id) => {
   return decorationCache.get(id);
 };
 
-const startBlackHoleAnimation = (canvas, markerEl, color) => {
-  console.log("startBlackHoleAnimation running (from MapView.js)");
-  const hexToRgb = (hex) => {
-  const bigint = parseInt(hex.replace("#", ""), 16);
-  return {
-    r: (bigint >> 16) & 255,
-    g: (bigint >> 8) & 255,
-    b: bigint & 255,
-  };
-};
+// ── Blazing gold — same energy as cinematic highways ──────────────────────────
+const GOLD = { r: 255, g: 200, b: 60 };
 
-const { r, g, b } = hexToRgb(color);
+const startBlackHoleAnimation = (canvas, markerEl) => {
   const ctx = canvas.getContext("2d");
   canvas.width = 300;
   canvas.height = 300;
   const cx = 150, cy = 150;
   let animId;
+  let frame = 0;
 
-  const spawnPoints = [
-    { x: 0, y: 0 },
-    { x: 300, y: 0 },
-    { x: 0, y: 300 },
-    { x: 300, y: 300 },
-    { x: 0, y: 150 },
-    { x: 300, y: 150 }
-  ];
+  // 8 trails at organic angles for cinematic asymmetry
+  const baseAngles = [0, 42, 90, 137, 180, 222, 270, 317];
+  const spawnRadius = 148;
 
-  let particles = spawnPoints.map(pt => ({
-    x: pt.x,
-    y: pt.y,
-    vx: 0,
-    vy: 0,
-    trail: [],
-    absorbed: false,
-    life: 1
-  }));
+  let particles = baseAngles.map((angleDeg, idx) => {
+    const jitter = (Math.random() - 0.5) * 20;
+    const jRad = (angleDeg + jitter) * (Math.PI / 180);
+    return {
+      x: cx + Math.cos(jRad) * spawnRadius,
+      y: cy + Math.sin(jRad) * spawnRadius,
+      vx: 0,
+      vy: 0,
+      trail: [],
+      trailMaxLen: 26 + idx * 2,
+      absorbed: false,
+      life: 1,
+      delay: idx * 4,          // staggered spawn in frames
+      width: 2.0 + Math.random() * 1.2,
+    };
+  });
 
   const triggerPulse = () => {
-    if (markerEl.classList.contains('absorption-pulse')) return;
-    markerEl.classList.add('absorption-pulse');
-    setTimeout(() => {
-      markerEl.classList.remove('absorption-pulse');
-    }, 600); // 0.6s pulse matching CSS animation
+    if (markerEl.classList.contains("absorption-pulse")) return;
+    markerEl.classList.add("absorption-pulse");
+    setTimeout(() => markerEl.classList.remove("absorption-pulse"), 700);
+  };
+
+  let pulseTriggered = false;
+  const { r, g, b } = GOLD;
+
+  const drawTrail = (p) => {
+    if (p.trail.length < 2) return;
+
+    // Pass 1 — wide outer glow
+    for (let i = 0; i < p.trail.length - 1; i++) {
+      const progress = i / (p.trail.length - 1);
+      ctx.beginPath();
+      ctx.moveTo(p.trail[i].x, p.trail[i].y);
+      ctx.lineTo(p.trail[i + 1].x, p.trail[i + 1].y);
+      ctx.strokeStyle = `rgba(${r},${g},${b},${progress * p.life * 0.3})`;
+      ctx.lineWidth = p.width * 4.5;
+      ctx.shadowBlur = 18 * progress;
+      ctx.shadowColor = `rgba(${r},${g},${b},0.85)`;
+      ctx.lineCap = "round";
+      ctx.stroke();
+    }
+
+    // Pass 2 — bright gold core
+    for (let i = 0; i < p.trail.length - 1; i++) {
+      const progress = i / (p.trail.length - 1);
+      const brightness = Math.round(210 + progress * 45);
+      ctx.beginPath();
+      ctx.moveTo(p.trail[i].x, p.trail[i].y);
+      ctx.lineTo(p.trail[i + 1].x, p.trail[i + 1].y);
+      ctx.strokeStyle = `rgba(255,${brightness},70,${progress * p.life * 0.9})`;
+      ctx.lineWidth = p.width;
+      ctx.shadowBlur = 7 * progress;
+      ctx.shadowColor = `rgba(255,240,160,0.8)`;
+      ctx.lineCap = "round";
+      ctx.stroke();
+    }
+
+    // Leading hot point
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.width * 1.6, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(255,252,200,${p.life * 0.95})`;
+    ctx.shadowBlur = 28;
+    ctx.shadowColor = `rgba(255,215,80,1)`;
+    ctx.fill();
   };
 
   const loop = () => {
     animId = requestAnimationFrame(loop);
+    frame++;
     ctx.clearRect(0, 0, 300, 300);
 
-    ctx.shadowBlur = 15;
-    ctx.shadowColor = `rgba(${r}, ${g}, ${b}, 0.8)`;
     let activeParticles = [];
 
-    particles.forEach(p => {
+    particles.forEach((p) => {
+      // Staggered spawn — hold until delay frame
+      if (frame < p.delay) { activeParticles.push(p); return; }
+
       p.trail.push({ x: p.x, y: p.y });
-      if (p.trail.length > 20) p.trail.shift();
+      if (p.trail.length > p.trailMaxLen) p.trail.shift();
 
       const dx = p.x - cx;
       const dy = p.y - cy;
       const dist = Math.hypot(dx, dy);
 
-      if (dist > 100) {
-        // PHASE 1: CONVERGENCE
-        // move straight toward marker, smooth easing
-        p.x += (cx - p.x) * 0.015;
-        p.y += (cy - p.y) * 0.015;
-      } else if (dist > 5) {
-        // PHASE 2 & 3: ORBIT & SPIRAL INWARD
-        const closeness = 1 - (dist / 100);
-        const swirlStrength = 0.05 + closeness * 0.1;
-        const inwardPull = 0.015 + closeness * 0.04;
+      if (dist > 88) {
+        // Phase 0 — magnetic approach with subtle lateral drift
+        const ease = 0.011 + (1 - dist / spawnRadius) * 0.009;
+        p.x += (cx - p.x) * ease;
+        p.y += (cy - p.y) * ease;
+        if (dist > 0) {
+          p.x += (-dy / dist) * 0.28;
+          p.y += (dx / dist) * 0.28;
+        }
+      } else if (dist > 4) {
+        // Phase 1 — gravitational clockwise spiral, velocity-blended
+        const closeness = 1 - dist / 88;
+        const swirl = 0.036 + closeness * 0.082;
+        const pull  = 0.013 + closeness * 0.046;
 
-        p.vx = -dx * inwardPull;
-        p.vy = -dy * inwardPull;
-
-        // Force CLOCKWISE rotation
-        p.vx += -dy * swirlStrength;
-        p.vy += dx * swirlStrength;
-
+        const targetVx = -dx * pull + (-dy * swirl);
+        const targetVy = -dy * pull + (dx  * swirl);
+        p.vx = p.vx * 0.74 + targetVx * 0.26;
+        p.vy = p.vy * 0.74 + targetVy * 0.26;
         p.x += p.vx;
         p.y += p.vy;
       } else {
-        // PHASE 4: ABSORPTION
-        p.life -= 0.1;
+        // Phase 2 — absorption fade
+        p.life -= 0.072;
         if (p.life <= 0 && !p.absorbed) {
           p.absorbed = true;
-          triggerPulse();
+          if (!pulseTriggered) { pulseTriggered = true; triggerPulse(); }
         }
       }
 
       if (p.life > 0) {
         activeParticles.push(p);
-
-        // Gradient tail: bright front -> smooth fade tail
-        if (p.trail.length > 1) {
-          for (let i = 0; i < p.trail.length - 1; i++) {
-            ctx.beginPath();
-            ctx.moveTo(p.trail[i].x, p.trail[i].y);
-            ctx.lineTo(p.trail[i + 1].x, p.trail[i + 1].y);
-            
-            const progress = i / (p.trail.length - 1);
-            ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${progress * p.life})`;
-            ctx.lineWidth = 3;
-            ctx.shadowBlur = 20 * progress;
-            ctx.shadowColor = `rgba(${r}, ${g}, ${b}, 1)`;
-            ctx.stroke();
-          }
-        }
-
-        // Bright front
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(255, 255, 255, ${p.life})`;
-        ctx.shadowBlur = 20;
-        ctx.shadowColor = `rgba(${r}, ${g}, ${b}, 1)`;
-        ctx.fill();
+        ctx.save();
+        drawTrail(p);
+        ctx.restore();
       }
     });
 
     particles = activeParticles;
-
-    // SINGLE RUN ANIMATION
     if (particles.length === 0) {
       cancelAnimationFrame(animId);
       ctx.clearRect(0, 0, 300, 300);
@@ -353,7 +357,11 @@ const { r, g, b } = hexToRgb(color);
   loop();
 };
 
-const MapView = forwardRef(({ users, userLocation, theme, isFollowing, setIsFollowing, onAutoDisableFollowing, currentUserId, sosAlerts, cameraMode, setCameraMode }, ref) => {
+const MapView = forwardRef(({
+  users, userLocation, theme, isFollowing, setIsFollowing,
+  onAutoDisableFollowing, currentUserId, sosAlerts,
+  cameraMode, setCameraMode, onBearingChange
+}, ref) => {
   const mapContainer = useRef(null);
   const map = useRef(null);
   const markers = useRef({});
@@ -382,10 +390,8 @@ const MapView = forwardRef(({ users, userLocation, theme, isFollowing, setIsFoll
       antialias: true,
       maxPitch: 85,
     });
-    
 
-    // 🏗️ RELIABLE LAYER RESTORATION
-    // 'styledata' fires when style changes, ensuring 3D layers are always re-added
+    // 🏗️ Reliable layer restoration
     const restoreMapLayers = () => {
       applyThemeToMap(map.current, themeRef.current, cameraModeRef.current);
       add3D();
@@ -395,18 +401,17 @@ const MapView = forwardRef(({ users, userLocation, theme, isFollowing, setIsFoll
     map.current.on("styledata", restoreMapLayers);
     map.current.on("idle", restoreMapLayers);
 
-    // 📍 Auto-disable follow mode on user interaction
-    map.current.on("dragstart", () => {
-      if (onAutoDisableFollowingRef.current) onAutoDisableFollowingRef.current();
-    });
+    // 🧭 Live bearing for compass
+    const emitBearing = () => {
+      if (onBearingChange) onBearingChange(map.current.getBearing());
+    };
+    map.current.on("rotate", emitBearing);
+    map.current.on("move",   emitBearing);
 
-    map.current.on("zoomstart", () => {
-      if (onAutoDisableFollowingRef.current) onAutoDisableFollowingRef.current();
-    });
-
-    map.current.on("rotatestart", () => {
-      if (onAutoDisableFollowingRef.current) onAutoDisableFollowingRef.current();
-    });
+    // 📍 Auto-disable follow on interaction
+    map.current.on("dragstart",   () => { if (onAutoDisableFollowingRef.current) onAutoDisableFollowingRef.current(); });
+    map.current.on("zoomstart",   () => { if (onAutoDisableFollowingRef.current) onAutoDisableFollowingRef.current(); });
+    map.current.on("rotatestart", () => { if (onAutoDisableFollowingRef.current) onAutoDisableFollowingRef.current(); });
 
     map.current.on("error", (e) => {
       const message = e?.error?.message || e?.message || "";
@@ -418,7 +423,7 @@ const MapView = forwardRef(({ users, userLocation, theme, isFollowing, setIsFoll
       map.current?.remove();
       map.current = null;
     };
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const prevTheme = useRef(theme);
 
@@ -426,7 +431,6 @@ const MapView = forwardRef(({ users, userLocation, theme, isFollowing, setIsFoll
   useEffect(() => {
     if (!map.current) return;
     themeRef.current = theme;
-    
     if (prevTheme.current !== theme) {
       map.current.setStyle(getMapStyleForTheme(theme));
       prevTheme.current = theme;
@@ -434,7 +438,7 @@ const MapView = forwardRef(({ users, userLocation, theme, isFollowing, setIsFoll
       applyThemeToMap(map.current, theme, cameraModeRef.current);
       add3D();
     }
-  }, [theme]);
+  }, [theme]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     cameraModeRef.current = cameraMode;
@@ -449,68 +453,40 @@ const MapView = forwardRef(({ users, userLocation, theme, isFollowing, setIsFoll
         const { lngOffset, latOffset } = getDecorations(currentUserId);
         const nextCameraMode = getNextCameraMode(cameraMode);
 
-
-
         if (nextCameraMode === CAMERA_MODES.TOP) {
-  // TOP VIEW
-      map.current.easeTo({
-        center: [userLocation.lng + lngOffset, userLocation.lat + latOffset],
-        zoom: 16,
-        pitch: 0,
-        bearing: 0,
-        duration: 800,
-        essential: true,
-      });
-    } else if (nextCameraMode === CAMERA_MODES.CINEMATIC) {
-      // 3D VIEW
-      map.current.easeTo({
-        center: [userLocation.lng + lngOffset, userLocation.lat + latOffset],
-        zoom: 16,
-        pitch: 60,
-        bearing: userLocation.heading || 0,
-        duration: 800,
-        essential: true,
-      });
-    } else {
-      // IMMERSIVE VIEW
-      map.current.easeTo({
-        center: [userLocation.lng + lngOffset, userLocation.lat + latOffset],
-        zoom: 18.25,
-        pitch: 78,
-        bearing: userLocation.heading || 0,
-        duration: 1000,
-        essential: true,
-      });
-    }
+          map.current.easeTo({
+            center: [userLocation.lng + lngOffset, userLocation.lat + latOffset],
+            zoom: 16, pitch: 0, bearing: 0, duration: 800, essential: true,
+          });
+        } else if (nextCameraMode === CAMERA_MODES.CINEMATIC) {
+          map.current.easeTo({
+            center: [userLocation.lng + lngOffset, userLocation.lat + latOffset],
+            zoom: 16, pitch: 60, bearing: userLocation.heading || 0, duration: 800, essential: true,
+          });
+        } else {
+          map.current.easeTo({
+            center: [userLocation.lng + lngOffset, userLocation.lat + latOffset],
+            zoom: 18.25, pitch: 78, bearing: userLocation.heading || 0, duration: 1000, essential: true,
+          });
+        }
 
-    setCameraMode(nextCameraMode);
-
-
-
-
-
-
+        setCameraMode(nextCameraMode);
       }
     },
     handleCenterOnUser: (lng, lat) => {
       if (map.current) {
-        map.current.easeTo({
-          center: [lng, lat],
-          zoom: 16,
-          duration: 1200,
-          essential: true,
-        });
+        map.current.easeTo({ center: [lng, lat], zoom: 16, duration: 1200, essential: true });
       }
     },
   }));
 
-  // 🎯 Update Blue Dot Marker
+  // 🎯 Update user location marker
   useEffect(() => {
     if (!map.current || !userLocation || !currentUserId) return;
 
     const { lng, lat, heading } = userLocation;
     const { lngOffset, latOffset, color } = getDecorations(currentUserId);
-    
+
     const targetLng = lng + lngOffset;
     const targetLat = lat + latOffset;
 
@@ -519,42 +495,37 @@ const MapView = forwardRef(({ users, userLocation, theme, isFollowing, setIsFoll
       el.className = "user-location-marker";
       el.style.color = color;
       el.innerHTML = `
-        <canvas class="black-hole-canvas"></canvas>
         <div class="pulse-ring"></div>
+        <div class="pulse-ring pulse-ring--secondary"></div>
         <div class="glow-ring"></div>
+        <div class="glow-halo"></div>
         <div class="direction-cone"></div>
-        <div class="center-dot"></div>
+        <div class="center-dot">
+          <div class="center-dot__inner"></div>
+        </div>
       `;
 
       const canvas = el.querySelector(".black-hole-canvas");
-      startBlackHoleAnimation(canvas, el, color);
+      //startBlackHoleAnimation(canvas, el);
 
-      userMarker.current = new maplibregl.Marker({
-        element: el,
-        anchor: "center",
-      })
+      userMarker.current = new maplibregl.Marker({ element: el, anchor: "center" })
         .setLngLat([targetLng, targetLat])
         .addTo(map.current);
     } else {
       userMarker.current.setLngLat([targetLng, targetLat]);
     }
 
-    const el = userMarker.current.getElement();
+    const el   = userMarker.current.getElement();
     const cone = el.querySelector(".direction-cone");
-    const dot = el.querySelector(".center-dot");
+    const dot  = el.querySelector(".center-dot");
     const glow = el.querySelector(".glow-ring");
     const pulse = el.querySelector(".pulse-ring");
 
-    // Apply unique color with brightness highlight for current user
-    if (dot) {
-      dot.style.backgroundColor = color;
-      dot.style.borderColor = "white";
-      dot.style.boxShadow = `0 0 10px ${color}`;
-    }
+    if (dot)  { dot.style.backgroundColor = color; dot.style.borderColor = "white"; dot.style.boxShadow = `0 0 12px ${color}, 0 0 24px ${color}55`; }
     if (glow) glow.style.backgroundColor = color;
     if (pulse) pulse.style.backgroundColor = color;
     if (cone) cone.style.borderBottomColor = color;
-    
+
     if (heading !== null && heading !== undefined) {
       cone.style.transform = `rotate(${heading}deg)`;
       cone.style.display = "block";
@@ -566,13 +537,9 @@ const MapView = forwardRef(({ users, userLocation, theme, isFollowing, setIsFoll
       map.current.jumpTo({ center: [targetLng, targetLat] });
       initialCenterSet.current = true;
     } else if (isFollowing) {
-      map.current.easeTo({
-        center: [targetLng, targetLat],
-        duration: 800,
-        essential: true,
-      });
+      map.current.easeTo({ center: [targetLng, targetLat], duration: 800, essential: true });
     }
-  }, [userLocation, theme, isFollowing, currentUserId, cameraMode]);
+  }, [userLocation, theme, isFollowing, currentUserId, cameraMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const add3D = () => {
     if (!map.current || !map.current.isStyleLoaded()) return;
@@ -633,20 +600,16 @@ const MapView = forwardRef(({ users, userLocation, theme, isFollowing, setIsFoll
     const beforeLayerId = layers.slice(lastBuildingIndex + 1).find((layer) => !isBuildingSourceLayer(layer))?.id;
 
     baseBuildingLayers.forEach((layer) => {
-      if (map.current.getLayer(layer.id)) {
-        map.current.removeLayer(layer.id);
-      }
+      if (map.current.getLayer(layer.id)) map.current.removeLayer(layer.id);
     });
 
     const extrusionLayer = {
       id: BUILDING_LAYER_ID,
-      source: source,
+      source,
       "source-layer": sourceLayer,
       type: "fill-extrusion",
       minzoom: BUILDING_MIN_ZOOM,
-      layout: {
-        visibility: "visible",
-      },
+      layout: { visibility: "visible" },
       paint: getBuildingPaint(themeRef.current),
       ...(buildingLayer.filter ? { filter: buildingLayer.filter } : {}),
     };
@@ -656,14 +619,7 @@ const MapView = forwardRef(({ users, userLocation, theme, isFollowing, setIsFoll
       beforeLayerId && map.current.getLayer(beforeLayerId) ? beforeLayerId : undefined
     );
     applyBuildingLighting(map.current, themeRef.current);
-    syncBuildingAccentLayers(
-      map.current,
-      source,
-      sourceLayer,
-      buildingLayer.filter,
-      themeRef.current,
-      beforeLayerId
-    );
+    syncBuildingAccentLayers(map.current, source, sourceLayer, buildingLayer.filter, themeRef.current, beforeLayerId);
     map.current.__orbitBuildingThemeApplied = themeRef.current;
   };
 
@@ -672,7 +628,6 @@ const MapView = forwardRef(({ users, userLocation, theme, isFollowing, setIsFoll
 
     users.forEach((user) => {
       if (user.id === currentUserId) return;
-
       const { lngOffset, latOffset, color } = getDecorations(user.id);
 
       if (!markers.current[user.id]) {
@@ -688,7 +643,6 @@ const MapView = forwardRef(({ users, userLocation, theme, isFollowing, setIsFoll
         const marker = new maplibregl.Marker({ element: el })
           .setLngLat([user.lng + lngOffset, user.lat + latOffset])
           .addTo(map.current);
-
         markers.current[user.id] = marker;
       } else {
         markers.current[user.id].setLngLat([user.lng + lngOffset, user.lat + latOffset]);
@@ -704,68 +658,45 @@ const MapView = forwardRef(({ users, userLocation, theme, isFollowing, setIsFoll
     });
   }, [users, theme, currentUserId]);
 
-  // 🚨 Handle SOS Alerts (Enhanced with Markers)
+  // 🚨 SOS Markers
   useEffect(() => {
     if (!map.current) return;
 
-    console.log("📡 SOS ALERTS UPDATE:", sosAlerts);
-
-    // Create/Update SOS Markers
     sosAlerts.forEach((alert) => {
       const { lngOffset, latOffset } = getDecorations(alert.id);
       if (!sosMarkers.current[alert.id]) {
-        console.log("✨ Creating new SOS marker for:", alert.id);
         const el = document.createElement("div");
         el.className = "sos-marker";
         el.innerHTML = `
           <div class="sos-pulse"></div>
           <div class="sos-pulse delay"></div>
-          
         `;
-
-        const marker = new maplibregl.Marker({ 
-          element: el, 
-          anchor: "center" 
-        })
-        
-        .setLngLat([
-          alert.lng + lngOffset,
-          alert.lat + latOffset
-        ])
-        .addTo(map.current);
-
+        const marker = new maplibregl.Marker({ element: el, anchor: "center" })
+          .setLngLat([alert.lng + lngOffset, alert.lat + latOffset])
+          .addTo(map.current);
         sosMarkers.current[alert.id] = marker;
       } else {
-        sosMarkers.current[alert.id].setLngLat([
-          alert.lng + lngOffset,
-          alert.lat + latOffset
-        ]);
+        sosMarkers.current[alert.id].setLngLat([alert.lng + lngOffset, alert.lat + latOffset]);
       }
     });
 
-    // Remove inactive SOS markers
     Object.keys(sosMarkers.current).forEach((id) => {
-      const stillExists = sosAlerts.find((alert) => String(alert.id) === String(id));
-      if (!stillExists) {
-        console.log("🗑️ Removing SOS marker for:", id);
+      if (!sosAlerts.find((alert) => String(alert.id) === String(id))) {
         sosMarkers.current[id].remove();
         delete sosMarkers.current[id];
       }
     });
   }, [sosAlerts]);
 
-    return (
-      <div
-        className={`map-stage ${cameraMode === CAMERA_MODES.IMMERSIVE ? "immersive-atmosphere" : ""}`}
-        style={{ width: "100%", height: "100vh", position: "relative" }}
-      >
-        <div
-          ref={mapContainer}
-          className="map-viewport"
-          style={{ position: "absolute", inset: 0 }}
-        />
-        <div className="immersive-fog-overlay" aria-hidden="true" />
-      </div>
-    );
-  });
-  export default MapView;
+  return (
+    <div
+      className={`map-stage ${cameraMode === CAMERA_MODES.IMMERSIVE ? "immersive-atmosphere" : ""}`}
+      style={{ width: "100%", height: "100vh", position: "relative" }}
+    >
+      <div ref={mapContainer} className="map-viewport" style={{ position: "absolute", inset: 0 }} />
+      <div className="immersive-fog-overlay" aria-hidden="true" />
+    </div>
+  );
+});
+
+export default MapView;

@@ -190,12 +190,6 @@ backdrop-filter: none;
   color: #f1f5f9;
 }
 
-.light-mode .control-btn {
-  background: rgba(0, 0, 0, 0.6);   /* dark glass */
-  border: 1px solid rgba(0, 0, 0, 0.2);
-  color: white;
-}
-
 /* 🌙 DARK MODE (keep your current or refine) */
 .dark-mode .control-btn {
   background: rgba(255, 255, 255, 0.1); /* light glass */
@@ -226,6 +220,205 @@ backdrop-filter: none;
   box-shadow: 
     0 6px 25px rgba(59, 130, 246, 0.6),
     0 0 10px rgba(59, 130, 246, 0.4) !important;
+}
+
+.compass-control-btn {
+  position: relative;
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, rgba(37, 39, 42, 0.86), rgba(6, 7, 8, 0.82)),
+    radial-gradient(circle at 50% 12%, rgba(255, 236, 190, 0.18), transparent 42%);
+  border-color: rgba(255, 226, 168, 0.22);
+}
+
+.compass-control-btn::after {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  pointer-events: none;
+}
+
+.live-compass-icon {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+}
+
+.live-compass-icon svg {
+  width: 30px !important;
+  height: 30px !important;
+}
+
+.compass-control-btn:hover .live-compass-icon {
+  filter: drop-shadow(0 0 10px rgba(255, 211, 107, 0.34));
+}
+
+.compass-fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 30000;
+  display: grid;
+  place-items: center;
+  padding: max(20px, env(safe-area-inset-top)) max(18px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom)) max(18px, env(safe-area-inset-left));
+  background:
+    radial-gradient(circle at 50% 34%, rgba(70, 60, 42, 0.22), transparent 38%),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.84), rgba(0, 0, 0, 0.96));
+  -webkit-backdrop-filter: blur(26px) saturate(1.05);
+  backdrop-filter: blur(26px) saturate(1.05);
+  animation: compassOverlayIn 180ms ease-out;
+}
+
+.compass-fullscreen-shell {
+  position: relative;
+  width: min(390px, 100%);
+  min-height: min(720px, calc(100dvh - 40px));
+  border-radius: 42px;
+  padding: 34px 26px 42px;
+  display: grid;
+  grid-template-rows: auto 1fr auto auto;
+  align-items: center;
+  color: #f8fafc;
+  background:
+    radial-gradient(circle at 50% 22%, rgba(255, 240, 205, 0.10), transparent 30%),
+    linear-gradient(180deg, rgba(7, 7, 8, 0.96), rgba(0, 0, 0, 0.98));
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow:
+    0 36px 90px rgba(0, 0, 0, 0.72),
+    0 0 0 1px rgba(255, 226, 168, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 -28px 54px rgba(255, 255, 255, 0.035);
+  overflow: hidden;
+}
+
+.compass-fullscreen-shell::before,
+.compass-fullscreen-shell::after {
+  content: "";
+  position: absolute;
+  left: 12%;
+  right: 12%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.16), transparent);
+  pointer-events: none;
+}
+
+.compass-fullscreen-shell::before {
+  top: 118px;
+}
+
+.compass-fullscreen-shell::after {
+  bottom: 96px;
+}
+
+.compass-close-btn {
+  position: absolute;
+  top: 22px;
+  right: 22px;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.07);
+  color: rgba(255, 255, 255, 0.86);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: transform 150ms ease, background 150ms ease, border-color 150ms ease;
+}
+
+.compass-close-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.compass-close-btn:hover {
+  transform: scale(1.05);
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.22);
+}
+
+.compass-status-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  margin-right: 50px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.7px;
+  color: rgba(226, 232, 240, 0.68);
+}
+
+.compass-hero-dial {
+  width: min(310px, 78vw);
+  aspect-ratio: 1;
+  justify-self: center;
+  display: grid;
+  place-items: center;
+  margin-top: 10px;
+  filter:
+    drop-shadow(0 28px 46px rgba(0, 0, 0, 0.58))
+    drop-shadow(0 0 22px rgba(255, 80, 42, 0.16));
+}
+
+.compass-dial-svg.full {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.compass-bearing-readout {
+  justify-self: center;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 4px;
+  margin-top: 12px;
+  font-weight: 300;
+  color: rgba(248, 250, 252, 0.96);
+  text-shadow: 0 0 22px rgba(255, 255, 255, 0.16);
+}
+
+.compass-bearing-number {
+  font-size: clamp(58px, 17vw, 84px);
+  line-height: 0.95;
+  letter-spacing: 0;
+}
+
+.compass-degree-mark,
+.compass-cardinal-mark {
+  font-size: clamp(25px, 7vw, 38px);
+  line-height: 1;
+}
+
+.compass-cardinal-mark {
+  margin-left: 7px;
+  color: rgba(238, 242, 247, 0.82);
+}
+
+.compass-coordinate-readout {
+  justify-self: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-top: 18px;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(226, 232, 240, 0.78);
+  letter-spacing: 0;
+}
+
+@keyframes compassOverlayIn {
+  from {
+    opacity: 0;
+    transform: scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 /* ✨ Mica Dark Global Effect */
@@ -731,11 +924,6 @@ body::before {
   background: rgba(0, 0, 0, 0.08);
   pointer-events: none;
   z-index: 0;
-}
-
-/* 🌓 Light Mode Adjustment Override */
-body.light-mode::before {
-  background: rgba(0, 0, 0, 0.15);
 }
 
 .users-panel::-webkit-scrollbar {
@@ -1254,20 +1442,6 @@ body.light-mode::before {
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
   }
 
-  /* Light Mode Support for Mobile Buttons */
-  body.light-mode .fab-container .control-btn {
-    background: rgba(255, 255, 255, 0.6);
-    border: 1px solid rgba(0, 0, 0, 0.1);
-    color: #1a1a1a;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
-  }
-
-  body.light-mode .fab-container .control-btn.active {
-    background: rgba(59, 130, 246, 0.9);
-    color: white;
-    border: none;
-  }
-
   .fab-actions {
     display: flex;
     flex-direction: column;
@@ -1394,9 +1568,9 @@ body.light-mode::before {
 .map-stage {
   overflow: hidden;
   /* Warm-dark grey base — matches terrain base color exactly */
-  background: #16181a;
+  background: #1c2024;
   /* Subtle vignette to frame the cinematic view */
-  box-shadow: inset 0 0 120px rgba(0, 0, 0, 0.35);
+  box-shadow: inset 0 0 150px rgba(0, 0, 0, 0.42);
 }
 
 .map-viewport {
@@ -1421,18 +1595,18 @@ body.light-mode::before {
     /* Top sky — cloud ceiling, deep and moody */
     linear-gradient(
       to bottom,
-      rgba(8, 10, 16, 0.72)  0%,
-      rgba(10, 12, 18, 0.58) 8%,
-      rgba(12, 14, 20, 0.38) 18%,
-      rgba(14, 16, 22, 0.18) 28%,
-      rgba(16, 18, 24, 0.06) 40%,
+      rgba(8, 11, 17, 0.78)  0%,
+      rgba(11, 14, 20, 0.64) 8%,
+      rgba(15, 18, 24, 0.44) 18%,
+      rgba(22, 24, 28, 0.22) 30%,
+      rgba(30, 31, 30, 0.08) 42%,
       rgba(0, 0, 0, 0)       56%
     ),
     /* Horizon haze — warm city-glow amber band */
     radial-gradient(
       ellipse 120% 28% at 50% 38%,
-      rgba(52, 42, 28, 0.28)  0%,
-      rgba(38, 30, 20, 0.18) 40%,
+      rgba(72, 59, 40, 0.32)  0%,
+      rgba(45, 38, 28, 0.20) 42%,
       rgba(0, 0, 0, 0)       80%
     );
   /* Mask: strong at top (sky), fade at horizon, invisible below */
@@ -1466,30 +1640,30 @@ body.light-mode::before {
   z-index: 2;
   /* Base opacity: always slightly visible in dark mode.
      Increases dramatically in immersive mode via class. */
-  opacity: 0.55;
+  opacity: 0.68;
   transition: opacity 700ms cubic-bezier(0.4, 0, 0.2, 1);
   background:
     /* Primary atmospheric depth gradient: top-down fog */
     linear-gradient(
       to bottom,
-      rgba(42, 38, 30, 0.18)  0%,
-      rgba(32, 29, 22, 0.12) 20%,
-      rgba(22, 20, 16, 0.055) 46%,
+      rgba(48, 46, 40, 0.22)  0%,
+      rgba(39, 37, 31, 0.15) 20%,
+      rgba(28, 27, 24, 0.075) 46%,
       rgba(10, 9, 8, 0)       68%
     ),
     /* Horizon city-glow warm band */
     radial-gradient(
       ellipse 100% 22% at 50% 32%,
-      rgba(58, 48, 32, 0.16)  0%,
-      rgba(40, 32, 20, 0.10) 50%,
+      rgba(82, 67, 42, 0.18)  0%,
+      rgba(52, 43, 30, 0.12) 50%,
       rgba(0, 0, 0, 0)        90%
     ),
     /* Lateral distance fog — edges fade first */
     radial-gradient(
       ellipse 90% 60% at 50% 58%,
       rgba(0, 0, 0, 0)        0%,
-      rgba(14, 13, 11, 0.04) 60%,
-      rgba(18, 16, 14, 0.10) 100%
+      rgba(18, 18, 17, 0.055) 58%,
+      rgba(18, 18, 18, 0.14) 100%
     );
   -webkit-backdrop-filter: blur(0.4px) saturate(0.92);
   backdrop-filter: blur(0.4px) saturate(0.92);
@@ -1515,6 +1689,18 @@ body.light-mode::before {
    At maximum camera immersion (low pitch, high zoom), the fog
    intensifies to simulate being inside the urban environment.
    ─────────────────────────────────────────────────────────────── */
+.dark-mode .map-stage::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 74% 46% at 50% 62%, rgba(255, 202, 116, 0.045), transparent 58%),
+    radial-gradient(ellipse 110% 78% at 50% 52%, transparent 0%, rgba(4, 6, 8, 0.10) 72%, rgba(2, 3, 4, 0.28) 100%),
+    linear-gradient(to top, rgba(0, 0, 0, 0.14), transparent 32%);
+}
+
 .map-stage.immersive-atmosphere .immersive-fog-overlay {
   opacity: 1;
   /* Heavier blur, deeper desaturation at extreme close range */
@@ -1552,12 +1738,6 @@ body.light-mode::before {
   padding: 2px 6px;
 }
 
-
-/* 🌞 LIGHT MODE — dark avatar bg */
-.light-mode .avatar {
-  background: rgba(15, 15, 15, 0.35);    
-  border: 1px solid rgba(82, 82, 82, 0.2);
-}
 
 /* 🌙 DARK MODE — keep glass look */
 .dark-mode .avatar {
@@ -2017,6 +2197,29 @@ body.light-mode::before {
 
   .dark-mode .chat-toggle {
     left: min(calc(90vw + 14px), 326px);
+  }
+}
+
+@media (max-width: 520px) {
+  .compass-fullscreen {
+    padding: max(12px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
+  }
+
+  .compass-fullscreen-shell {
+    width: min(100%, 380px);
+    min-height: min(680px, calc(100dvh - 24px));
+    border-radius: 34px;
+    padding: 30px 18px 34px;
+  }
+
+  .compass-status-row {
+    margin-right: 46px;
+    font-size: 10px;
+    letter-spacing: 1.3px;
+  }
+
+  .compass-hero-dial {
+    width: min(286px, 82vw);
   }
 }
 

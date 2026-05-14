@@ -33,13 +33,7 @@ const CAMERA_MODES = {
   IMMERSIVE: "immersive",
 };
 
-const getInitialTheme = () => {
-  const savedTheme = localStorage.getItem("theme");
-  return savedTheme === "dark" ? savedTheme : "dark";
-};
-
-const LIGHT_MODE_MAINTENANCE_MESSAGE =
-  "Light mode is currently undergoing improvements while we continue refining the cinematic dark-mode experience. It will return later.";
+const DARK_THEME_ID = "dark";
 
 const CameraModeIcon = ({ mode }) => {
   if (mode === CAMERA_MODES.IMMERSIVE) {
@@ -69,6 +63,291 @@ const CameraModeIcon = ({ mode }) => {
   );
 };
 
+// ── Premium Live Compass Icon ─────────────────────────────────────────────────
+let _compassInstanceId = 0;
+const LiveCompassIcon = ({ bearing, cameraMode }) => {
+  // Stable instance ID (created once per component mount)
+  const idRef = useRef(null);
+  if (idRef.current === null) {
+    idRef.current = ++_compassInstanceId;
+  }
+  const uid = idRef.current;
+
+  // Needle counter-rotates so North always points up
+  const needleAngle = -bearing;
+
+  const modeColor =
+    cameraMode === CAMERA_MODES.IMMERSIVE ? "#c084fc" :
+    cameraMode === CAMERA_MODES.CINEMATIC ? "#FFD76A" :
+    "#94a3b8";
+  const modeGlow =
+    cameraMode === CAMERA_MODES.IMMERSIVE ? "rgba(192,132,252,0.55)" :
+    cameraMode === CAMERA_MODES.CINEMATIC ? "rgba(255,215,100,0.55)" :
+    "rgba(148,163,184,0.4)";
+
+  const bgId   = `cBg-${uid}`;
+  const glowId = `cGlow-${uid}`;
+
+  return (
+    <svg
+      viewBox="0 0 100 100"
+      style={{
+        width: "26px",
+        height: "26px",
+        filter: `drop-shadow(0 0 7px ${modeGlow})`,
+        display: "block",
+      }}
+    >
+      <defs>
+        <radialGradient id={bgId} cx="50%" cy="40%" r="60%">
+          <stop offset="0%" stopColor="#1a1b1c" />
+          <stop offset="100%" stopColor="#09090B" />
+        </radialGradient>
+        <radialGradient id={glowId} cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor={modeColor} stopOpacity="0.18" />
+          <stop offset="100%" stopColor={modeColor} stopOpacity="0" />
+        </radialGradient>
+      </defs>
+
+      {/* Base disc */}
+      <circle cx="50" cy="50" r="44" fill={`url(#${bgId})`} />
+
+      {/* Soft inner glow */}
+      <circle cx="50" cy="50" r="40" fill={`url(#${glowId})`} />
+
+      {/* Outer ring */}
+      <circle cx="50" cy="50" r="44" fill="none"
+        stroke={modeColor} strokeOpacity="0.22" strokeWidth="2.5" />
+
+      {/* Cardinal tick marks */}
+      {[0, 90, 180, 270].map((deg) => {
+        const r1 = 38, r2 = 43;
+        const rad = (deg - 90) * Math.PI / 180;
+        return (
+          <line key={deg}
+            x1={50 + Math.cos(rad) * r1} y1={50 + Math.sin(rad) * r1}
+            x2={50 + Math.cos(rad) * r2} y2={50 + Math.sin(rad) * r2}
+            stroke={modeColor} strokeOpacity="0.55" strokeWidth="2" strokeLinecap="round"
+          />
+        );
+      })}
+
+      {/* Needle — rotates with map bearing */}
+      <g
+        style={{
+          transform: `rotate(${needleAngle}deg)`,
+          transformOrigin: "50px 50px",
+          transition: "transform 0.18s cubic-bezier(0.25, 0.46, 0.45, 0.94)",
+        }}
+      >
+        {/* North blade */}
+        <path d="M50 16 L56.5 50 L50 44 L43.5 50 Z" fill={modeColor} opacity="0.95" />
+        {/* South blade */}
+        <path d="M50 84 L56.5 50 L50 57 L43.5 50 Z" fill="rgba(230,230,240,0.55)" />
+        {/* Center pivot */}
+        <circle cx="50" cy="50" r="5.5" fill={modeColor} opacity="0.9" />
+        <circle cx="50" cy="50" r="2.5" fill="#09090B" />
+      </g>
+
+      {/* North indicator dot (static) */}
+      <circle cx="50" cy="9" r="3.2" fill="#FF453A" opacity="0.9" />
+    </svg>
+  );
+};
+
+const COMPASS_TICK_DEGREES = Array.from({ length: 72 }, (_, index) => index * 5);
+const COMPASS_NUMERAL_DEGREES = Array.from({ length: 12 }, (_, index) => index * 30);
+const COMPASS_CARDINALS = [
+  { label: "N", degrees: 0 },
+  { label: "E", degrees: 90 },
+  { label: "S", degrees: 180 },
+  { label: "W", degrees: 270 },
+];
+
+const normalizeDegrees = (value = 0) => Math.round(((value % 360) + 360) % 360);
+
+const getCardinalDirection = (degrees) => {
+  const directions = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
+  return directions[Math.round(normalizeDegrees(degrees) / 45) % directions.length];
+};
+
+const formatCoordinate = (value, positiveLabel, negativeLabel) => {
+  if (typeof value !== "number" || Number.isNaN(value)) return "--";
+  const absolute = Math.abs(value);
+  let degrees = Math.floor(absolute);
+  const minutesFloat = (absolute - degrees) * 60;
+  let minutes = Math.floor(minutesFloat);
+  let seconds = Math.round((minutesFloat - minutes) * 60);
+  if (seconds === 60) {
+    seconds = 0;
+    minutes += 1;
+  }
+  if (minutes === 60) {
+    minutes = 0;
+    degrees += 1;
+  }
+  return `${degrees}\u00b0${String(minutes).padStart(2, "0")}'${String(seconds).padStart(2, "0")}" ${value >= 0 ? positiveLabel : negativeLabel}`;
+};
+
+const formatElevation = (meters) => {
+  if (typeof meters !== "number" || Number.isNaN(meters)) return "ALT -- FT";
+  return `~${Math.round(meters * 3.28084)} FT`;
+};
+
+const FullscreenCompassDial = ({ bearing }) => {
+  const normalized = normalizeDegrees(bearing);
+  const needleAngle = -normalized;
+
+  return (
+    <svg className="compass-dial-svg full" viewBox="0 0 100 100" aria-hidden="true">
+      <defs>
+        <radialGradient id="orbit-compass-full-bg" cx="48%" cy="42%" r="62%">
+          <stop offset="0%" stopColor="#24272b" />
+          <stop offset="54%" stopColor="#0c0d0f" />
+          <stop offset="100%" stopColor="#030304" />
+        </radialGradient>
+        <radialGradient id="orbit-compass-full-glow" cx="50%" cy="42%" r="58%">
+          <stop offset="0%" stopColor="#ffd77a" stopOpacity="0.2" />
+          <stop offset="48%" stopColor="#c99b45" stopOpacity="0.08" />
+          <stop offset="100%" stopColor="#000000" stopOpacity="0" />
+        </radialGradient>
+        <linearGradient id="orbit-compass-full-rim" x1="20" y1="5" x2="84" y2="92">
+          <stop offset="0%" stopColor="#f6efe2" stopOpacity="0.72" />
+          <stop offset="44%" stopColor="#7f7568" stopOpacity="0.32" />
+          <stop offset="100%" stopColor="#151515" stopOpacity="0.9" />
+        </linearGradient>
+      </defs>
+
+      <circle cx="50" cy="50" r="48" fill="url(#orbit-compass-full-bg)" />
+      <circle cx="50" cy="50" r="45" fill="url(#orbit-compass-full-glow)" />
+      <circle cx="50" cy="50" r="44" fill="none" stroke="url(#orbit-compass-full-rim)" strokeWidth="1.4" />
+      <circle cx="50" cy="50" r="28" fill="none" stroke="rgba(255,255,255,0.11)" strokeWidth="0.8" />
+      <circle cx="50" cy="50" r="17" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="0.8" />
+
+      <g
+        style={{
+          transform: `rotate(${needleAngle}deg)`,
+          transformOrigin: "50px 50px",
+          transition: "transform 180ms cubic-bezier(0.22, 0.61, 0.36, 1)",
+        }}
+      >
+        <path
+          d="M50 8 A42 42 0 0 1 59 16 L52.3 50 L50 45.3 L47.7 50 L41 16 A42 42 0 0 1 50 8 Z"
+          fill="#ff3b1f"
+          opacity="0.96"
+        />
+        <path d="M50 92 L56 51 L50 57 L44 51 Z" fill="rgba(228,232,238,0.54)" />
+        <line x1="50" y1="11" x2="50" y2="89" stroke="rgba(255,255,255,0.36)" strokeWidth="1" />
+      </g>
+
+      {COMPASS_TICK_DEGREES.map((degrees) => {
+        const major = degrees % 30 === 0;
+        const cardinal = degrees % 90 === 0;
+        const startRadius = cardinal ? 31 : major ? 33 : 37;
+        const radians = (degrees - 90) * Math.PI / 180;
+        return (
+          <line
+            key={degrees}
+            x1={50 + Math.cos(radians) * startRadius}
+            y1={50 + Math.sin(radians) * startRadius}
+            x2={50 + Math.cos(radians) * 43}
+            y2={50 + Math.sin(radians) * 43}
+            stroke={cardinal ? "rgba(255,255,255,0.86)" : major ? "rgba(255,255,255,0.48)" : "rgba(255,255,255,0.24)"}
+            strokeWidth={cardinal ? 1.5 : major ? 0.9 : 0.55}
+            strokeLinecap="round"
+          />
+        );
+      })}
+
+      {COMPASS_NUMERAL_DEGREES.map((degrees) => {
+        if (degrees % 90 === 0) return null;
+        const radians = (degrees - 90) * Math.PI / 180;
+        return (
+          <text
+            key={degrees}
+            x={50 + Math.cos(radians) * 47.8}
+            y={50 + Math.sin(radians) * 47.8}
+            textAnchor="middle"
+            dominantBaseline="middle"
+            fill="rgba(226,232,240,0.58)"
+            fontSize="3.6"
+            fontWeight="600"
+          >
+            {degrees}
+          </text>
+        );
+      })}
+
+      {COMPASS_CARDINALS.map(({ label, degrees }) => {
+        const radians = (degrees - 90) * Math.PI / 180;
+        return (
+          <text
+            key={label}
+            x={50 + Math.cos(radians) * 25}
+            y={50 + Math.sin(radians) * 25}
+            textAnchor="middle"
+            dominantBaseline="middle"
+            fill={label === "N" ? "#ff4a2f" : "rgba(247,250,252,0.88)"}
+            fontSize="6.8"
+            fontWeight="800"
+          >
+            {label}
+          </text>
+        );
+      })}
+
+      <circle cx="50" cy="50" r="8" fill="rgba(255,255,255,0.10)" />
+      <circle cx="50" cy="50" r="3.7" fill="rgba(255,255,255,0.9)" />
+      <circle cx="50" cy="6.2" r="2.4" fill="#ff3b1f" />
+    </svg>
+  );
+};
+
+const CompassFullscreen = ({ bearing, userLocation, cameraMode, onClose }) => {
+  const heading = normalizeDegrees(bearing);
+  const cardinal = getCardinalDirection(heading);
+  const latText = userLocation ? formatCoordinate(userLocation.lat, "N", "S") : "--";
+  const lngText = userLocation ? formatCoordinate(userLocation.lng, "E", "W") : "--";
+  const elevation = formatElevation(userLocation?.altitude);
+  const cameraLabel =
+    cameraMode === CAMERA_MODES.IMMERSIVE ? "IMMERSIVE" :
+    cameraMode === CAMERA_MODES.CINEMATIC ? "CINEMATIC" :
+    "OVERVIEW";
+
+  return (
+    <div className="compass-fullscreen" role="dialog" aria-modal="true" aria-label="Compass" onClick={onClose}>
+      <div className="compass-fullscreen-shell" onClick={(event) => event.stopPropagation()}>
+        <button className="compass-close-btn" type="button" onClick={onClose} aria-label="Close compass">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
+            <line x1="6" y1="6" x2="18" y2="18" />
+            <line x1="18" y1="6" x2="6" y2="18" />
+          </svg>
+        </button>
+
+        <div className="compass-status-row">
+          <span>ORBIT NAV</span>
+          <span>{cameraLabel}</span>
+        </div>
+
+        <div className="compass-hero-dial">
+          <FullscreenCompassDial bearing={bearing} />
+        </div>
+
+        <div className="compass-bearing-readout">
+          <span className="compass-bearing-number">{heading}</span>
+          <span className="compass-degree-mark">{"\u00b0"}</span>
+          <span className="compass-cardinal-mark">{cardinal}</span>
+        </div>
+
+        <div className="compass-coordinate-readout">
+          <span>{latText} {lngText}</span>
+          <span>{elevation}</span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 function App() {
   const [users, setUsers] = useState([]);
   const [toast, setToast] = useState(null);
@@ -76,14 +355,16 @@ function App() {
   const [isSOSActive, setIsSOSActive] = useState(false);
   const [userLocation, setUserLocation] = useState(null);
     
-  const [theme, setTheme] = useState(getInitialTheme);
+  const theme = DARK_THEME_ID;
   const [isFollowing, setIsFollowing] = useState(true);
   const [fabOpen, setFabOpen] = useState(false);
   const [activePanel, setActivePanel] = useState(null); // 'chat', 'users', or null
   const [showProfile, setShowProfile] = useState(false);
   const [showCreateRoomModal, setShowCreateRoomModal] = useState(false);
   const [showEasterEgg, setShowEasterEgg] = useState(false);
+  const [isCompassOpen, setIsCompassOpen] = useState(false);
   const [cameraMode, setCameraMode] = useState(CAMERA_MODES.CINEMATIC);
+  const [mapBearing, setMapBearing] = useState(0);
   const [isInvisible, setIsInvisible] = useState(() => localStorage.getItem("invisibleMode") === "true");
 
   // 🔑 Join-room passcode modal state
@@ -98,24 +379,44 @@ function App() {
   const [isRoomPrivate, setIsRoomPrivate] = useState(localStorage.getItem("isRoomPrivate") === "true");
   const [roomInput, setRoomInput] = useState("");
   const chatEndRef = useRef(null);
+  const currentRoomRef = useRef(currentRoom);
+  const isRoomPrivateRef = useRef(isRoomPrivate);
   
   // 🔑 Auth State
   const [user, setUser] = useState(getPersistentUser());
   const mapRef = useRef(null);
+
+  const persistRoomSelection = useCallback((room, privateRoom) => {
+    currentRoomRef.current = room;
+    isRoomPrivateRef.current = privateRoom;
+    setCurrentRoom(room);
+    setIsRoomPrivate(privateRoom);
+    localStorage.setItem("roomId", room);
+    localStorage.setItem("isRoomPrivate", String(privateRoom));
+  }, []);
 
   // 💾 Persist theme
   useEffect(() => {
     localStorage.setItem("theme", theme);
   }, [theme]);
 
-  // 🔌 Socket Listeners
   useEffect(() => {
-    // Initial join / rejoin if logged in
-    if (user.username) {
-      // Use rejoin_room — backend verifies room still exists, no passcode needed
-      socket.emit("rejoin_room", { room: currentRoom });
-    }
+    currentRoomRef.current = currentRoom;
+  }, [currentRoom]);
 
+  useEffect(() => {
+    isRoomPrivateRef.current = isRoomPrivate;
+  }, [isRoomPrivate]);
+
+  // 🔌 Socket Listeners
+  const requestPublicRoomJoin = useCallback((room) => {
+    pendingJoinRef.current = { isPrivate: false };
+    localStorage.setItem("roomId", room);
+    socket.emit("join_room", { room });
+    setRoomInput("");
+  }, []);
+
+  useEffect(() => {
     socket.on("update_users", (data) => {
       const unique = {};
       data.forEach((u) => {
@@ -154,13 +455,17 @@ function App() {
     // 💬 LOAD OLD MESSAGES
     socket.on("load_messages", (messages) => {
       console.log("📜 LOADED MESSAGES:", messages);
-      setChatMessages(messages);
+      const now = Date.now() / 1000;
+      setChatMessages((messages || []).filter((msg) => now - msg.timestamp < 86400));
     });
 
     // 💬 RECEIVE NEW MESSAGE
     socket.on("receive_message", (msg) => {
       console.log("🔥 RECEIVED:", msg);
-      setChatMessages((prev) => [...prev, msg]);
+      setChatMessages((prev) => {
+        if (msg._id && prev.some((item) => item._id === msg._id)) return prev;
+        return [...prev, msg];
+      });
     });
 
     // 💬 MESSAGE UPDATED (SEEN STATUS)
@@ -182,43 +487,41 @@ function App() {
 
       // Otherwise roll back to Global (e.g. create-room failure, deleted room)
       const rolledBack = "Global";
-      setCurrentRoom(rolledBack);
-      localStorage.setItem("roomId", rolledBack);
-      setIsRoomPrivate(false);
-      localStorage.setItem("isRoomPrivate", "false");
+      persistRoomSelection(rolledBack, false);
       setChatMessages([]);
       socket.emit("join_room", { room: rolledBack });
       showToast({ message, type: "error" });
     });
 
     // ✅ ROOM JOINED CONFIRMATION (join flow only)
-    socket.on("room_joined", ({ room }) => {
+    socket.on("room_joined", ({ room, isPrivate }) => {
       console.log("✅ Joined room:", room);
 
-      const wasPrivate = pendingJoinRef.current?.isPrivate ?? false;
+      const pendingJoin = pendingJoinRef.current;
+      const previousRoom = currentRoomRef.current;
+      const wasRestore = !pendingJoin && room === previousRoom;
+      const wasPrivate =
+        typeof isPrivate === "boolean"
+          ? isPrivate
+          : pendingJoin?.isPrivate ?? (wasRestore ? isRoomPrivateRef.current : false);
       pendingJoinRef.current = null;
 
-      setCurrentRoom(room);
-      localStorage.setItem("roomId", room);
-      setChatMessages([]);
-      setIsRoomPrivate(wasPrivate);
-      localStorage.setItem("isRoomPrivate", String(wasPrivate));
+      persistRoomSelection(room, wasPrivate);
 
       if (joinModalRef.current) {
         setJoinModal(null);
       }
 
-      showToast({ message: `Joined room: ${room}`, type: "room" });
+      if (!wasRestore) {
+        showToast({ message: `Joined room: ${room}`, type: "room" });
+      }
     });
 
     // 🔒 ROOM CREATED CONFIRMATION (create flow only)
     socket.on("room_created", ({ room }) => {
       console.log("🔒 Room created:", room);
-      setCurrentRoom(room);
-      localStorage.setItem("roomId", room);
+      persistRoomSelection(room, true);
       setChatMessages([]);
-      setIsRoomPrivate(true);
-      localStorage.setItem("isRoomPrivate", "true");
       showToast({ message: `Room “${room}” created!`, type: "room" });
     });
 
@@ -247,8 +550,12 @@ function App() {
       }
 
       // Public room that exists in DB — join directly
-      doJoinPublic(room);
+      requestPublicRoomJoin(room);
     });
+
+    if (user.username) {
+      socket.emit("rejoin_room", { room: currentRoomRef.current });
+    }
 
     return () => {
       socket.off("update_users");
@@ -265,7 +572,7 @@ function App() {
       socket.off("invisible_confirmed");
     };
 
-  }, [user.username]);
+  }, [persistRoomSelection, requestPublicRoomJoin, user.username, user.userId]);
 
   // Keep ref in sync so socket callbacks can read latest modal state
   useEffect(() => {
@@ -299,6 +606,7 @@ function App() {
           lat: pos.coords.latitude,
           lng: pos.coords.longitude,
           heading: pos.coords.heading,
+          altitude: pos.coords.altitude,
         };
         setUserLocation(coords);
 
@@ -322,6 +630,9 @@ function App() {
   // 👻 Restore invisible state on reconnect
   useEffect(() => {
     const handleReconnect = () => {
+      if (user.username) {
+        socket.emit("rejoin_room", { room: currentRoomRef.current });
+      }
       const savedInvisible = localStorage.getItem("invisibleMode") === "true";
       if (savedInvisible && user.userId) {
         socket.emit("set_invisible", { userId: user.userId, invisible: true });
@@ -329,7 +640,7 @@ function App() {
     };
     socket.on("connect", handleReconnect);
     return () => socket.off("connect", handleReconnect);
-  }, [user.userId]);
+  }, [user.username, user.userId]);
 
   // 👻 Sync invisible state on initial load
   useEffect(() => {
@@ -417,13 +728,6 @@ showToast({
     });
   };
   // Directly join a public room (no passcode required)
-  const doJoinPublic = useCallback((room) => {
-    pendingJoinRef.current = { isPrivate: false };
-    localStorage.setItem("roomId", room);
-    socket.emit("join_room", { room });
-    setRoomInput("");
-  }, []);
-
   // JOIN button handler — asks backend for room type first
   const handleSwitchRoom = () => {
     const room = roomInput.trim();
@@ -561,6 +865,27 @@ showToast({
   };
 
   // 🛸 If no username, show Login Page
+  const handleOpenCompass = () => {
+    setIsCompassOpen(true);
+  };
+
+  const handleCloseCompass = () => {
+    setIsCompassOpen(false);
+  };
+
+  useEffect(() => {
+    if (!isCompassOpen) return undefined;
+
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        setIsCompassOpen(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isCompassOpen]);
+
   if (!user.username) {
     return <Login onLogin={handleLogin} />;
   }
@@ -599,19 +924,6 @@ showToast({
   }
 };
 
-  const handleThemeToggle = () => {
-    if (theme === "dark") {
-      localStorage.setItem("theme", "dark");
-      showToast({
-        message: LIGHT_MODE_MAINTENANCE_MESSAGE,
-        type: "maintenance",
-      });
-      return;
-    }
-
-    setTheme("dark");
-  };
-
   return (
     <div style={{ width: "100vw", height: "100vh", position: "relative", overflow: "hidden" }} className={`${theme}-mode`}>
       <MapView 
@@ -626,7 +938,17 @@ showToast({
         sosAlerts={sosAlerts}
         cameraMode={cameraMode}
         setCameraMode={setCameraMode}
+        onBearingChange={setMapBearing}
       />
+
+      {isCompassOpen && (
+        <CompassFullscreen
+          bearing={mapBearing}
+          userLocation={userLocation}
+          cameraMode={cameraMode}
+          onClose={handleCloseCompass}
+        />
+      )}
 
       {/* 💬 CHAT PANEL (Mica Dark) */}
       <div className={`chat-panel ${activePanel === "chat" ? "open" : "closed"}`}>
@@ -810,28 +1132,12 @@ showToast({
       {/* 📱 MOBILE FAB */}
       <div className={`fab-container ${fabOpen ? "open" : ""}`}>
         <div className="fab-actions">
-          <button 
-            className="control-btn" 
-            onClick={handleThemeToggle}
-            title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+          <button
+            className="control-btn compass-control-btn"
+            onClick={handleOpenCompass}
+            title="Open compass"
           >
-            {theme === "dark" ? (
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="5"></circle>
-                <line x1="12" y1="1" x2="12" y2="3"></line>
-                <line x1="12" y1="21" x2="12" y2="23"></line>
-                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
-                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
-                <line x1="1" y1="12" x2="3" y2="12"></line>
-                <line x1="21" y1="12" x2="23" y2="12"></line>
-                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
-                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
-              </svg>
-            ) : (
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
-              </svg>
-            )}
+            <LiveCompassIcon bearing={mapBearing} cameraMode={cameraMode} />
           </button>
 
           <button 
@@ -904,36 +1210,22 @@ showToast({
           </svg>
         </button>
 
-        <button 
-          className="control-btn recenter-btn" 
+        <button
+          className="control-btn recenter-btn"
           onClick={handleRecenter}
           title="Toggle camera mode"
         >
           <CameraModeIcon mode={cameraMode} />
         </button>
 
-        <button 
-          className="control-btn" 
-          onClick={handleThemeToggle}
-          title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+
+
+        <button
+          className="control-btn compass-control-btn"
+          onClick={handleOpenCompass}
+          title="Open compass"
         >
-          {theme === "dark" ? (
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="5"></circle>
-              <line x1="12" y1="1" x2="12" y2="3"></line>
-              <line x1="12" y1="21" x2="12" y2="23"></line>
-              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
-              <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
-              <line x1="1" y1="12" x2="3" y2="12"></line>
-              <line x1="21" y1="12" x2="23" y2="12"></line>
-              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
-              <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
-            </svg>
-          ) : (
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
-            </svg>
-          )}
+          <LiveCompassIcon bearing={mapBearing} cameraMode={cameraMode} />
         </button>
       </div>
 
@@ -941,18 +1233,30 @@ showToast({
         className={`sos-btn ${isSOSActive ? "active" : ""}`}
         onClick={handleSOS}
       >
-        {/* 👇 Show icon ONLY when NOT active */}
-        {!isSOSActive && (
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
-            strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
-            style={{ width: 20, height: 20 }}>
-            <circle cx="12" cy="12" r="10" />
-            <line x1="12" y1="8" x2="12" y2="12" />
-            <line x1="12" y1="16" x2="12.01" y2="16" />
-          </svg>
+        {!isSOSActive ? (
+          <>
+            {/* Premium SOS warning icon */}
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"
+              style={{ width: 18, height: 18, flexShrink: 0 }}>
+              <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+              <line x1="12" y1="9" x2="12" y2="13" />
+              <line x1="12" y1="17" x2="12.01" y2="17" />
+            </svg>
+            <span>SOS</span>
+          </>
+        ) : (
+          <>
+            {/* Premium cancel X icon */}
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+              style={{ width: 16, height: 16, flexShrink: 0 }}>
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+            <span>CANCEL</span>
+          </>
         )}
-
-        <span>{isSOSActive ? "CANCEL" : "SOS"}</span>
       </button>
 
       {toast && (

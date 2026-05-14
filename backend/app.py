@@ -156,6 +156,21 @@ def db_create_room(room_name, passcode, creator_sid):
         print(f"❌ insert_one failed for '{room_name}': {exc}")
         return None, str(exc)
 
+
+def load_recent_messages(room):
+    cutoff = time.time() - 86400
+    messages = list(
+        messages_collection.find(
+            {"room": room, "timestamp": {"$gt": cutoff}}
+        ).sort("timestamp", 1)
+    )
+    for msg in messages:
+        msg["_id"] = str(msg["_id"])
+        msg.pop("createdAt", None)
+        msg.setdefault("seenBy", [])
+        msg.setdefault("senderId", "unknown")
+    return messages
+
 # --------------------------------------------------
 # DEBUG HTTP ENDPOINTS
 # --------------------------------------------------
@@ -241,7 +256,7 @@ def handle_create_room(data):
     socket_to_room[sid] = room_name
 
     emit("load_messages", [])           # new room — no messages yet
-    emit("room_created", {"room": room_name})
+    emit("room_created", {"room": room_name, "isPrivate": True})
     print(f"{'='*55}\n")
 
 
@@ -258,6 +273,7 @@ def handle_join(data):
     passcode   = (data.get("passcode") or "").strip()
     is_private = bool(data.get("isPrivate", False))
     sid        = request.sid
+    room_is_private = False
 
     print(f"   room='{room}'  passcode='{passcode}'  is_private={is_private}")
 
@@ -279,6 +295,7 @@ def handle_join(data):
             emit("room_error", {"message": "Invalid room passcode"})
             return
         print("   ✅ Passcode correct")
+        room_is_private = bool(existing.get("isPrivate", True))
 
     else:
         # Public join —
@@ -294,6 +311,7 @@ def handle_join(data):
             if existing.get("isPrivate"):
                 emit("room_error", {"message": "That room is private. Use a passcode to join."})
                 return
+            room_is_private = bool(existing.get("isPrivate", False))
 
     # --------------------------------------------------
     # SWITCH SOCKET ROOM
@@ -308,20 +326,10 @@ def handle_join(data):
     # --------------------------------------------------
     # LOAD LAST 24 h MESSAGES
     # --------------------------------------------------
-    cutoff   = time.time() - 86400
-    messages = list(
-        messages_collection.find(
-            {"room": room, "timestamp": {"$gt": cutoff}}
-        ).sort("timestamp", 1)
-    )
-    for msg in messages:
-        msg["_id"] = str(msg["_id"])
-        msg.pop("createdAt", None)
-        msg.setdefault("seenBy", [])
-        msg.setdefault("senderId", "unknown")
+    messages = load_recent_messages(room)
 
     emit("load_messages", messages)
-    emit("room_joined", {"room": room})
+    emit("room_joined", {"room": room, "isPrivate": room_is_private})
     print(f"{'='*55}\n")
 
 # --------------------------------------------------
@@ -347,7 +355,8 @@ def handle_rejoin(data):
             leave_room(old)
         join_room(room)
         socket_to_room[sid] = room
-        emit("room_joined", {"room": room})
+        emit("load_messages", load_recent_messages(room))
+        emit("room_joined", {"room": room, "isPrivate": False})
         print(f"   → rejoined Global")
         print(f"{'='*55}\n")
         return
@@ -368,20 +377,10 @@ def handle_rejoin(data):
     print(f"👤 {sid} rejoined '{room}'")
 
     # Load messages
-    cutoff   = time.time() - 86400
-    messages = list(
-        messages_collection.find(
-            {"room": room, "timestamp": {"$gt": cutoff}}
-        ).sort("timestamp", 1)
-    )
-    for msg in messages:
-        msg["_id"] = str(msg["_id"])
-        msg.pop("createdAt", None)
-        msg.setdefault("seenBy", [])
-        msg.setdefault("senderId", "unknown")
+    messages = load_recent_messages(room)
 
     emit("load_messages", messages)
-    emit("room_joined", {"room": room})
+    emit("room_joined", {"room": room, "isPrivate": bool(existing.get("isPrivate", False))})
     print(f"{'='*55}\n")
 
 # --------------------------------------------------

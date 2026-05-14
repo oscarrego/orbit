@@ -1,5 +1,8 @@
 export const BUILDING_LAYER_ID = "orbit-3d-buildings";
 export const BUILDING_ROOF_LAYER_ID = "orbit-3d-building-roofs";
+export const BUILDING_TERRAIN_BLEND_LAYER_ID = "orbit-building-terrain-blend";
+export const BUILDING_ROAD_BOUNCE_LAYER_ID = "orbit-building-road-bounce";
+export const BUILDING_ATMOSPHERE_LAYER_ID = "orbit-building-atmosphere-veil";
 export const SKYSCRAPER_UPPER_LIGHT_LAYER_ID = "orbit-skyscraper-upper-light";
 export const SKYSCRAPER_CROWN_LIGHT_LAYER_ID = "orbit-skyscraper-crown-light";
 export const SKYSCRAPER_WINDOW_BAND_LAYER_IDS = [
@@ -14,6 +17,9 @@ export const SKYSCRAPER_BAND_LAYER_IDS = [
   "orbit-skyscraper-shadow-band-c"
 ];
 export const BUILDING_ACCENT_LAYER_IDS = [
+  BUILDING_TERRAIN_BLEND_LAYER_ID,
+  BUILDING_ROAD_BOUNCE_LAYER_ID,
+  BUILDING_ATMOSPHERE_LAYER_ID,
   BUILDING_ROOF_LAYER_ID,
   SKYSCRAPER_UPPER_LIGHT_LAYER_ID,
   SKYSCRAPER_CROWN_LIGHT_LAYER_ID,
@@ -22,33 +28,56 @@ export const BUILDING_ACCENT_LAYER_IDS = [
 ];
 export const BUILDING_SOURCE_LAYER = "building";
 export const BUILDING_MIN_ZOOM = 13;
-export const LIGHT_BUILDING_COLOR = "#7a7979";
 
 const BUILDING_ID_NUMBER_EXPRESSION = [
   "abs",
   ["case", ["==", ["id"], null], 17, ["to-number", ["id"], 17]]
 ];
 
-// Buildings grade from dark warm-grey at street level to subtly lighter at height.
-// This simulates overcast moonlight + distant city-glow reflecting off tall faces.
+const BUILDING_TONE_BUCKET_EXPRESSION = ["%", BUILDING_ID_NUMBER_EXPRESSION, 6];
+
+// Buildings grade through cool/warm charcoal families so districts do not read
+// as one flat matte mass. Height still controls the downtown weight.
 const DARK_BUILDING_COLOR_EXPRESSION = [
   "let",
   "height",
   ["max", 10, ["to-number", ["get", "render_height"], 24]],
+  "tone",
+  BUILDING_TONE_BUCKET_EXPRESSION,
   [
-    "interpolate",
-    ["linear"],
-    ["var", "height"],
-    0,
-    "#181a1e",
-    18,
-    "#1b1d21",
-    45,
-    "#1f2228",
-    90,
-    "#23262d",
-    160,
-    "#272b33"
+    "case",
+    ["<", ["var", "tone"], 2],
+    [
+      "interpolate",
+      ["linear"],
+      ["var", "height"],
+      0, "#22262b",
+      22, "#252a30",
+      55, "#20252d",
+      105, "#1a2028",
+      180, "#151a22"
+    ],
+    ["<", ["var", "tone"], 4],
+    [
+      "interpolate",
+      ["linear"],
+      ["var", "height"],
+      0, "#242629",
+      22, "#2b2e32",
+      55, "#252a30",
+      105, "#1d232a",
+      180, "#171c23"
+    ],
+    [
+      "interpolate",
+      ["linear"],
+      ["var", "height"],
+      0, "#1f2528",
+      22, "#263034",
+      55, "#222a31",
+      105, "#1a2229",
+      180, "#141b22"
+    ]
   ]
 ];
 
@@ -160,21 +189,51 @@ const cloneExpression = (value) =>
 // Rooftops catch slightly more atmospheric ambient light than walls.
 // They should be slightly lighter and cooler than the wall base colour.
 const DARK_ROOF_COLOR_EXPRESSION = [
-  "interpolate",
-  ["linear"],
-  ["zoom"],
-  13,
-  "#222428",
-  15,
-  "#2a2d34",
-  17,
-  "#31353e",
-  19,
-  "#383d48"
+  "let",
+  "tone",
+  BUILDING_TONE_BUCKET_EXPRESSION,
+  [
+    "case",
+    ["<", ["var", "tone"], 2],
+    [
+      "interpolate",
+      ["linear"],
+      ["zoom"],
+      13, "#2f343a",
+      15, "#373d45",
+      17, "#414955",
+      19, "#4a5360"
+    ],
+    ["<", ["var", "tone"], 4],
+    [
+      "interpolate",
+      ["linear"],
+      ["zoom"],
+      13, "#303237",
+      15, "#3a3d43",
+      17, "#454952",
+      19, "#4e535d"
+    ],
+    [
+      "interpolate",
+      ["linear"],
+      ["zoom"],
+      13, "#2b3537",
+      15, "#354144",
+      17, "#404d52",
+      19, "#48575d"
+    ]
+  ]
 ];
 
 const TALL_BUILDING_FILTER = [
   ">=",
+  ["max", 0, cloneExpression(BUILDING_RAW_HEIGHT_EXPRESSION)],
+  48
+];
+
+const LOW_BUILDING_FILTER = [
+  "<",
   ["max", 0, cloneExpression(BUILDING_RAW_HEIGHT_EXPRESSION)],
   48
 ];
@@ -190,13 +249,13 @@ const SKYSCRAPER_UPPER_LIGHT_COLOR_EXPRESSION = [
     ["linear"],
     ["var", "height"],
     48,
-    "#2e2e2a",
+    "#303235",
     90,
-    "#3c3a2f",
+    "#393b3c",
     150,
-    "#4a4738",
+    "#44433f",
     220,
-    "#585443"
+    "#514d45"
   ]
 ];
 
@@ -211,13 +270,13 @@ const SKYSCRAPER_CROWN_LIGHT_COLOR_EXPRESSION = [
     ["linear"],
     ["var", "height"],
     48,
-    "#444038",
+    "#4a4842",
     110,
-    "#5a5446",
+    "#5d584e",
     180,
-    "#6e6756",
+    "#706958",
     250,
-    "#827a66"
+    "#837b67"
   ]
 ];
 
@@ -316,36 +375,118 @@ const getSkyscraperWindowBandLayer = (
   };
 };
 
-export const getBuildingPaint = (themeId) => ({
-  "fill-extrusion-color":
-    themeId === "light" ? LIGHT_BUILDING_COLOR : cloneExpression(DARK_BUILDING_COLOR_EXPRESSION),
+export const getBuildingPaint = () => ({
+  "fill-extrusion-color": cloneExpression(DARK_BUILDING_COLOR_EXPRESSION),
   "fill-extrusion-height": cloneExpression(BUILDING_HEIGHT_EXPRESSION),
   "fill-extrusion-base": cloneExpression(BUILDING_BASE_EXPRESSION),
   "fill-extrusion-opacity": cloneExpression(BUILDING_OPACITY_EXPRESSION),
   "fill-extrusion-vertical-gradient": true
 });
 
-export const getBuildingLight = (themeId) =>
-  themeId === "light"
-    ? {
-        anchor: "viewport",
-        position: [1.25, 72, 48],
-        color: "#ffffff",
-        intensity: 0.78
-      }
-    : {
-        // Overcast moonlight + distant city-glow: slightly warm-white, angled low
-        // from the upper-left to give facades readable depth separation.
-        anchor: "viewport",
-        position: [1.5, 52, 48],
-        color: "#dde0e8",
-        intensity: 0.42
-      };
+export const getBuildingLight = () => ({
+  anchor: "viewport",
+  position: [1.45, 50, 52],
+  color: "#e5e9f1",
+  intensity: 0.54
+});
 
 export const getBuildingAccentLayers = (themeId, source, sourceLayer, baseFilter) => {
-  if (themeId !== "dark") return [];
+  const terrainBlendTop = [
+    "min",
+    cloneExpression(BUILDING_FULL_HEIGHT_EXPRESSION),
+    ["+", cloneExpression(BUILDING_BASE_VALUE_EXPRESSION), 5.5]
+  ];
+  const roadBounceTop = [
+    "min",
+    cloneExpression(BUILDING_FULL_HEIGHT_EXPRESSION),
+    ["+", cloneExpression(BUILDING_BASE_VALUE_EXPRESSION), 12]
+  ];
 
   return [
+    {
+      id: BUILDING_TERRAIN_BLEND_LAYER_ID,
+      source,
+      "source-layer": sourceLayer,
+      type: "fill-extrusion",
+      minzoom: BUILDING_MIN_ZOOM,
+      filter: mergeFilters(baseFilter, LOW_BUILDING_FILTER),
+      paint: {
+        "fill-extrusion-color": [
+          "let",
+          "tone",
+          BUILDING_TONE_BUCKET_EXPRESSION,
+          [
+            "case",
+            ["<", ["var", "tone"], 2], "#3c4349",
+            ["<", ["var", "tone"], 4], "#424348",
+            "#384649"
+          ]
+        ],
+        "fill-extrusion-height": terrainBlendTop,
+        "fill-extrusion-base": cloneExpression(BUILDING_BASE_EXPRESSION),
+        "fill-extrusion-opacity": [
+          "interpolate",
+          ["linear"],
+          ["zoom"],
+          13, 0,
+          14.25, 0.12,
+          16, 0.22,
+          18, 0.28
+        ],
+        "fill-extrusion-vertical-gradient": false
+      }
+    },
+    {
+      id: BUILDING_ROAD_BOUNCE_LAYER_ID,
+      source,
+      "source-layer": sourceLayer,
+      type: "fill-extrusion",
+      minzoom: BUILDING_MIN_ZOOM + 0.35,
+      filter: baseFilter ? cloneExpression(baseFilter) : undefined,
+      paint: {
+        "fill-extrusion-color": [
+          "case",
+          [">=", ["max", 0, cloneExpression(BUILDING_RAW_HEIGHT_EXPRESSION)], 70],
+          "#6a5538",
+          "#5a4d39"
+        ],
+        "fill-extrusion-height": roadBounceTop,
+        "fill-extrusion-base": cloneExpression(BUILDING_BASE_EXPRESSION),
+        "fill-extrusion-opacity": [
+          "interpolate",
+          ["linear"],
+          ["zoom"],
+          13, 0,
+          14.5, 0.06,
+          16.5, 0.13,
+          18.5, 0.16
+        ],
+        "fill-extrusion-vertical-gradient": true
+      }
+    },
+    {
+      id: BUILDING_ATMOSPHERE_LAYER_ID,
+      source,
+      "source-layer": sourceLayer,
+      type: "fill-extrusion",
+      minzoom: BUILDING_MIN_ZOOM + 0.8,
+      filter: baseFilter ? cloneExpression(baseFilter) : undefined,
+      paint: {
+        "fill-extrusion-color": "#5d6873",
+        "fill-extrusion-height": cloneExpression(BUILDING_FULL_HEIGHT_EXPRESSION),
+        "fill-extrusion-base": buildingHeightAtRatio(0.28),
+        "fill-extrusion-opacity": [
+          "interpolate",
+          ["linear"],
+          ["zoom"],
+          13.5, 0,
+          15, 0.045,
+          17, 0.075,
+          19, 0.095
+        ],
+        "fill-extrusion-vertical-gradient": true
+      }
+    },
     {
       id: SKYSCRAPER_UPPER_LIGHT_LAYER_ID,
       source,
@@ -392,13 +533,13 @@ export const getBuildingAccentLayers = (themeId, source, sourceLayer, baseFilter
         "fill-extrusion-vertical-gradient": true
       }
     },
-    // Window bands — warm amber tones suggesting interior lights spilling outward
+    // Subtle material ribs, not emissive windows.
     getSkyscraperWindowBandLayer(
       SKYSCRAPER_WINDOW_BAND_LAYER_IDS[0],
       0.50,
       2.4,
-      "#9a9080",
-      0.28,
+      "#807b70",
+      0.10,
       source,
       sourceLayer,
       baseFilter
@@ -407,8 +548,8 @@ export const getBuildingAccentLayers = (themeId, source, sourceLayer, baseFilter
       SKYSCRAPER_WINDOW_BAND_LAYER_IDS[1],
       0.65,
       2.6,
-      "#bfb59e",
-      0.36,
+      "#969083",
+      0.13,
       source,
       sourceLayer,
       baseFilter
@@ -417,8 +558,8 @@ export const getBuildingAccentLayers = (themeId, source, sourceLayer, baseFilter
       SKYSCRAPER_WINDOW_BAND_LAYER_IDS[2],
       0.78,
       2.2,
-      "#afa492",
-      0.32,
+      "#8b867c",
+      0.11,
       source,
       sourceLayer,
       baseFilter
@@ -427,8 +568,8 @@ export const getBuildingAccentLayers = (themeId, source, sourceLayer, baseFilter
       SKYSCRAPER_WINDOW_BAND_LAYER_IDS[3],
       0.90,
       2.8,
-      "#cec3ae",
-      0.42,
+      "#a09a8c",
+      0.14,
       source,
       sourceLayer,
       baseFilter

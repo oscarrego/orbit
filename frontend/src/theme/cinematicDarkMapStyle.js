@@ -201,6 +201,26 @@ const cinematicHighwayLayers = [
       ]
     }
   },
+  // Secondary corridors carry a faint warm spill so the grid sits inside the city glow.
+  {
+    id: "orbit-secondary-road-warm-bounce",
+    filter: secondaryFilter,
+    paint: {
+      "line-color": "rgba(255,185,92,0.20)",
+      "line-width": [
+        "interpolate", ["exponential", 1.35], ["zoom"],
+        11, 1.4, 13, 3.2, 15, 8.5, 17, 17, 19, 30
+      ],
+      "line-blur": [
+        "interpolate", ["linear"], ["zoom"],
+        11, 2.4, 14, 5.5, 17, 10, 19, 16
+      ],
+      "line-opacity": [
+        "interpolate", ["linear"], ["zoom"],
+        10, 0, 12, 0.12, 15, 0.26, 18, 0.34
+      ]
+    }
+  },
   // Secondary roads — subtle steel-blue depth
   {
     id: "orbit-secondary-road-depth",
@@ -225,15 +245,15 @@ const cinematicHighwayLayers = [
 // subtle saturation so depth gradients and atmospheric perspective read correctly.
 const styleGroundAndWater = (mapInstance) => {
   // Base background — deep warm-grey, not black
-  setPaint(mapInstance, "background", "background-color", "#16181a");
+  setPaint(mapInstance, "background", "background-color", "#1c2024");
 
   // Landcover — subtly visible, layered with depth
   setPaint(mapInstance, "landcover", "fill-color", [
     "interpolate", ["linear"], ["zoom"],
-    6,  "#1a1c1e",
-    10, "#1e2022",
-    13, "#22252a",
-    16, "#272b30"
+    6,  "#20242a",
+    10, "#252a31",
+    13, "#2c323a",
+    16, "#343a43"
   ]);
   setPaint(mapInstance, "landcover", "fill-opacity", [
     "interpolate", ["linear"], ["zoom"],
@@ -243,9 +263,9 @@ const styleGroundAndWater = (mapInstance) => {
   // Residential areas — slightly lighter than base, warm grey
   setPaint(mapInstance, "landuse_residential", "fill-color", [
     "interpolate", ["linear"], ["zoom"],
-    6,  "#1c1f22",
-    12, "#242830",
-    16, "#2a2f38"
+    6,  "#232830",
+    12, "#303640",
+    16, "#3a414b"
   ]);
   setPaint(mapInstance, "landuse_residential", "fill-opacity", [
     "interpolate", ["linear"], ["zoom"],
@@ -253,33 +273,33 @@ const styleGroundAndWater = (mapInstance) => {
   ]);
 
   // General landuse — warm-toned dark grey
-  setPaint(mapInstance, "landuse", "fill-color", "#252830");
-  setPaint(mapInstance, "landuse", "fill-opacity", 0.74);
+  setPaint(mapInstance, "landuse", "fill-color", "#333941");
+  setPaint(mapInstance, "landuse", "fill-opacity", 0.82);
 
   // Parks — dark muted green, not pitch black
-  setPaint(mapInstance, "park_national_park", "fill-color", "#1e2a22");
-  setPaint(mapInstance, "park_nature_reserve", "fill-color", "#1e2a22");
+  setPaint(mapInstance, "park_national_park", "fill-color", "#263628");
+  setPaint(mapInstance, "park_nature_reserve", "fill-color", "#263628");
 
   // Water — deep atmospheric teal, no pure black
   setPaint(mapInstance, "water", "fill-color", [
     "interpolate", ["linear"], ["zoom"],
-    0,  "#0e1720",
-    8,  "#111e28",
-    12, "#142330",
-    16, "#192c3a"
+    0,  "#101b24",
+    8,  "#142331",
+    12, "#182b3b",
+    16, "#203746"
   ]);
-  setPaint(mapInstance, "water", "fill-outline-color", "#223848");
+  setPaint(mapInstance, "water", "fill-outline-color", "#2b4658");
   setPaint(mapInstance, "water", "fill-opacity", 1);
 
   // Water shadow — soft atmospheric glow at edges
-  setPaint(mapInstance, "water_shadow", "fill-color", "#1a3040");
+  setPaint(mapInstance, "water_shadow", "fill-color", "#25465a");
   setPaint(mapInstance, "water_shadow", "fill-opacity", [
     "interpolate", ["linear"], ["zoom"],
     8, 0.22, 13, 0.44, 17, 0.66
   ]);
 
   // Waterways — atmospheric teal-blue
-  setPaint(mapInstance, "waterway", "line-color", "#1e3a4a");
+  setPaint(mapInstance, "waterway", "line-color", "#2b5668");
   setPaint(mapInstance, "waterway", "line-opacity", 0.84);
   setPaint(mapInstance, "waterway", "line-width", [
     "interpolate", ["exponential", 1.3], ["zoom"],
@@ -318,16 +338,16 @@ const styleRoadHierarchy = (mapInstance) => {
 
     if (isSecondary) {
       // Cool steel-blue — atmospheric depth
-      setPaint(mapInstance, id, "line-color", isCase ? "#2a2e34" : "#586070");
-      setPaint(mapInstance, id, "line-opacity", isTunnel ? 0.24 : isBridge ? 0.72 : 0.58);
+      setPaint(mapInstance, id, "line-color", isCase ? "#323840" : "#747d89");
+      setPaint(mapInstance, id, "line-opacity", isTunnel ? 0.28 : isBridge ? 0.78 : 0.64);
       setPaint(mapInstance, id, "line-blur", isCase ? 0.5 : 0.1);
       return;
     }
 
     if (isMinor) {
       // Barely visible, just enough to feel textured
-      setPaint(mapInstance, id, "line-color", isCase ? "#222528" : "#3e4248");
-      setPaint(mapInstance, id, "line-opacity", isTunnel ? 0.14 : isBridge ? 0.5 : 0.36);
+      setPaint(mapInstance, id, "line-color", isCase ? "#2c3136" : "#565d66");
+      setPaint(mapInstance, id, "line-opacity", isTunnel ? 0.18 : isBridge ? 0.56 : 0.42);
       setPaint(mapInstance, id, "line-blur", isCase ? 0.4 : 0);
       return;
     }

@@ -2,7 +2,6 @@ import { useEffect, useRef, forwardRef, useImperativeHandle } from "react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { getBackgroundColor, getMapFilters } from "../theme/themeHelpers";
-import { customLightMapStyle } from "../theme/customLightMapStyle";
 import {
   BUILDING_ACCENT_LAYER_IDS,
   BUILDING_LAYER_ID,
@@ -99,25 +98,23 @@ const IMMERSIVE_SKY_STYLE = {
   "atmosphere-blend": 0.28
 };
 
-const getSkyStyleForMode = (cameraMode, themeId) => {
-  if (themeId !== "dark") return cloneMapStyle(TOP_SKY_STYLE);
+const getSkyStyleForMode = (cameraMode) => {
   if (cameraMode === CAMERA_MODES.IMMERSIVE)  return cloneMapStyle(IMMERSIVE_SKY_STYLE);
   if (cameraMode === CAMERA_MODES.CINEMATIC)  return cloneMapStyle(CINEMATIC_SKY_STYLE);
   return cloneMapStyle(TOP_SKY_STYLE);
 };
 
-const applyCameraAtmosphere = (mapInstance, cameraMode, themeId) => {
+const applyCameraAtmosphere = (mapInstance, cameraMode) => {
   if (!mapInstance?.setSky) return;
   try {
-    mapInstance.setSky(getSkyStyleForMode(cameraMode, themeId), { validate: false });
+    mapInstance.setSky(getSkyStyleForMode(cameraMode), { validate: false });
   } catch (error) {
     console.warn("Unable to apply camera atmosphere:", error);
   }
 };
 
 
-const getMapStyleForTheme = (themeId) =>
-  themeId === "light" ? cloneMapStyle(customLightMapStyle) : DARK_MAP_STYLE_URL;
+const getMapStyleForTheme = () => DARK_MAP_STYLE_URL;
 
 const isBuildingSourceLayer = (layer) =>
   Boolean(
@@ -197,13 +194,9 @@ const applyThemeToMap = (mapInstance, themeId, cameraMode) => {
 
   applyBuildingLighting(mapInstance, themeId);
 
-  if (themeId === "dark") {
-    applyCinematicDarkMapStyle(mapInstance);
-  } else {
-    mapInstance.__orbitCinematicDarkApplied = false;
-  }
+  applyCinematicDarkMapStyle(mapInstance);
 
-  applyCameraAtmosphere(mapInstance, cameraMode, themeId);
+  applyCameraAtmosphere(mapInstance, cameraMode);
 };
 
 const getDecorations = (id) => {
