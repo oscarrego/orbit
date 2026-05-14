@@ -29,6 +29,8 @@ const BUILDING_ID_NUMBER_EXPRESSION = [
   ["case", ["==", ["id"], null], 17, ["to-number", ["id"], 17]]
 ];
 
+// Buildings grade from dark warm-grey at street level to subtly lighter at height.
+// This simulates overcast moonlight + distant city-glow reflecting off tall faces.
 const DARK_BUILDING_COLOR_EXPRESSION = [
   "let",
   "height",
@@ -38,15 +40,15 @@ const DARK_BUILDING_COLOR_EXPRESSION = [
     ["linear"],
     ["var", "height"],
     0,
-    "#151515",
+    "#181a1e",
     18,
-    "#171716",
+    "#1b1d21",
     45,
-    "#1a1a19",
+    "#1f2228",
     90,
-    "#1d1d1b",
+    "#23262d",
     160,
-    "#20201d"
+    "#272b33"
   ]
 ];
 
@@ -155,18 +157,20 @@ const BUILDING_OPACITY_EXPRESSION = [
 const cloneExpression = (value) =>
   Array.isArray(value) ? JSON.parse(JSON.stringify(value)) : value;
 
+// Rooftops catch slightly more atmospheric ambient light than walls.
+// They should be slightly lighter and cooler than the wall base colour.
 const DARK_ROOF_COLOR_EXPRESSION = [
   "interpolate",
   ["linear"],
   ["zoom"],
   13,
-  "#1d1e1c",
+  "#222428",
   15,
-  "#262724",
+  "#2a2d34",
   17,
-  "#2d2e2a",
+  "#31353e",
   19,
-  "#33332f"
+  "#383d48"
 ];
 
 const TALL_BUILDING_FILTER = [
@@ -175,6 +179,8 @@ const TALL_BUILDING_FILTER = [
   48
 ];
 
+// Upper-third of skyscrapers — warm diffuse light from city-glow ambience.
+// Opacity kept very low so it only appears as a subtle depth gradient.
 const SKYSCRAPER_UPPER_LIGHT_COLOR_EXPRESSION = [
   "let",
   "height",
@@ -184,16 +190,18 @@ const SKYSCRAPER_UPPER_LIGHT_COLOR_EXPRESSION = [
     ["linear"],
     ["var", "height"],
     48,
-    "#252520",
+    "#2e2e2a",
     90,
-    "#333229",
+    "#3c3a2f",
     150,
-    "#403d32",
+    "#4a4738",
     220,
-    "#4d493c"
+    "#585443"
   ]
 ];
 
+// Crown region — most exposed to overcast sky + distant urban glow.
+// Taller buildings catch more atmospheric light at their apex.
 const SKYSCRAPER_CROWN_LIGHT_COLOR_EXPRESSION = [
   "let",
   "height",
@@ -203,13 +211,13 @@ const SKYSCRAPER_CROWN_LIGHT_COLOR_EXPRESSION = [
     ["linear"],
     ["var", "height"],
     48,
-    "#3b3930",
+    "#444038",
     110,
-    "#4f4a3e",
+    "#5a5446",
     180,
-    "#625c4d",
+    "#6e6756",
     250,
-    "#756e5d"
+    "#827a66"
   ]
 ];
 
@@ -326,10 +334,12 @@ export const getBuildingLight = (themeId) =>
         intensity: 0.78
       }
     : {
+        // Overcast moonlight + distant city-glow: slightly warm-white, angled low
+        // from the upper-left to give facades readable depth separation.
         anchor: "viewport",
-        position: [1.25, 58, 52],
-        color: "#d8d9d1",
-        intensity: 0.28
+        position: [1.5, 52, 48],
+        color: "#dde0e8",
+        intensity: 0.42
       };
 
 export const getBuildingAccentLayers = (themeId, source, sourceLayer, baseFilter) => {
@@ -346,19 +356,15 @@ export const getBuildingAccentLayers = (themeId, source, sourceLayer, baseFilter
       paint: {
         "fill-extrusion-color": cloneExpression(SKYSCRAPER_UPPER_LIGHT_COLOR_EXPRESSION),
         "fill-extrusion-height": cloneExpression(BUILDING_FULL_HEIGHT_EXPRESSION),
-        "fill-extrusion-base": buildingHeightAtRatio(0.42),
+        "fill-extrusion-base": buildingHeightAtRatio(0.38),
         "fill-extrusion-opacity": [
           "interpolate",
           ["linear"],
           ["zoom"],
-          14,
-          0,
-          15,
-          0.06,
-          17,
-          0.1,
-          19,
-          0.12
+          14, 0,
+          15, 0.10,
+          17, 0.18,
+          19, 0.22
         ],
         "fill-extrusion-vertical-gradient": true
       }
@@ -373,59 +379,56 @@ export const getBuildingAccentLayers = (themeId, source, sourceLayer, baseFilter
       paint: {
         "fill-extrusion-color": cloneExpression(SKYSCRAPER_CROWN_LIGHT_COLOR_EXPRESSION),
         "fill-extrusion-height": cloneExpression(BUILDING_FULL_HEIGHT_EXPRESSION),
-        "fill-extrusion-base": buildingHeightAtRatio(0.68),
+        "fill-extrusion-base": buildingHeightAtRatio(0.64),
         "fill-extrusion-opacity": [
           "interpolate",
           ["linear"],
           ["zoom"],
-          14,
-          0,
-          15.5,
-          0.07,
-          17,
-          0.12,
-          19,
-          0.15
+          14,   0,
+          15.5, 0.14,
+          17,   0.22,
+          19,   0.28
         ],
         "fill-extrusion-vertical-gradient": true
       }
     },
+    // Window bands — warm amber tones suggesting interior lights spilling outward
     getSkyscraperWindowBandLayer(
       SKYSCRAPER_WINDOW_BAND_LAYER_IDS[0],
-      0.54,
-      2.2,
-      "#8f8879",
-      0.22,
+      0.50,
+      2.4,
+      "#9a9080",
+      0.28,
       source,
       sourceLayer,
       baseFilter
     ),
     getSkyscraperWindowBandLayer(
       SKYSCRAPER_WINDOW_BAND_LAYER_IDS[1],
-      0.67,
-      2.4,
-      "#b4ac9b",
-      0.3,
+      0.65,
+      2.6,
+      "#bfb59e",
+      0.36,
       source,
       sourceLayer,
       baseFilter
     ),
     getSkyscraperWindowBandLayer(
       SKYSCRAPER_WINDOW_BAND_LAYER_IDS[2],
-      0.8,
-      2.1,
-      "#9f9788",
-      0.26,
+      0.78,
+      2.2,
+      "#afa492",
+      0.32,
       source,
       sourceLayer,
       baseFilter
     ),
     getSkyscraperWindowBandLayer(
       SKYSCRAPER_WINDOW_BAND_LAYER_IDS[3],
-      0.92,
-      2.6,
-      "#c4bcaa",
-      0.34,
+      0.90,
+      2.8,
+      "#cec3ae",
+      0.42,
       source,
       sourceLayer,
       baseFilter
@@ -448,12 +451,10 @@ export const getBuildingAccentLayers = (themeId, source, sourceLayer, baseFilter
           "interpolate",
           ["linear"],
           ["zoom"],
-          13,
-          0,
-          14,
-          0.44,
-          16,
-          0.68
+          13, 0,
+          14, 0.52,
+          16, 0.76,
+          18, 0.88
         ],
         "fill-extrusion-vertical-gradient": false
       }

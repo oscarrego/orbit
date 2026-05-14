@@ -21,77 +21,53 @@ const highwayWidth = [
   "interpolate",
   ["exponential", 1.45],
   ["zoom"],
-  9,
-  0.7,
-  11,
-  1.4,
-  13,
-  3.1,
-  15,
-  7,
-  17,
-  15,
-  19,
-  28
+  9,  0.7,
+  11, 1.4,
+  13, 3.1,
+  15, 7,
+  17, 15,
+  19, 28
 ];
 
 const highwayOuterGlowWidth = [
   "interpolate",
   ["exponential", 1.45],
   ["zoom"],
-  9,
-  1.5,
-  11,
-  3.2,
-  13,
-  8.5,
-  15,
-  22,
-  17,
-  46,
-  19,
-  78
+  9,  2.0,
+  11, 4.5,
+  13, 11,
+  15, 28,
+  17, 56,
+  19, 92
 ];
 
 const highwayMidGlowWidth = [
   "interpolate",
   ["exponential", 1.45],
   ["zoom"],
-  9,
-  1,
-  11,
-  2.3,
-  13,
-  6,
-  15,
-  15,
-  17,
-  32,
-  19,
-  56
+  9,  1.2,
+  11, 2.8,
+  13, 7,
+  15, 18,
+  17, 38,
+  19, 64
 ];
 
 const secondaryWidth = [
   "interpolate",
   ["exponential", 1.35],
   ["zoom"],
-  11,
-  0.35,
-  13,
-  0.9,
-  15,
-  2.1,
-  17,
-  5.2,
-  19,
-  9
+  11, 0.35,
+  13, 0.9,
+  15, 2.1,
+  17, 5.2,
+  19, 9
 ];
 
 const clone = (value) => JSON.parse(JSON.stringify(value));
 
 const setPaint = (mapInstance, layerId, property, value) => {
   if (!mapInstance.getLayer(layerId)) return;
-
   try {
     mapInstance.setPaintProperty(layerId, property, clone(value));
   } catch (error) {
@@ -134,41 +110,47 @@ const addLineLayer = (mapInstance, layer, beforeLayerId) => {
   );
 };
 
+// ── Cinematic Highway Layers ─────────────────────────────────────────────────
+// 4-pass system: volumetric outer diffusion → mid bloom → bright core → hot highlight
 const cinematicHighwayLayers = [
+  // Pass 0 — Volumetric atmospheric diffusion (widest, softest, low opacity)
+  {
+    id: "orbit-highway-atmosphere",
+    filter: highwayFilter,
+    paint: {
+      "line-color": "rgba(255,172,60,0.14)",
+      "line-width": [
+        "interpolate", ["exponential", 1.45], ["zoom"],
+        9, 4, 11, 9, 13, 20, 15, 48, 17, 90, 19, 140
+      ],
+      "line-blur": [
+        "interpolate", ["linear"], ["zoom"],
+        10, 18, 14, 28, 17, 42, 19, 58
+      ],
+      "line-opacity": [
+        "interpolate", ["linear"], ["zoom"],
+        9, 0, 11, 0.12, 14, 0.22, 17, 0.34
+      ]
+    }
+  },
+  // Pass 1 — Outer cinematic bloom glow
   {
     id: "orbit-highway-outer-glow",
     filter: highwayFilter,
     paint: {
-      "line-color": "rgba(255,179,71,0.22)",
+      "line-color": "rgba(255,179,71,0.26)",
       "line-width": clone(highwayOuterGlowWidth),
       "line-blur": [
-        "interpolate",
-        ["linear"],
-        ["zoom"],
-        10,
-        7,
-        14,
-        14,
-        17,
-        22,
-        19,
-        32
+        "interpolate", ["linear"], ["zoom"],
+        10, 9, 14, 18, 17, 28, 19, 40
       ],
       "line-opacity": [
-        "interpolate",
-        ["linear"],
-        ["zoom"],
-        9,
-        0,
-        11,
-        0.18,
-        14,
-        0.28,
-        17,
-        0.42
+        "interpolate", ["linear"], ["zoom"],
+        9, 0, 11, 0.22, 14, 0.36, 17, 0.52
       ]
     }
   },
+  // Pass 2 — Mid bloom glow
   {
     id: "orbit-highway-mid-glow",
     filter: highwayFilter,
@@ -176,33 +158,16 @@ const cinematicHighwayLayers = [
       "line-color": "#ffb347",
       "line-width": clone(highwayMidGlowWidth),
       "line-blur": [
-        "interpolate",
-        ["linear"],
-        ["zoom"],
-        10,
-        3,
-        14,
-        7,
-        17,
-        13,
-        19,
-        20
+        "interpolate", ["linear"], ["zoom"],
+        10, 4, 14, 9, 17, 16, 19, 24
       ],
       "line-opacity": [
-        "interpolate",
-        ["linear"],
-        ["zoom"],
-        9,
-        0,
-        11,
-        0.3,
-        14,
-        0.5,
-        17,
-        0.68
+        "interpolate", ["linear"], ["zoom"],
+        9, 0, 11, 0.34, 14, 0.58, 17, 0.74
       ]
     }
   },
+  // Pass 3 — Bright golden core
   {
     id: "orbit-highway-core",
     filter: highwayFilter,
@@ -210,188 +175,121 @@ const cinematicHighwayLayers = [
       "line-color": "#ffd36b",
       "line-width": clone(highwayWidth),
       "line-blur": [
-        "interpolate",
-        ["linear"],
-        ["zoom"],
-        10,
-        0.4,
-        14,
-        0.7,
-        17,
-        1.2
+        "interpolate", ["linear"], ["zoom"],
+        10, 0.5, 14, 0.8, 17, 1.4
       ],
       "line-opacity": [
-        "interpolate",
-        ["linear"],
-        ["zoom"],
-        9,
-        0,
-        11,
-        0.58,
-        14,
-        0.86,
-        17,
-        0.98
+        "interpolate", ["linear"], ["zoom"],
+        9, 0, 11, 0.62, 14, 0.88, 17, 0.98
       ]
     }
   },
+  // Pass 4 — Hot white center highlight (cinematic specularity)
   {
     id: "orbit-highway-center-highlight",
     filter: highwayFilter,
     paint: {
-      "line-color": "#fff3c2",
+      "line-color": "#fff8e0",
       "line-width": [
-        "interpolate",
-        ["exponential", 1.35],
-        ["zoom"],
-        10,
-        0.25,
-        13,
-        0.7,
-        15,
-        1.35,
-        17,
-        2.8,
-        19,
-        5
+        "interpolate", ["exponential", 1.35], ["zoom"],
+        10, 0.28, 13, 0.75, 15, 1.5, 17, 3.0, 19, 5.5
       ],
-      "line-blur": 0.15,
+      "line-blur": 0.12,
       "line-opacity": [
-        "interpolate",
-        ["linear"],
-        ["zoom"],
-        10,
-        0,
-        12,
-        0.62,
-        15,
-        0.92,
-        18,
-        1
+        "interpolate", ["linear"], ["zoom"],
+        10, 0, 12, 0.64, 15, 0.94, 18, 1
       ]
     }
   },
+  // Secondary roads — subtle steel-blue depth
   {
     id: "orbit-secondary-road-depth",
     filter: secondaryFilter,
     paint: {
-      "line-color": "#758294",
+      "line-color": "#6a7a8a",
       "line-width": clone(secondaryWidth),
       "line-blur": [
-        "interpolate",
-        ["linear"],
-        ["zoom"],
-        11,
-        0.2,
-        15,
-        0.7,
-        18,
-        1.4
+        "interpolate", ["linear"], ["zoom"],
+        11, 0.2, 15, 0.8, 18, 1.6
       ],
       "line-opacity": [
-        "interpolate",
-        ["linear"],
-        ["zoom"],
-        11,
-        0.12,
-        14,
-        0.28,
-        17,
-        0.42
+        "interpolate", ["linear"], ["zoom"],
+        11, 0.14, 14, 0.32, 17, 0.48
       ]
     }
   }
 ];
 
+// ── Terrain & Environment ─────────────────────────────────────────────────────
+// Key principle: avoid pure black (#000). Use very dark warm/cool greys with
+// subtle saturation so depth gradients and atmospheric perspective read correctly.
 const styleGroundAndWater = (mapInstance) => {
-  setPaint(mapInstance, "background", "background-color", "#171817");
+  // Base background — deep warm-grey, not black
+  setPaint(mapInstance, "background", "background-color", "#16181a");
 
+  // Landcover — subtly visible, layered with depth
   setPaint(mapInstance, "landcover", "fill-color", [
-    "interpolate",
-    ["linear"],
-    ["zoom"],
-    8,
-    "#1b1c19",
-    12,
-    "#22231f",
-    16,
-    "#2a2a25"
+    "interpolate", ["linear"], ["zoom"],
+    6,  "#1a1c1e",
+    10, "#1e2022",
+    13, "#22252a",
+    16, "#272b30"
   ]);
-  setPaint(mapInstance, "landcover", "fill-opacity", 0.82);
+  setPaint(mapInstance, "landcover", "fill-opacity", [
+    "interpolate", ["linear"], ["zoom"],
+    6, 0.72, 12, 0.88, 16, 0.95
+  ]);
 
+  // Residential areas — slightly lighter than base, warm grey
   setPaint(mapInstance, "landuse_residential", "fill-color", [
-    "interpolate",
-    ["linear"],
-    ["zoom"],
-    6,
-    "#1c1d1a",
-    12,
-    "#24241f",
-    16,
-    "#2c2b25"
+    "interpolate", ["linear"], ["zoom"],
+    6,  "#1c1f22",
+    12, "#242830",
+    16, "#2a2f38"
   ]);
   setPaint(mapInstance, "landuse_residential", "fill-opacity", [
-    "interpolate",
-    ["linear"],
-    ["zoom"],
-    6,
-    0.62,
-    12,
-    0.88,
-    16,
-    0.96
+    "interpolate", ["linear"], ["zoom"],
+    6, 0.64, 12, 0.86, 16, 0.94
   ]);
 
-  setPaint(mapInstance, "landuse", "fill-color", "#252720");
-  setPaint(mapInstance, "landuse", "fill-opacity", 0.7);
+  // General landuse — warm-toned dark grey
+  setPaint(mapInstance, "landuse", "fill-color", "#252830");
+  setPaint(mapInstance, "landuse", "fill-opacity", 0.74);
 
-  setPaint(mapInstance, "park_national_park", "fill-color", "#223026");
-  setPaint(mapInstance, "park_nature_reserve", "fill-color", "#223026");
+  // Parks — dark muted green, not pitch black
+  setPaint(mapInstance, "park_national_park", "fill-color", "#1e2a22");
+  setPaint(mapInstance, "park_nature_reserve", "fill-color", "#1e2a22");
 
+  // Water — deep atmospheric teal, no pure black
   setPaint(mapInstance, "water", "fill-color", [
-    "interpolate",
-    ["linear"],
-    ["zoom"],
-    0,
-    "#0d1418",
-    10,
-    "#101b20",
-    14,
-    "#132229",
-    17,
-    "#172a31"
+    "interpolate", ["linear"], ["zoom"],
+    0,  "#0e1720",
+    8,  "#111e28",
+    12, "#142330",
+    16, "#192c3a"
   ]);
-  setPaint(mapInstance, "water", "fill-outline-color", "#21383a");
+  setPaint(mapInstance, "water", "fill-outline-color", "#223848");
   setPaint(mapInstance, "water", "fill-opacity", 1);
 
-  setPaint(mapInstance, "water_shadow", "fill-color", "#21383a");
+  // Water shadow — soft atmospheric glow at edges
+  setPaint(mapInstance, "water_shadow", "fill-color", "#1a3040");
   setPaint(mapInstance, "water_shadow", "fill-opacity", [
-    "interpolate",
-    ["linear"],
-    ["zoom"],
-    8,
-    0.18,
-    13,
-    0.36,
-    17,
-    0.58
+    "interpolate", ["linear"], ["zoom"],
+    8, 0.22, 13, 0.44, 17, 0.66
   ]);
 
-  setPaint(mapInstance, "waterway", "line-color", "#21383a");
-  setPaint(mapInstance, "waterway", "line-opacity", 0.82);
+  // Waterways — atmospheric teal-blue
+  setPaint(mapInstance, "waterway", "line-color", "#1e3a4a");
+  setPaint(mapInstance, "waterway", "line-opacity", 0.84);
   setPaint(mapInstance, "waterway", "line-width", [
-    "interpolate",
-    ["exponential", 1.3],
-    ["zoom"],
-    8,
-    0.45,
-    13,
-    1.4,
-    16,
-    3.2
+    "interpolate", ["exponential", 1.3], ["zoom"],
+    8, 0.5, 13, 1.6, 16, 3.6
   ]);
 };
 
+// ── Road Hierarchy ────────────────────────────────────────────────────────────
+// Major roads get warm amber tones. Secondary gets cool steel.
+// Minor roads stay nearly invisible to not pollute the atmosphere.
 const styleRoadHierarchy = (mapInstance) => {
   const layers = mapInstance.getStyle().layers || [];
 
@@ -411,33 +309,38 @@ const styleRoadHierarchy = (mapInstance) => {
     const isBridge = id.includes("bridge");
 
     if (isMajor) {
-      setPaint(mapInstance, id, "line-color", isCase ? "#3a2f26" : "#b9823e");
-      setPaint(mapInstance, id, "line-opacity", isTunnel ? 0.38 : isCase ? 0.44 : 0.62);
-      setPaint(mapInstance, id, "line-blur", isCase ? 1.2 : 0.35);
+      // Warm amber undertone — road surface feels illuminated
+      setPaint(mapInstance, id, "line-color", isCase ? "#332a1e" : "#a87842");
+      setPaint(mapInstance, id, "line-opacity", isTunnel ? 0.32 : isCase ? 0.4 : 0.56);
+      setPaint(mapInstance, id, "line-blur", isCase ? 1.0 : 0.3);
       return;
     }
 
     if (isSecondary) {
-      setPaint(mapInstance, id, "line-color", isCase ? "#303330" : "#6d706a");
-      setPaint(mapInstance, id, "line-opacity", isTunnel ? 0.28 : isBridge ? 0.78 : 0.66);
-      setPaint(mapInstance, id, "line-blur", isCase ? 0.55 : 0.12);
+      // Cool steel-blue — atmospheric depth
+      setPaint(mapInstance, id, "line-color", isCase ? "#2a2e34" : "#586070");
+      setPaint(mapInstance, id, "line-opacity", isTunnel ? 0.24 : isBridge ? 0.72 : 0.58);
+      setPaint(mapInstance, id, "line-blur", isCase ? 0.5 : 0.1);
       return;
     }
 
     if (isMinor) {
-      setPaint(mapInstance, id, "line-color", isCase ? "#252724" : "#4c504c");
-      setPaint(mapInstance, id, "line-opacity", isTunnel ? 0.18 : isBridge ? 0.58 : 0.46);
-      setPaint(mapInstance, id, "line-blur", isCase ? 0.45 : 0);
+      // Barely visible, just enough to feel textured
+      setPaint(mapInstance, id, "line-color", isCase ? "#222528" : "#3e4248");
+      setPaint(mapInstance, id, "line-opacity", isTunnel ? 0.14 : isBridge ? 0.5 : 0.36);
+      setPaint(mapInstance, id, "line-blur", isCase ? 0.4 : 0);
       return;
     }
 
     if (id.includes("rail")) {
-      setPaint(mapInstance, id, "line-color", "#3b403b");
-      setPaint(mapInstance, id, "line-opacity", 0.34);
+      setPaint(mapInstance, id, "line-color", "#32383e");
+      setPaint(mapInstance, id, "line-opacity", 0.28);
     }
   });
 };
 
+// ── Labels ────────────────────────────────────────────────────────────────────
+// Cinematic label rendering: soft halos, warm highway names, readable but not harsh.
 const styleLabels = (mapInstance) => {
   const layers = mapInstance.getStyle().layers || [];
 
@@ -454,52 +357,55 @@ const styleLabels = (mapInstance) => {
     const isWater = id.includes("water");
     const isHouseNumber = id.includes("housenumber");
 
-    setPaint(mapInstance, id, "text-halo-color", "rgba(10,12,16,0.9)");
-    setPaint(mapInstance, id, "text-halo-width", isPlace || isRoadName ? 1.8 : 1.35);
-    setPaint(mapInstance, id, "text-halo-blur", 0.25);
-    setPaint(mapInstance, id, "text-opacity", isHouseNumber ? 0.45 : 0.92);
+    // Universal halo — dark with enough opacity to separate text from terrain
+    setPaint(mapInstance, id, "text-halo-color", "rgba(8,10,14,0.92)");
+    setPaint(mapInstance, id, "text-halo-width", isPlace || isRoadName ? 1.9 : 1.4);
+    setPaint(mapInstance, id, "text-halo-blur", 0.22);
+    setPaint(mapInstance, id, "text-opacity", isHouseNumber ? 0.42 : 0.9);
 
     if (isCity) {
-      setPaint(mapInstance, id, "text-color", "#d8e1ec");
-      setPaint(mapInstance, id, "icon-color", "#9fb1c4");
+      // Slightly cool-white — moonlight on city signs
+      setPaint(mapInstance, id, "text-color", "#d2dce8");
+      setPaint(mapInstance, id, "icon-color", "#9ab0c4");
       return;
     }
 
     if (isCountry) {
-      setPaint(mapInstance, id, "text-color", "#c3cfdd");
-      setPaint(mapInstance, id, "icon-color", "#8392a5");
+      setPaint(mapInstance, id, "text-color", "#bfccd8");
+      setPaint(mapInstance, id, "icon-color", "#7e90a4");
       return;
     }
 
     if (isPlace) {
-      setPaint(mapInstance, id, "text-color", "#aebccd");
-      setPaint(mapInstance, id, "icon-color", "#7e8fa2");
+      setPaint(mapInstance, id, "text-color", "#a8b8c8");
+      setPaint(mapInstance, id, "icon-color", "#7a8c9e");
       return;
     }
 
     if (isMajorRoadName) {
-      setPaint(mapInstance, id, "text-color", "#f4d88a");
-      setPaint(mapInstance, id, "text-halo-color", "rgba(4,5,7,0.86)");
-      setPaint(mapInstance, id, "text-halo-width", 2);
+      // Warm gold — matches the highway glow system
+      setPaint(mapInstance, id, "text-color", "#f0d07e");
+      setPaint(mapInstance, id, "text-halo-color", "rgba(4,5,7,0.88)");
+      setPaint(mapInstance, id, "text-halo-width", 2.1);
       return;
     }
 
     if (isRoadName) {
-      setPaint(mapInstance, id, "text-color", "#b2b8b3");
+      setPaint(mapInstance, id, "text-color", "#a8adb4");
       return;
     }
 
     if (isWater) {
-      setPaint(mapInstance, id, "text-color", "#8fb1d4");
-      setPaint(mapInstance, id, "text-halo-color", "rgba(4,10,18,0.88)");
+      setPaint(mapInstance, id, "text-color", "#7aaec8");
+      setPaint(mapInstance, id, "text-halo-color", "rgba(4,10,18,0.90)");
       return;
     }
 
     if (isPoi) {
-      const poiColor = id.includes("park") ? "#9fce87" : "#d7b46a";
+      const poiColor = id.includes("park") ? "#7fbd6e" : "#c8a860";
       setPaint(mapInstance, id, "text-color", poiColor);
       setPaint(mapInstance, id, "icon-color", poiColor);
-      setPaint(mapInstance, id, "text-opacity", 0.84);
+      setPaint(mapInstance, id, "text-opacity", 0.82);
     }
   });
 };

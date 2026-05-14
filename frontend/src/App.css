@@ -1384,9 +1384,19 @@ body.light-mode::before {
   }
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   🌃 CINEMATIC MAP STAGE — Atmospheric Dark Night Environment
+   ═══════════════════════════════════════════════════════════════
+   Design intent: cloudy urban night, overcast sky trapping city
+   glow, atmospheric depth and volumetric fog — never pure black.
+   ═══════════════════════════════════════════════════════════════ */
+
 .map-stage {
   overflow: hidden;
-  background: #171817;
+  /* Warm-dark grey base — matches terrain base color exactly */
+  background: #16181a;
+  /* Subtle vignette to frame the cinematic view */
+  box-shadow: inset 0 0 120px rgba(0, 0, 0, 0.35);
 }
 
 .map-viewport {
@@ -1394,49 +1404,148 @@ body.light-mode::before {
   height: 100%;
 }
 
-.immersive-fog-overlay {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 700ms ease;
-  background:
-    linear-gradient(
-      to bottom,
-      rgba(55, 55, 48, 0.12) 0%,
-      rgba(38, 39, 34, 0.09) 25%,
-      rgba(22, 23, 20, 0.035) 52%,
-      rgba(10, 10, 9, 0) 74%
-    ),
-    radial-gradient(
-      ellipse at 50% 8%,
-      rgba(92, 88, 76, 0.07) 0%,
-      rgba(33, 34, 29, 0.045) 34%,
-      rgba(0, 0, 0, 0) 68%
-    );
-  -webkit-backdrop-filter: blur(0.6px) saturate(0.9) contrast(0.98);
-  backdrop-filter: blur(0.6px) saturate(0.9) contrast(0.98);
-  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 34%, rgba(0, 0, 0, 0.38) 58%, transparent 78%);
-  mask-image: linear-gradient(to bottom, #000 0%, #000 34%, rgba(0, 0, 0, 0.38) 58%, transparent 78%);
-}
-
-.map-stage.immersive-atmosphere .immersive-fog-overlay {
-  opacity: 1;
-}
-
-.map-stage.immersive-atmosphere::after {
+/* ── Persistent Cinematic Sky Backdrop ──────────────────────────
+   Always visible in dark mode. Provides the deep cloudy-night
+   atmosphere above the horizon. Transitions naturally into the
+   WebGL terrain without a harsh cutoff.
+   ─────────────────────────────────────────────────────────────── */
+.dark-mode .map-stage::before {
   content: "";
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: linear-gradient(
+  z-index: 1;
+  /* Layered sky: deep blue-black cloud ceiling at top,
+     warm amber city-glow horizon band, transparent at bottom */
+  background:
+    /* Top sky — cloud ceiling, deep and moody */
+    linear-gradient(
+      to bottom,
+      rgba(8, 10, 16, 0.72)  0%,
+      rgba(10, 12, 18, 0.58) 8%,
+      rgba(12, 14, 20, 0.38) 18%,
+      rgba(14, 16, 22, 0.18) 28%,
+      rgba(16, 18, 24, 0.06) 40%,
+      rgba(0, 0, 0, 0)       56%
+    ),
+    /* Horizon haze — warm city-glow amber band */
+    radial-gradient(
+      ellipse 120% 28% at 50% 38%,
+      rgba(52, 42, 28, 0.28)  0%,
+      rgba(38, 30, 20, 0.18) 40%,
+      rgba(0, 0, 0, 0)       80%
+    );
+  /* Mask: strong at top (sky), fade at horizon, invisible below */
+  -webkit-mask-image: linear-gradient(
     to bottom,
-    rgba(4, 4, 4, 0.1) 0%,
-    rgba(5, 5, 5, 0.045) 24%,
-    rgba(0, 0, 0, 0) 58%
+    #000 0%,
+    #000 16%,
+    rgba(0,0,0,0.72) 30%,
+    rgba(0,0,0,0.28) 46%,
+    transparent 62%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    #000 0%,
+    #000 16%,
+    rgba(0,0,0,0.72) 30%,
+    rgba(0,0,0,0.28) 46%,
+    transparent 62%
+  );
+  transition: opacity 600ms ease;
+}
+
+/* ── Persistent Atmospheric Depth Fog ───────────────────────────
+   Always-on in dark mode. Provides mid-distance aerial perspective
+   — distant objects desaturate and fade, closer terrain is clear.
+   ─────────────────────────────────────────────────────────────── */
+.immersive-fog-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+  /* Base opacity: always slightly visible in dark mode.
+     Increases dramatically in immersive mode via class. */
+  opacity: 0.55;
+  transition: opacity 700ms cubic-bezier(0.4, 0, 0.2, 1);
+  background:
+    /* Primary atmospheric depth gradient: top-down fog */
+    linear-gradient(
+      to bottom,
+      rgba(42, 38, 30, 0.18)  0%,
+      rgba(32, 29, 22, 0.12) 20%,
+      rgba(22, 20, 16, 0.055) 46%,
+      rgba(10, 9, 8, 0)       68%
+    ),
+    /* Horizon city-glow warm band */
+    radial-gradient(
+      ellipse 100% 22% at 50% 32%,
+      rgba(58, 48, 32, 0.16)  0%,
+      rgba(40, 32, 20, 0.10) 50%,
+      rgba(0, 0, 0, 0)        90%
+    ),
+    /* Lateral distance fog — edges fade first */
+    radial-gradient(
+      ellipse 90% 60% at 50% 58%,
+      rgba(0, 0, 0, 0)        0%,
+      rgba(14, 13, 11, 0.04) 60%,
+      rgba(18, 16, 14, 0.10) 100%
+    );
+  -webkit-backdrop-filter: blur(0.4px) saturate(0.92);
+  backdrop-filter: blur(0.4px) saturate(0.92);
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    #000 0%,
+    #000 28%,
+    rgba(0, 0, 0, 0.55) 52%,
+    rgba(0, 0, 0, 0.12) 72%,
+    transparent 88%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    #000 0%,
+    #000 28%,
+    rgba(0, 0, 0, 0.55) 52%,
+    rgba(0, 0, 0, 0.12) 72%,
+    transparent 88%
   );
 }
 
+/* ── Immersive Mode — Full Volumetric Atmosphere ────────────────
+   At maximum camera immersion (low pitch, high zoom), the fog
+   intensifies to simulate being inside the urban environment.
+   ─────────────────────────────────────────────────────────────── */
+.map-stage.immersive-atmosphere .immersive-fog-overlay {
+  opacity: 1;
+  /* Heavier blur, deeper desaturation at extreme close range */
+  -webkit-backdrop-filter: blur(0.8px) saturate(0.86) contrast(0.97);
+  backdrop-filter: blur(0.8px) saturate(0.86) contrast(0.97);
+}
+
+/* Immersive mode: additional depth vignette layer */
+.map-stage.immersive-atmosphere::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  background:
+    /* Overhead atmospheric ceiling darkening */
+    linear-gradient(
+      to bottom,
+      rgba(6, 7, 10, 0.22)  0%,
+      rgba(8, 9, 12, 0.12) 18%,
+      rgba(0, 0, 0, 0)      46%
+    ),
+    /* Bottom ground haze — light rising from lit roads */
+    linear-gradient(
+      to top,
+      rgba(22, 18, 12, 0.10)  0%,
+      rgba(0, 0, 0, 0)         28%
+    );
+}
+
+/* Hide MapLibre attribution for clean cinematic UI */
 .maplibregl-ctrl-attrib {
   font-size: 10px;
   opacity: 0;

@@ -67,38 +67,55 @@ const getNextCameraMode = (mode) => {
 const cloneMapStyle = (style) =>
   typeof style === "string" ? style : JSON.parse(JSON.stringify(style));
 
-const CLEAR_SKY_STYLE = {
-  "sky-color": "rgba(0, 0, 0, 0)",
-  "horizon-color": "rgba(0, 0, 0, 0)",
-  "fog-color": "rgba(0, 0, 0, 0)",
+// TOP mode: minimal atmosphere — almost clean for overview readability
+const TOP_SKY_STYLE = {
+  "sky-color":        "rgba(14, 16, 22, 0.0)",
+  "horizon-color":    "rgba(18, 20, 28, 0.0)",
+  "fog-color":        "rgba(14, 16, 22, 0.0)",
   "fog-ground-blend": 1,
-  "horizon-fog-blend": 1,
-  "sky-horizon-blend": 1,
+  "horizon-fog-blend":1,
+  "sky-horizon-blend":1,
   "atmosphere-blend": 0
 };
 
+// CINEMATIC mode: dark overcast sky with soft warm horizon — city glow from below
+const CINEMATIC_SKY_STYLE = {
+  "sky-color":        "rgba(12, 14, 20, 0.88)",
+  "horizon-color":    "rgba(32, 30, 24, 0.72)",
+  "fog-color":        "rgba(24, 22, 18, 0.54)",
+  "fog-ground-blend": 0.82,
+  "horizon-fog-blend":0.88,
+  "sky-horizon-blend":0.78,
+  "atmosphere-blend": 0.18
+};
+
+// IMMERSIVE mode: deep volumetric fog — humid cloudy night close to ground level
 const IMMERSIVE_SKY_STYLE = {
-  "sky-color": "rgba(8, 9, 8, 0)",
-  "horizon-color": "rgba(25, 26, 22, 0.24)",
-  "fog-color": "rgba(43, 44, 38, 0.28)",
-  "fog-ground-blend": 0.88,
-  "horizon-fog-blend": 0.94,
-  "sky-horizon-blend": 0.86,
-  "atmosphere-blend": 0.1
+  "sky-color":        "rgba(10, 12, 18, 0.94)",
+  "horizon-color":    "rgba(38, 34, 26, 0.80)",
+  "fog-color":        "rgba(32, 28, 22, 0.64)",
+  "fog-ground-blend": 0.76,
+  "horizon-fog-blend":0.90,
+  "sky-horizon-blend":0.82,
+  "atmosphere-blend": 0.28
+};
+
+const getSkyStyleForMode = (cameraMode, themeId) => {
+  if (themeId !== "dark") return cloneMapStyle(TOP_SKY_STYLE);
+  if (cameraMode === CAMERA_MODES.IMMERSIVE)  return cloneMapStyle(IMMERSIVE_SKY_STYLE);
+  if (cameraMode === CAMERA_MODES.CINEMATIC)  return cloneMapStyle(CINEMATIC_SKY_STYLE);
+  return cloneMapStyle(TOP_SKY_STYLE);
 };
 
 const applyCameraAtmosphere = (mapInstance, cameraMode, themeId) => {
   if (!mapInstance?.setSky) return;
-
   try {
-    mapInstance.setSky(
-      cloneMapStyle(themeId === "dark" && cameraMode === CAMERA_MODES.IMMERSIVE ? IMMERSIVE_SKY_STYLE : CLEAR_SKY_STYLE),
-      { validate: false }
-    );
+    mapInstance.setSky(getSkyStyleForMode(cameraMode, themeId), { validate: false });
   } catch (error) {
     console.warn("Unable to apply camera atmosphere:", error);
   }
 };
+
 
 const getMapStyleForTheme = (themeId) =>
   themeId === "light" ? cloneMapStyle(customLightMapStyle) : DARK_MAP_STYLE_URL;

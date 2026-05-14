@@ -2,15 +2,17 @@ export const darkTheme = {
   id: "dark",
   styleUrl: "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json",
   colors: {
-    background: "#171817",
+    // Warm-dark grey base — not pure black, allows atmospheric depth to read
+    background: "#16181a",
     roadPrimary: "#ffd36b",
-    roadSecondary: "#6d706a",
-    label: "#d8e1ec",
+    roadSecondary: "#6a7a8a",
+    label: "#d2dce8",
   },
   effects: {
-    glow: "rgba(255,179,71,0.22)",
+    glow: "rgba(255,179,71,0.26)",
     shadow: "none",
-    mapFilters: "brightness(1.02) contrast(1.08) saturate(0.88)",
+    // Cinematic tone: warm slightly, retain rich contrast, don't crush blacks
+    mapFilters: "brightness(1.04) contrast(1.06) saturate(0.84) sepia(0.04)",
   },
   ui: {
     glassBg: "rgba(10, 15, 25, 0.75)",
