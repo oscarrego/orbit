@@ -7,13 +7,26 @@ import CreateRoomModal from "./components/CreateRoomModal";
 import JoinRoomModal from "./components/JoinRoomModal";
 import socket from "./components/SocketManager";
 import "./App.css";
+import "./styles/orbit-ui.css";
+import "./styles/dark-theme.css";
+import "./styles/light-theme.css";
+import "./styles/mobile.css";
 
 // 🛠️ Helpers for persistent identity
 const getPersistentUser = () => {
-  const savedName = localStorage.getItem("username");
+  const storedName = localStorage.getItem("username");
+  const savedName = storedName && /^[A-Za-z]{5}$/.test(storedName.trim())
+    ? storedName.trim().toUpperCase()
+    : null;
   let savedId = localStorage.getItem("userId");
   let savedSeed = localStorage.getItem("avatarSeed");
-  
+
+  if (storedName && !savedName) {
+    localStorage.removeItem("username");
+  } else if (savedName && storedName !== savedName) {
+    localStorage.setItem("username", savedName);
+  }
+
   if (!savedId) {
     savedId = "user_" + Math.random().toString(36).substr(2, 9);
     localStorage.setItem("userId", savedId);
@@ -23,7 +36,7 @@ const getPersistentUser = () => {
     savedSeed = savedName;
     localStorage.setItem("avatarSeed", savedSeed);
   }
-  
+
   return { username: savedName, userId: savedId, avatarSeed: savedSeed || savedName };
 };
 
@@ -33,275 +46,133 @@ const CAMERA_MODES = {
   IMMERSIVE: "immersive",
 };
 
-const DARK_THEME_ID = "dark";
+const DEFAULT_THEME_ID = "dark";
+const isValidIdentity = (value) => /^[A-Za-z]{5}$/.test(value.trim());
 
+// ── Premium 2D / 3D Toggle Icons ─────────────────────────────────────────────
 const CameraModeIcon = ({ mode }) => {
-  if (mode === CAMERA_MODES.IMMERSIVE) {
+  if (mode === CAMERA_MODES.TOP) {
     return (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M12 3l7 18-7-4-7 4 7-18z" />
-        <path d="M12 3v14" />
-        <path d="M8.5 18.5 12 17l3.5 1.5" />
+      <svg className="perspective-svg" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M3.5 6.5 12 3l8.5 3.5v11L12 21l-8.5-3.5z" />
+        <path d="M12 3v18M3.5 10.2 12 13.6l8.5-3.4M3.5 14 12 17.4l8.5-3.4" opacity="0.54" />
+        <circle cx="12" cy="10" r="1.45" className="perspective-pulse" />
       </svg>
     );
   }
-
   if (mode === CAMERA_MODES.CINEMATIC) {
     return (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M3 10l9-5 9 5-9 5-9-5z" />
-        <path d="M3 14l9 5 9-5" />
+      <svg className="perspective-svg" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M3 15.8h18M5 14l3.4-3.6 2.3 2.1 3.2-4.8 5.1 6.3" />
+        <path d="M4 18.8h16M7 5.4h10" opacity="0.5" />
+        <circle cx="12" cy="15.8" r="1.25" className="perspective-pulse" />
       </svg>
     );
   }
-
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2V6z" />
-      <path d="M9 4v14M15 6v14" />
+    <svg className="perspective-svg" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M8 3.5H4.5V8M16 3.5h3.5V8M8 20.5H4.5V16M16 20.5h3.5V16" />
+      <path d="M8.4 12h7.2M12 8.4v7.2" opacity="0.76" />
+      <circle cx="12" cy="12" r="2.8" className="perspective-pulse" />
     </svg>
   );
 };
 
-// ── Watch-face compass button icon (matches reference image) ──────────────────
-let _compassInstanceId = 0;
-const LiveCompassIcon = ({ bearing, compassHeading, sensorActive }) => {
-  const idRef = useRef(null);
-  if (idRef.current === null) idRef.current = ++_compassInstanceId;
-  const uid = idRef.current;
-  const needleAngle = sensorActive ? -compassHeading : -bearing;
-  const ticks = Array.from({ length: 72 }, (_, i) => i * 5);
-  return (
-    <svg viewBox="0 0 100 100" style={{ width: 32, height: 32, display: 'block' }}>
-      <defs>
-        <radialGradient id={`cb-${uid}`} cx="50%" cy="45%" r="58%">
-          <stop offset="0%" stopColor="#2a2b2c" />
-          <stop offset="100%" stopColor="#080808" />
-        </radialGradient>
-        <linearGradient id={`cr-${uid}`} x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="rgba(255,255,255,0.35)" />
-          <stop offset="100%" stopColor="rgba(255,255,255,0.02)" />
-        </linearGradient>
-      </defs>
-      <circle cx="50" cy="50" r="48" fill={`url(#cb-${uid})`} />
-      <circle cx="50" cy="50" r="47.5" fill="none" stroke={`url(#cr-${uid})`} strokeWidth="1.5" />
-      <circle cx="50" cy="50" r="38" fill="none" stroke="rgba(255,255,255,0.10)" strokeWidth="0.6" />
-      <g style={{ transform: `rotate(${needleAngle}deg)`, transformOrigin: '50px 50px', transition: sensorActive ? 'transform 80ms linear' : 'transform 150ms ease' }}>
-        {ticks.map((deg) => {
-          const isCard = deg % 90 === 0, isMaj = deg % 30 === 0;
-          const r1 = isCard ? 33 : isMaj ? 35 : 37, r2 = 44;
-          const rad = (deg - 90) * Math.PI / 180;
-          return <line key={deg} x1={50+Math.cos(rad)*r1} y1={50+Math.sin(rad)*r1} x2={50+Math.cos(rad)*r2} y2={50+Math.sin(rad)*r2} stroke={isCard ? 'rgba(255,255,255,0.85)' : isMaj ? 'rgba(255,255,255,0.45)' : 'rgba(255,255,255,0.22)'} strokeWidth={isCard ? 1.4 : isMaj ? 0.9 : 0.55} strokeLinecap="round" />;
-        })}
-        {[{l:'N',d:0},{l:'E',d:90},{l:'S',d:180},{l:'W',d:270}].map(({l,d}) => {
-          const rad=(d-90)*Math.PI/180, r=27;
-          return <text key={l} x={50+Math.cos(rad)*r} y={50+Math.sin(rad)*r} textAnchor="middle" dominantBaseline="central" fill={l==='N'?'#ff3b30':'rgba(255,255,255,0.82)'} fontSize="8" fontWeight="700">{l}</text>;
-        })}
-        <path d="M50 13 L54 42 L50 39 L46 42 Z" fill="#ff3b30" opacity="0.96" />
-        <path d="M50 87 L54 58 L50 61 L46 58 Z" fill="rgba(230,230,235,0.60)" />
-      </g>
-      <line x1="50" y1="2" x2="50" y2="10" stroke="rgba(255,255,255,0.28)" strokeWidth="1.2" strokeLinecap="round" />
-      <circle cx="50" cy="50" r="6" fill="rgba(255,255,255,0.12)" />
-      <circle cx="50" cy="50" r="3" fill="rgba(255,255,255,0.88)" />
-      <circle cx="50" cy="5" r="2.6" fill="#ff3b30" opacity="0.9" />
-    </svg>
-  );
+const CAMERA_MODE_LABELS = {
+  [CAMERA_MODES.TOP]: "Top View",
+  [CAMERA_MODES.CINEMATIC]: "Front View",
+  [CAMERA_MODES.IMMERSIVE]: "Close View",
 };
 
-
-const COMPASS_TICK_DEGREES = Array.from({ length: 72 }, (_, index) => index * 5);
-const COMPASS_NUMERAL_DEGREES = Array.from({ length: 12 }, (_, index) => index * 30);
-const COMPASS_CARDINALS = [
-  { label: "N", degrees: 0 },
-  { label: "E", degrees: 90 },
-  { label: "S", degrees: 180 },
-  { label: "W", degrees: 270 },
-];
-
-const normalizeDegrees = (value = 0) => Math.round(((value % 360) + 360) % 360);
-
-const getCardinalDirection = (degrees) => {
-  const directions = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
-  return directions[Math.round(normalizeDegrees(degrees) / 45) % directions.length];
+const nextModeLabel = (mode) => {
+  if (mode === CAMERA_MODES.TOP) return CAMERA_MODE_LABELS[CAMERA_MODES.CINEMATIC];
+  if (mode === CAMERA_MODES.CINEMATIC) return CAMERA_MODE_LABELS[CAMERA_MODES.IMMERSIVE];
+  return CAMERA_MODE_LABELS[CAMERA_MODES.TOP];
 };
 
-const formatCoordinate = (value, positiveLabel, negativeLabel) => {
-  if (typeof value !== "number" || Number.isNaN(value)) return "--";
-  const absolute = Math.abs(value);
-  let degrees = Math.floor(absolute);
-  const minutesFloat = (absolute - degrees) * 60;
-  let minutes = Math.floor(minutesFloat);
-  let seconds = Math.round((minutesFloat - minutes) * 60);
-  if (seconds === 60) {
-    seconds = 0;
-    minutes += 1;
-  }
-  if (minutes === 60) {
-    minutes = 0;
-    degrees += 1;
-  }
-  return `${degrees}\u00b0${String(minutes).padStart(2, "0")}'${String(seconds).padStart(2, "0")}" ${value >= 0 ? positiveLabel : negativeLabel}`;
+const normalizeHeading = (value) => ((value % 360) + 360) % 360;
+
+const useDeviceHeading = () => {
+  const [deviceHeading, setDeviceHeading] = useState(null);
+  const listening = useRef(false);
+  const frame = useRef(null);
+  const smoothedHeading = useRef(null);
+
+  const handleOrientation = useCallback((event) => {
+    const rawHeading =
+      typeof event.webkitCompassHeading === "number"
+        ? event.webkitCompassHeading
+        : event.absolute && typeof event.alpha === "number"
+          ? 360 - event.alpha
+          : null;
+    if (rawHeading === null || Number.isNaN(rawHeading)) return;
+    const target = normalizeHeading(rawHeading);
+    if (smoothedHeading.current === null) {
+      smoothedHeading.current = target;
+    } else {
+      const delta = ((target - smoothedHeading.current + 540) % 360) - 180;
+      smoothedHeading.current = normalizeHeading(smoothedHeading.current + delta * 0.2);
+    }
+    if (frame.current) return;
+    frame.current = window.requestAnimationFrame(() => {
+      setDeviceHeading(smoothedHeading.current);
+      frame.current = null;
+    });
+  }, []);
+
+  const attachHeadingListener = useCallback(() => {
+    if (listening.current || typeof window.DeviceOrientationEvent === "undefined") return;
+    window.addEventListener("deviceorientationabsolute", handleOrientation, true);
+    window.addEventListener("deviceorientation", handleOrientation, true);
+    listening.current = true;
+  }, [handleOrientation]);
+
+  const requestDeviceHeading = useCallback(async () => {
+    if (typeof window.DeviceOrientationEvent === "undefined") return;
+    if (typeof window.DeviceOrientationEvent.requestPermission === "function") {
+      try {
+        const result = await window.DeviceOrientationEvent.requestPermission();
+        if (result !== "granted") return;
+      } catch (error) {
+        return;
+      }
+    }
+    attachHeadingListener();
+  }, [attachHeadingListener]);
+
+  useEffect(() => {
+    if (
+      typeof window.DeviceOrientationEvent !== "undefined" &&
+      typeof window.DeviceOrientationEvent.requestPermission !== "function"
+    ) {
+      attachHeadingListener();
+    }
+    return () => {
+      if (listening.current) {
+        window.removeEventListener("deviceorientationabsolute", handleOrientation, true);
+        window.removeEventListener("deviceorientation", handleOrientation, true);
+      }
+      if (frame.current) window.cancelAnimationFrame(frame.current);
+    };
+  }, [attachHeadingListener, handleOrientation]);
+
+  return { deviceHeading, requestDeviceHeading };
 };
 
-const formatElevation = (meters) => {
-  if (typeof meters !== "number" || Number.isNaN(meters)) return "ALT -- FT";
-  return `~${Math.round(meters * 3.28084)} FT`;
-};
-
-const FullscreenCompassDial = ({ bearing }) => {
-  const normalized = normalizeDegrees(bearing);
-  const needleAngle = -normalized;
-
-  return (
-    <svg className="compass-dial-svg full" viewBox="0 0 100 100" aria-hidden="true">
-      <defs>
-        <radialGradient id="orbit-compass-full-bg" cx="48%" cy="42%" r="62%">
-          <stop offset="0%" stopColor="#24272b" />
-          <stop offset="54%" stopColor="#0c0d0f" />
-          <stop offset="100%" stopColor="#030304" />
-        </radialGradient>
-        <radialGradient id="orbit-compass-full-glow" cx="50%" cy="42%" r="58%">
-          <stop offset="0%" stopColor="#ffd77a" stopOpacity="0.2" />
-          <stop offset="48%" stopColor="#c99b45" stopOpacity="0.08" />
-          <stop offset="100%" stopColor="#000000" stopOpacity="0" />
-        </radialGradient>
-        <linearGradient id="orbit-compass-full-rim" x1="20" y1="5" x2="84" y2="92">
-          <stop offset="0%" stopColor="#f6efe2" stopOpacity="0.72" />
-          <stop offset="44%" stopColor="#7f7568" stopOpacity="0.32" />
-          <stop offset="100%" stopColor="#151515" stopOpacity="0.9" />
-        </linearGradient>
-      </defs>
-
-      <circle cx="50" cy="50" r="48" fill="url(#orbit-compass-full-bg)" />
-      <circle cx="50" cy="50" r="45" fill="url(#orbit-compass-full-glow)" />
-      <circle cx="50" cy="50" r="44" fill="none" stroke="url(#orbit-compass-full-rim)" strokeWidth="1.4" />
-      <circle cx="50" cy="50" r="28" fill="none" stroke="rgba(255,255,255,0.11)" strokeWidth="0.8" />
-      <circle cx="50" cy="50" r="17" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="0.8" />
-
-      <g
-        style={{
-          transform: `rotate(${needleAngle}deg)`,
-          transformOrigin: "50px 50px",
-          transition: "transform 180ms cubic-bezier(0.22, 0.61, 0.36, 1)",
-        }}
-      >
-        <path
-          d="M50 8 A42 42 0 0 1 59 16 L52.3 50 L50 45.3 L47.7 50 L41 16 A42 42 0 0 1 50 8 Z"
-          fill="#ff3b1f"
-          opacity="0.96"
-        />
-        <path d="M50 92 L56 51 L50 57 L44 51 Z" fill="rgba(228,232,238,0.54)" />
-        <line x1="50" y1="11" x2="50" y2="89" stroke="rgba(255,255,255,0.36)" strokeWidth="1" />
-      </g>
-
-      {COMPASS_TICK_DEGREES.map((degrees) => {
-        const major = degrees % 30 === 0;
-        const cardinal = degrees % 90 === 0;
-        const startRadius = cardinal ? 31 : major ? 33 : 37;
-        const radians = (degrees - 90) * Math.PI / 180;
-        return (
-          <line
-            key={degrees}
-            x1={50 + Math.cos(radians) * startRadius}
-            y1={50 + Math.sin(radians) * startRadius}
-            x2={50 + Math.cos(radians) * 43}
-            y2={50 + Math.sin(radians) * 43}
-            stroke={cardinal ? "rgba(255,255,255,0.86)" : major ? "rgba(255,255,255,0.48)" : "rgba(255,255,255,0.24)"}
-            strokeWidth={cardinal ? 1.5 : major ? 0.9 : 0.55}
-            strokeLinecap="round"
-          />
-        );
-      })}
-
-      {COMPASS_NUMERAL_DEGREES.map((degrees) => {
-        if (degrees % 90 === 0) return null;
-        const radians = (degrees - 90) * Math.PI / 180;
-        return (
-          <text
-            key={degrees}
-            x={50 + Math.cos(radians) * 47.8}
-            y={50 + Math.sin(radians) * 47.8}
-            textAnchor="middle"
-            dominantBaseline="middle"
-            fill="rgba(226,232,240,0.58)"
-            fontSize="3.6"
-            fontWeight="600"
-          >
-            {degrees}
-          </text>
-        );
-      })}
-
-      {COMPASS_CARDINALS.map(({ label, degrees }) => {
-        const radians = (degrees - 90) * Math.PI / 180;
-        return (
-          <text
-            key={label}
-            x={50 + Math.cos(radians) * 25}
-            y={50 + Math.sin(radians) * 25}
-            textAnchor="middle"
-            dominantBaseline="middle"
-            fill={label === "N" ? "#ff4a2f" : "rgba(247,250,252,0.88)"}
-            fontSize="6.8"
-            fontWeight="800"
-          >
-            {label}
-          </text>
-        );
-      })}
-
-      <circle cx="50" cy="50" r="8" fill="rgba(255,255,255,0.10)" />
-      <circle cx="50" cy="50" r="3.7" fill="rgba(255,255,255,0.9)" />
-      <circle cx="50" cy="6.2" r="2.4" fill="#ff3b1f" />
-    </svg>
-  );
-};
-
-const CompassFullscreen = ({ bearing, compassHeading, sensorActive, sensorStatus, userLocation, cameraMode, onClose }) => {
-  // Use real sensor heading when available, else fall back to map bearing
-  const displayHeading = sensorActive ? normalizeDegrees(compassHeading) : normalizeDegrees(bearing);
-  const cardinal = getCardinalDirection(displayHeading);
-  const latText = userLocation ? formatCoordinate(userLocation.lat, "N", "S") : "--";
-  const lngText = userLocation ? formatCoordinate(userLocation.lng, "E", "W") : "--";
-  const elevation = formatElevation(userLocation?.altitude);
-  const cameraLabel =
-    cameraMode === CAMERA_MODES.IMMERSIVE ? "IMMERSIVE" :
-    cameraMode === CAMERA_MODES.CINEMATIC ? "CINEMATIC" : "OVERVIEW";
-
-  return (
-    <div className="compass-fullscreen" role="dialog" aria-modal="true" aria-label="Compass" onClick={onClose}>
-      <div className="compass-fullscreen-shell" onClick={(e) => e.stopPropagation()}>
-        <button className="compass-close-btn" type="button" onClick={onClose} aria-label="Close compass">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
-            <line x1="6" y1="6" x2="18" y2="18" />
-            <line x1="18" y1="6" x2="6" y2="18" />
-          </svg>
-        </button>
-        <div className="compass-status-row">
-          <span>ORBIT NAV</span>
-          <span>{sensorActive ? '● LIVE' : cameraLabel}</span>
-        </div>
-        <div className="compass-hero-dial">
-          <FullscreenCompassDial bearing={displayHeading} />
-        </div>
-        <div className="compass-bearing-readout">
-          <span className="compass-bearing-number">{displayHeading}</span>
-          <span className="compass-degree-mark">{"\u00b0"}</span>
-          <span className="compass-cardinal-mark">{cardinal}</span>
-        </div>
-        <div className="compass-coordinate-readout">
-          <span>{latText} {lngText}</span>
-          <span>{elevation}</span>
-        </div>
-        {sensorStatus && (
-          <div style={{ marginTop: 10, fontSize: 11, color: 'rgba(255,255,255,0.38)', textAlign: 'center', letterSpacing: '0.8px' }}>
-            {sensorStatus}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
+const NorthCompassIcon = ({ bearing }) => (
+  <svg className="orbit-compass" viewBox="0 0 42 42" fill="none" aria-hidden="true">
+    <circle className="orbit-compass-face" cx="21" cy="21" r="19" />
+    <path className="orbit-compass-mark" d="M21 4.5v3.2M37.5 21h-3.2M21 37.5v-3.2M4.5 21h3.2" />
+    <g
+      className="orbit-compass-needle"
+      style={{ transform: `rotate(${-bearing}deg)`, transformOrigin: "21px 21px" }}
+    >
+      <path className="orbit-compass-north" d="M21 7.3 24.6 21 21 18.6 17.4 21z" />
+      <path className="orbit-compass-south" d="M21 34.7 24.6 21 21 23.4 17.4 21z" />
+    </g>
+    <circle className="orbit-compass-center" cx="21" cy="21" r="2.1" />
+  </svg>
+);
 
 function App() {
   const [users, setUsers] = useState([]);
@@ -309,28 +180,29 @@ function App() {
   const [sosAlerts, setSosAlerts] = useState([]);
   const [isSOSActive, setIsSOSActive] = useState(false);
   const [userLocation, setUserLocation] = useState(null);
-    
-  const theme = DARK_THEME_ID;
+
+  const [theme, setTheme] = useState(() =>
+    localStorage.getItem("theme") === "light" ? "light" : DEFAULT_THEME_ID
+  );
+  const [buildingsEnabled, setBuildingsEnabled] = useState(() =>
+    localStorage.getItem("buildingView") !== "2d"
+  );
   const [isFollowing, setIsFollowing] = useState(true);
   const [fabOpen, setFabOpen] = useState(false);
-  const [activePanel, setActivePanel] = useState(null);
+  const [activePanel, setActivePanel] = useState(null); // 'chat', 'users', or null
   const [showProfile, setShowProfile] = useState(false);
   const [showCreateRoomModal, setShowCreateRoomModal] = useState(false);
   const [showEasterEgg, setShowEasterEgg] = useState(false);
-  const [isCompassOpen, setIsCompassOpen] = useState(false);
   const [cameraMode, setCameraMode] = useState(CAMERA_MODES.CINEMATIC);
   const [mapBearing, setMapBearing] = useState(0);
   const [isInvisible, setIsInvisible] = useState(() => localStorage.getItem("invisibleMode") === "true");
-  const [compassHeading, setCompassHeading] = useState(0);
-  const [sensorActive, setSensorActive] = useState(false);
-  const [sensorStatus, setSensorStatus] = useState('');
-  const compassFilterRef = useRef(0);
+  const { deviceHeading, requestDeviceHeading } = useDeviceHeading();
 
   // 🔑 Join-room passcode modal state
   const [joinModal, setJoinModal] = useState(null);  // null | { roomName, loading, error }
-  const joinModalRef  = useRef(null); // keep latest modal state for socket callbacks
+  const joinModalRef = useRef(null); // keep latest modal state for socket callbacks
   const pendingJoinRef = useRef(null); // { isPrivate: bool } — tracks the in-flight join_room emit
-  
+
   // 💬 Chat State
   const [chatMessages, setChatMessages] = useState([]);
   const [msgInput, setMsgInput] = useState("");
@@ -340,7 +212,7 @@ function App() {
   const chatEndRef = useRef(null);
   const currentRoomRef = useRef(currentRoom);
   const isRoomPrivateRef = useRef(isRoomPrivate);
-  
+
   // 🔑 Auth State
   const [user, setUser] = useState(getPersistentUser());
   const mapRef = useRef(null);
@@ -358,6 +230,10 @@ function App() {
   useEffect(() => {
     localStorage.setItem("theme", theme);
   }, [theme]);
+
+  useEffect(() => {
+    localStorage.setItem("buildingView", buildingsEnabled ? "3d" : "2d");
+  }, [buildingsEnabled]);
 
   useEffect(() => {
     currentRoomRef.current = currentRoom;
@@ -393,7 +269,7 @@ function App() {
     socket.on("sos_alert", (data) => {
       console.log("🚨 ALERT RECEIVED:", data);
       setSosAlerts(prev => [...prev.filter(alert => String(alert.id) !== String(data.id)), data]);
-      
+
       // Show clickable toast for other users' SOS
       if (String(data.id) !== String(user.userId)) {
         showToast({
@@ -429,7 +305,7 @@ function App() {
 
     // 💬 MESSAGE UPDATED (SEEN STATUS)
     socket.on("message_updated", (updatedMsg) => {
-      setChatMessages((prev) => 
+      setChatMessages((prev) =>
         prev.map((msg) => (msg._id === updatedMsg._id ? updatedMsg : msg))
       );
     });
@@ -547,7 +423,7 @@ function App() {
   useEffect(() => {
     const cleanupInterval = setInterval(() => {
       const now = Date.now() / 1000;
-      setChatMessages((prev) => 
+      setChatMessages((prev) =>
         prev.filter((msg) => now - msg.timestamp < 86400)
       );
     }, 60000); // Check every 60 seconds
@@ -610,14 +486,14 @@ function App() {
 
   // 🔑 Handle Login
   const handleLogin = (username, roomId) => {
-    const trimmed = username.trim();
-    if (!trimmed) return;
+    const trimmed = username.trim().toUpperCase();
+    if (!isValidIdentity(trimmed)) return;
 
     const finalRoom = roomId?.trim() || "Global";
     localStorage.setItem("username", trimmed);
     localStorage.setItem("roomId", finalRoom);
     setCurrentRoom(finalRoom);
-    
+
     // Set initial avatar seed as username if not exists
     let seed = localStorage.getItem("avatarSeed");
     if (!seed) {
@@ -625,15 +501,15 @@ function App() {
       localStorage.setItem("avatarSeed", seed);
     }
 
-showToast({
-  message: `Welcome, ${trimmed}!`,
-  type: "welcome"
-});
+    showToast({
+      message: `Welcome, ${trimmed}!`,
+      type: "welcome"
+    });
 
 
-setUser((prev) => ({ ...prev, username: trimmed, avatarSeed: seed }));
-  socket.emit("join_room", { room: finalRoom });
-};
+    setUser((prev) => ({ ...prev, username: trimmed, avatarSeed: seed }));
+    socket.emit("join_room", { room: finalRoom });
+  };
 
   // 🚪 Handle Logout
   const handleLogout = () => {
@@ -654,8 +530,8 @@ setUser((prev) => ({ ...prev, username: trimmed, avatarSeed: seed }));
 
   // 📝 Update Username
   const updateUsername = (newName) => {
-    const trimmed = newName.trim();
-    if (!trimmed || trimmed === user.username) return;
+    const trimmed = newName.trim().toUpperCase();
+    if (!isValidIdentity(trimmed) || trimmed === user.username) return;
 
     localStorage.setItem("username", trimmed);
     setUser(prev => ({ ...prev, username: trimmed }));
@@ -670,11 +546,11 @@ setUser((prev) => ({ ...prev, username: trimmed, avatarSeed: seed }));
       });
     }
 
-showToast({
-  message: "Name updated!",
-  type: "success"
-});
-};
+    showToast({
+      message: "Name updated!",
+      type: "success"
+    });
+  };
 
   // 👻 Handle Invisible Mode Toggle
   const handleToggleInvisible = (newValue) => {
@@ -714,7 +590,7 @@ showToast({
     // Emit to the dedicated CREATE event — never join_room
     // Backend will reject with create_room_error if room already exists
     socket.emit("create_room", {
-      room:     roomData.name,
+      room: roomData.name,
       passcode: roomData.passcode,
     });
   };
@@ -747,12 +623,6 @@ showToast({
     setMsgInput("");
   };
 
-  // 💬 Handle Mark as Seen
-  const markAsSeen = (messageId) => {
-    if (!messageId) return;
-    socket.emit("message_seen", { messageId, userId: user.userId });
-  };
-
   // 💬 Seen Logic Effect (Real-time)
   useEffect(() => {
     if (activePanel !== "chat") return;
@@ -780,7 +650,7 @@ showToast({
 
   const handleSOS = () => {
     if (!userLocation || !user.username) return;
-    
+
     if (isSOSActive) {
       // 🔴 TELL SERVER YOU CANCELLED
       socket.emit("sos_cancel", { id: user.userId });
@@ -816,78 +686,18 @@ showToast({
     } else {
       setToast({ message: input, type });
     }
-    
+
     // Auto-clear toast
     setTimeout(() => {
       setToast(null);
     }, 5000);
   };
 
-  // 🧭 Device orientation / compass sensor
-  useEffect(() => {
-    const ALPHA = 0.15; // low-pass smoothing
-    const handleOrientation = (e) => {
-      let heading = null;
-      if (e.webkitCompassHeading != null) {
-        heading = e.webkitCompassHeading; // iOS
-      } else if (e.absolute && e.alpha != null) {
-        heading = 360 - e.alpha; // Android absolute
-      } else if (e.alpha != null) {
-        heading = 360 - e.alpha; // fallback
-      }
-      if (heading == null) return;
-      compassFilterRef.current = compassFilterRef.current * (1 - ALPHA) + heading * ALPHA;
-      setCompassHeading(Math.round(compassFilterRef.current));
-      setSensorActive(true);
-      setSensorStatus('');
-    };
-
-    const tryListen = () => {
-      window.addEventListener('deviceorientationabsolute', handleOrientation, true);
-      window.addEventListener('deviceorientation', handleOrientation, true);
-    };
-
-    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-      // iOS 13+
-      DeviceOrientationEvent.requestPermission()
-        .then(state => {
-          if (state === 'granted') { tryListen(); setSensorStatus(''); }
-          else setSensorStatus('SENSOR PERMISSION DENIED');
-        })
-        .catch(() => setSensorStatus('SENSOR UNAVAILABLE'));
-    } else if (typeof DeviceOrientationEvent !== 'undefined') {
-      tryListen();
-    } else {
-      setSensorStatus('NO SENSOR — SHOWING MAP BEARING');
-    }
-
-    return () => {
-      window.removeEventListener('deviceorientationabsolute', handleOrientation, true);
-      window.removeEventListener('deviceorientation', handleOrientation, true);
-    };
-  }, []);
-
   // 🛸 If no username, show Login Page
-  const handleOpenCompass = () => {
-    setIsCompassOpen(true);
+  const handleCompassReset = () => {
+    requestDeviceHeading();
+    mapRef.current?.resetBearing();
   };
-
-  const handleCloseCompass = () => {
-    setIsCompassOpen(false);
-  };
-
-  useEffect(() => {
-    if (!isCompassOpen) return undefined;
-
-    const handleKeyDown = (event) => {
-      if (event.key === "Escape") {
-        setIsCompassOpen(false);
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isCompassOpen]);
 
   if (!user.username) {
     return <Login onLogin={handleLogin} />;
@@ -917,24 +727,24 @@ showToast({
   }
 
   const handleRecenter = () => {
-  if (userLocation) {
-    mapRef.current?.handleRecenter();
-  } else {
-    showToast({
-  message: "Waiting for location...",
-  type: "location"
-});
-  }
-};
+    if (userLocation) {
+      mapRef.current?.handleRecenter();
+    } else {
+      showToast({
+        message: "Waiting for location...",
+        type: "location"
+      });
+    }
+  };
 
   return (
-    <div style={{ width: "100vw", height: "100vh", position: "relative", overflow: "hidden" }} className={`${theme}-mode`}>
-      <MapView 
-        ref={mapRef} 
-        users={users} 
-        userLocation={userLocation} 
-        theme={theme} 
-        isFollowing={isFollowing} 
+    <div style={{ width: "100vw", height: "100vh", position: "relative", overflow: "hidden" }} className={`orbit-app-shell ${theme}-mode`}>
+      <MapView
+        ref={mapRef}
+        users={users}
+        userLocation={userLocation}
+        theme={theme}
+        isFollowing={isFollowing}
         setIsFollowing={setIsFollowing}
         onAutoDisableFollowing={handleAutoDisableFollowing}
         currentUserId={user.userId}
@@ -942,19 +752,9 @@ showToast({
         cameraMode={cameraMode}
         setCameraMode={setCameraMode}
         onBearingChange={setMapBearing}
+        buildingsEnabled={buildingsEnabled}
+        deviceHeading={deviceHeading}
       />
-
-      {isCompassOpen && (
-        <CompassFullscreen
-          bearing={mapBearing}
-          compassHeading={compassHeading}
-          sensorActive={sensorActive}
-          sensorStatus={sensorStatus}
-          userLocation={userLocation}
-          cameraMode={cameraMode}
-          onClose={handleCloseCompass}
-        />
-      )}
 
       {/* 💬 CHAT PANEL (Mica Dark) */}
       <div className={`chat-panel ${activePanel === "chat" ? "open" : "closed"}`}>
@@ -974,10 +774,10 @@ showToast({
 
         <div className="room-controls">
           <div className="join-row">
-            <input 
-              type="text" 
-              className="room-input" 
-              placeholder="Enter Room ID..." 
+            <input
+              type="text"
+              className="room-input"
+              placeholder="Enter Room ID..."
               value={roomInput}
               onChange={(e) => setRoomInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSwitchRoom()}
@@ -988,7 +788,7 @@ showToast({
             + Create Private Room
           </button>
         </div>
-        
+
         <div className="chat-messages">
           {chatMessages.length === 0 ? (
             <div className="empty-state">
@@ -1022,9 +822,9 @@ showToast({
 
         <form className="chat-input-container" onSubmit={sendMessage}>
           <div className="message-input-wrapper">
-            <input 
-              type="text" 
-              placeholder="Type a message..." 
+            <input
+              type="text"
+              placeholder="Type a message..."
               value={msgInput}
               onChange={(e) => setMsgInput(e.target.value)}
             />
@@ -1040,7 +840,7 @@ showToast({
 
 
       {/* ⬅️ CHAT TOGGLE BUTTON */}
-      <button 
+      <button
         className={`chat-toggle ${activePanel === "chat" ? "open" : "closed"}`}
         onClick={() => {
           setActivePanel(prev => {
@@ -1069,8 +869,8 @@ showToast({
       {(() => {
         const visibleUsers = isInvisible ? users.filter(u => u.id !== user.userId) : users;
         return (
-          <div 
-            className="users-indicator" 
+          <div
+            className="users-indicator"
             onClick={() => setActivePanel(prev => (prev === "users" ? null : "users"))}
           >
             <div className="online-dot"></div>
@@ -1083,55 +883,55 @@ showToast({
       {activePanel === "users" && (() => {
         const visibleUsers = isInvisible ? users.filter(u => u.id !== user.userId) : users;
         return (
-        <div className="users-panel">
-          <h3>Nearby Users</h3>
-          <div className="user-list">
-            {visibleUsers.length > 0 ? (
-              [...visibleUsers]
-                .sort((a, b) => (a.id === user.userId ? -1 : b.id === user.userId ? 1 : 0))
-                .map((u, i) => {
-                  let distance = "Calculating...";
+          <div className="users-panel">
+            <h3>Nearby Users</h3>
+            <div className="user-list">
+              {visibleUsers.length > 0 ? (
+                [...visibleUsers]
+                  .sort((a, b) => (a.id === user.userId ? -1 : b.id === user.userId ? 1 : 0))
+                  .map((u, i) => {
+                    let distance = "Calculating...";
 
-                  if (userLocation && u.lat && u.lng) {
-                    const d = getDistanceKm(
-                      userLocation.lat,
-                      userLocation.lng,
-                      u.lat,
-                      u.lng
-                    );
-                    distance = `${d.toFixed(2)} km`;
-                  }
+                    if (userLocation && u.lat && u.lng) {
+                      const d = getDistanceKm(
+                        userLocation.lat,
+                        userLocation.lng,
+                        u.lat,
+                        u.lng
+                      );
+                      distance = `${d.toFixed(2)} km`;
+                    }
 
-                  return (
-                    <div key={u.id}>
-                      <div 
-                        className={`user-item ${u.id === user.userId ? "current" : ""}`}
-                        onClick={() => {
-                          mapRef.current?.handleCenterOnUser(u.lng, u.lat);
-                          setIsFollowing(false);
-                          showToast(`Tracking ${u.name}`, "tracking");
-                        }}
-                      >
-                        <div className="user-info">
-                          <span className="user-name">
-                            {u.name} {u.id === user.userId ? <span className="you-label"></span> : ""}
-                          </span>
-                          <span className="user-status">
-                            Online now {distance && u.id !== user.userId && <span className="distance" style={{ opacity: 0.7 }}> • {distance}</span>}
-                          </span>
+                    return (
+                      <div key={u.id}>
+                        <div
+                          className={`user-item ${u.id === user.userId ? "current" : ""}`}
+                          onClick={() => {
+                            mapRef.current?.handleCenterOnUser(u.lng, u.lat);
+                            setIsFollowing(false);
+                            showToast(`Tracking ${u.name}`, "tracking");
+                          }}
+                        >
+                          <div className="user-info">
+                            <span className="user-name">
+                              {u.name} {u.id === user.userId ? <span className="you-label"></span> : ""}
+                            </span>
+                            <span className="user-status">
+                              Online now {distance && u.id !== user.userId && <span className="distance" style={{ opacity: 0.7 }}> • {distance}</span>}
+                            </span>
+                          </div>
                         </div>
+                        {u.id === user.userId && visibleUsers.length > 1 && (
+                          <div className="user-divider"></div>
+                        )}
                       </div>
-                      {u.id === user.userId && visibleUsers.length > 1 && (
-                        <div className="user-divider"></div>
-                      )}
-                    </div>
-                  );
-                })
-            ) : (
-              <div className="no-users">No users nearby</div>
-            )}
+                    );
+                  })
+              ) : (
+                <div className="no-users">No users nearby</div>
+              )}
+            </div>
           </div>
-        </div>
         );
       })()}
 
@@ -1139,23 +939,25 @@ showToast({
       <div className={`fab-container ${fabOpen ? "open" : ""}`}>
         <div className="fab-actions">
           <button
-            className="control-btn compass-control-btn"
-            onClick={handleOpenCompass}
-            title="Open compass"
+            className={`control-btn compass-control-btn ${Math.abs(mapBearing) > 0.5 ? "bearing-active" : ""}`}
+            onClick={handleCompassReset}
+            title="Reset bearing to north"
+            aria-label="Reset bearing to north"
           >
-            <LiveCompassIcon bearing={mapBearing} compassHeading={compassHeading} sensorActive={sensorActive} />
+            <NorthCompassIcon bearing={mapBearing} />
           </button>
 
-          <button 
-            className="control-btn recenter-btn" 
+          <button
+            className={`control-btn recenter-btn perspective-${cameraMode} active`}
             onClick={handleRecenter}
-            title="Toggle camera mode"
+            title={`${CAMERA_MODE_LABELS[cameraMode]} active. Switch to ${nextModeLabel(cameraMode)}`}
+            aria-label={`${CAMERA_MODE_LABELS[cameraMode]} active. Switch to ${nextModeLabel(cameraMode)}`}
           >
             <CameraModeIcon mode={cameraMode} />
           </button>
 
-          <button 
-            className={`control-btn ${isFollowing ? "active" : ""}`} 
+          <button
+            className={`control-btn ${isFollowing ? "active" : ""}`}
             onClick={() => {
               setIsFollowing(!isFollowing);
               showToast(
@@ -1171,7 +973,10 @@ showToast({
           </button>
         </div>
 
-        <button className="fab-main" onClick={() => {
+        <button
+          className="fab-main"
+          aria-label={fabOpen ? "Close map controls" : "Open map controls"}
+          onClick={() => {
           setFabOpen(prev => {
             const next = !prev;
             if (next && window.innerWidth <= 768) {
@@ -1179,7 +984,8 @@ showToast({
             }
             return next;
           });
-        }}>
+        }}
+        >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 24, height: 24 }}>
             <circle cx="12" cy="12" r="1"></circle>
             <circle cx="12" cy="5" r="1"></circle>
@@ -1190,18 +996,18 @@ showToast({
 
       {/* 🛠️ CONTROL CLUSTER */}
       <div className="control-cluster">
-        <button className="profile-btn" onClick={() => setShowProfile(true)}>
+        <button className="profile-btn" onClick={() => setShowProfile(true)} aria-label="Open profile settings">
           <div className="avatar">
-            <img 
-              src={`https://api.dicebear.com/9.x/lorelei/svg?seed=${encodeURIComponent(user.avatarSeed)}`} 
-              alt="My Avatar" 
+            <img
+              src={`https://api.dicebear.com/9.x/lorelei/svg?seed=${encodeURIComponent(user.avatarSeed)}`}
+              alt="My Avatar"
               style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover", display: "block" }}
             />
           </div>
         </button>
 
-        <button 
-          className={`control-btn ${isFollowing ? "active" : ""}`} 
+        <button
+          className={`control-btn ${isFollowing ? "active" : ""}`}
           onClick={() => {
             setIsFollowing(!isFollowing);
             showToast(
@@ -1217,9 +1023,10 @@ showToast({
         </button>
 
         <button
-          className="control-btn recenter-btn"
+          className={`control-btn recenter-btn perspective-${cameraMode} active`}
           onClick={handleRecenter}
-          title="Toggle camera mode"
+          title={`${CAMERA_MODE_LABELS[cameraMode]} active. Switch to ${nextModeLabel(cameraMode)}`}
+          aria-label={`${CAMERA_MODE_LABELS[cameraMode]} active. Switch to ${nextModeLabel(cameraMode)}`}
         >
           <CameraModeIcon mode={cameraMode} />
         </button>
@@ -1227,11 +1034,12 @@ showToast({
 
 
         <button
-          className="control-btn compass-control-btn"
-          onClick={handleOpenCompass}
-          title="Open compass"
+          className={`control-btn compass-control-btn ${Math.abs(mapBearing) > 0.5 ? "bearing-active" : ""}`}
+          onClick={handleCompassReset}
+          title="Reset bearing to north"
+          aria-label="Reset bearing to north"
         >
-          <LiveCompassIcon bearing={mapBearing} compassHeading={compassHeading} sensorActive={sensorActive} />
+          <NorthCompassIcon bearing={mapBearing} />
         </button>
       </div>
 
@@ -1266,7 +1074,7 @@ showToast({
       </button>
 
       {toast && (
-        <div 
+        <div
           className={`toast ${toast.type}`}
           onClick={() => {
             if (toast.type === "sos" && toast.userId !== user.userId) {
@@ -1275,94 +1083,94 @@ showToast({
               showToast({ message: "Tracking user...", type: "tracking" });
             }
           }}
-          style={{ 
-            cursor: toast.type === "sos" && toast.userId !== user.userId ? "pointer" : "default" 
+          style={{
+            cursor: toast.type === "sos" && toast.userId !== user.userId ? "pointer" : "default"
           }}
         >
           {/* ICON */}
           {toast.type === "tracking" && (
             <svg className="icon radar-sweep" viewBox="0 0 24 24" fill="none">
-              <circle cx="12" cy="12" r="9" stroke="white" strokeWidth="2" opacity="0.3"/>
-              <path className="sweep" d="M12 3 A9 9 0 0 1 21 12" stroke="white" strokeWidth="2"/>
-              <circle cx="12" cy="12" r="2" fill="white"/>
+              <circle cx="12" cy="12" r="9" stroke="white" strokeWidth="2" opacity="0.3" />
+              <path className="sweep" d="M12 3 A9 9 0 0 1 21 12" stroke="white" strokeWidth="2" />
+              <circle cx="12" cy="12" r="2" fill="white" />
             </svg>
           )}
 
-          {toast.type === "follow" && (    
+          {toast.type === "follow" && (
             <svg className="icon follow-fly" viewBox="0 0 24 24" fill="none">
               <path d="M3 11L22 2L13 21L11 13L3 11Z"
-                stroke="white" strokeWidth="2"/>
+                stroke="white" strokeWidth="2" />
             </svg>
           )}
 
 
-{toast.type === "success" && (
-  <svg className="icon check-icon" viewBox="0 0 24 24" fill="none">
-    <circle
-      className="ring"
-      cx="12"
-      cy="12"
-      r="10"
-      stroke="white"
-      strokeWidth="2"
-    />
-    <path
-      d="M7 13l3 3 7-7"
-      stroke="white"
-      strokeWidth="2.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </svg>
-)}
+          {toast.type === "success" && (
+            <svg className="icon check-icon" viewBox="0 0 24 24" fill="none">
+              <circle
+                className="ring"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="white"
+                strokeWidth="2"
+              />
+              <path
+                d="M7 13l3 3 7-7"
+                stroke="white"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          )}
 
 
-{toast.type === "room" && (
-  <svg className="icon room-icon" viewBox="0 0 24 24" fill="none">
-    <circle
-      className="portal-ring"
-      cx="12"
-      cy="12"
-      r="9"
-      stroke="white"
-      strokeWidth="2"
-    />
-    <path
-      className="portal-arrow"
-      d="M10 8l4 4-4 4"
-      stroke="white"
-      strokeWidth="2.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </svg>
-)}
+          {toast.type === "room" && (
+            <svg className="icon room-icon" viewBox="0 0 24 24" fill="none">
+              <circle
+                className="portal-ring"
+                cx="12"
+                cy="12"
+                r="9"
+                stroke="white"
+                strokeWidth="2"
+              />
+              <path
+                className="portal-arrow"
+                d="M10 8l4 4-4 4"
+                stroke="white"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          )}
 
 
           {toast.type === "sos" && (
             <svg className="icon" viewBox="0 0 24 24" fill="none">
-              <circle cx="12" cy="12" r="10" stroke="white" strokeWidth="2"/>
-              <line x1="12" y1="8" x2="12" y2="12" stroke="white" strokeWidth="2" strokeLinecap="round"/>
-              <line x1="12" y1="16" x2="12.01" y2="16" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+              <circle cx="12" cy="12" r="10" stroke="white" strokeWidth="2" />
+              <line x1="12" y1="8" x2="12" y2="12" stroke="white" strokeWidth="2" strokeLinecap="round" />
+              <line x1="12" y1="16" x2="12.01" y2="16" stroke="white" strokeWidth="2" strokeLinecap="round" />
             </svg>
           )}
 
           {toast.type === "cancel" && (
             <svg className="icon" viewBox="0 0 24 24" fill="none">
-              <path d="M20 6L9 17L4 12" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M20 6L9 17L4 12" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           )}
 
           {toast.type === "location" && (
-  <svg className="icon" viewBox="0 0 24 24" fill="none">
-    <path
-      d="M12 21s6-5.5 6-10a6 6 0 1 0-12 0c0 4.5 6 10 6 10z"
-      stroke="white"
-      strokeWidth="2"
-    />
-    <circle cx="12" cy="11" r="2" fill="white" />
-  </svg>
-)}
+            <svg className="icon" viewBox="0 0 24 24" fill="none">
+              <path
+                d="M12 21s6-5.5 6-10a6 6 0 1 0-12 0c0 4.5 6 10 6 10z"
+                stroke="white"
+                strokeWidth="2"
+              />
+              <circle cx="12" cy="11" r="2" fill="white" />
+            </svg>
+          )}
 
           {toast.type === "maintenance" && (
             <svg className="icon" viewBox="0 0 24 24" fill="none">
@@ -1377,7 +1185,7 @@ showToast({
           <span className="text">{toast.message}</span>
 
           {toast.type === "sos" && toast.userId !== user.userId && (
-            <button 
+            <button
               className="view-btn"
               onClick={(e) => {
                 e.stopPropagation();
@@ -1392,26 +1200,30 @@ showToast({
         </div>
       )}
 
-        
+
 
 
 
 
       {showProfile && (
-        <ProfileModal 
-          user={user} 
-          onClose={() => setShowProfile(false)} 
+        <ProfileModal
+          user={user}
+          onClose={() => setShowProfile(false)}
           onChangeAvatar={changeAvatar}
           onUpdateUsername={updateUsername}
           onLogout={handleLogout}
           isInvisible={isInvisible}
           onToggleInvisible={handleToggleInvisible}
+          themeMode={theme}
+          onThemeModeChange={setTheme}
+          buildingsEnabled={buildingsEnabled}
+          onBuildingsEnabledChange={setBuildingsEnabled}
         />
       )}
 
       {showCreateRoomModal && (
-        <CreateRoomModal 
-          onClose={() => setShowCreateRoomModal(false)} 
+        <CreateRoomModal
+          onClose={() => setShowCreateRoomModal(false)}
           onCreate={handleCreateRoom}
         />
       )}

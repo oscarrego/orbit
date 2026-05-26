@@ -1,7 +1,7 @@
-import { useEffect, useRef, forwardRef, useImperativeHandle } from "react";
+﻿import { useEffect, useRef, forwardRef, useImperativeHandle } from "react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { getBackgroundColor, getMapFilters } from "../theme/themeHelpers";
+import { getBackgroundColor, getMapFilters, getThemeConfig } from "../theme/themeHelpers";
 import {
   BUILDING_ACCENT_LAYER_IDS,
   BUILDING_LAYER_ID,
@@ -10,8 +10,7 @@ import {
   getBuildingLight,
   getBuildingPaint
 } from "../theme/mapBuildingStyle";
-import { DARK_MAP_STYLE_URL, applyCinematicDarkMapStyle, applyEnvironmentToMap } from "../theme/cinematicDarkMapStyle";
-import { getDayFactor, getEnvironmentValues, interpolateSkyStyle, DAY_SKY_STYLES } from "../theme/environmentSystem";
+import { applyCinematicDarkMapStyle } from "../theme/cinematicDarkMapStyle";
 
 const MARKER_PALETTE = [
   "#FF3B30", "#FF9500", "#FFCC00", "#34C759",
@@ -99,56 +98,34 @@ const IMMERSIVE_SKY_STYLE = {
   "atmosphere-blend": 0.28
 };
 
-const NIGHT_SKY_STYLES = {
-  top: {
-    "sky-color":        "rgba(14, 16, 22, 0.0)",
-    "horizon-color":    "rgba(18, 20, 28, 0.0)",
-    "fog-color":        "rgba(14, 16, 22, 0.0)",
-    "fog-ground-blend": 1,
-    "horizon-fog-blend":1,
-    "sky-horizon-blend":1,
-    "atmosphere-blend": 0
-  },
-  cinematic: {
-    "sky-color":        "rgba(12, 14, 20, 0.88)",
-    "horizon-color":    "rgba(32, 30, 24, 0.72)",
-    "fog-color":        "rgba(24, 22, 18, 0.54)",
-    "fog-ground-blend": 0.82,
-    "horizon-fog-blend":0.88,
-    "sky-horizon-blend":0.78,
-    "atmosphere-blend": 0.18
-  },
-  immersive: {
-    "sky-color":        "rgba(10, 12, 18, 0.94)",
-    "horizon-color":    "rgba(38, 34, 26, 0.80)",
-    "fog-color":        "rgba(32, 28, 22, 0.64)",
-    "fog-ground-blend": 0.76,
-    "horizon-fog-blend":0.90,
-    "sky-horizon-blend":0.82,
-    "atmosphere-blend": 0.28
-  },
+const LIGHT_SKY_STYLE = {
+  "sky-color": "rgba(232, 237, 243, 0.92)",
+  "horizon-color": "rgba(244, 247, 250, 0.9)",
+  "fog-color": "rgba(221, 227, 234, 0.34)",
+  "fog-ground-blend": 0.84,
+  "horizon-fog-blend": 0.92,
+  "sky-horizon-blend": 0.92,
+  "atmosphere-blend": 0.1
 };
 
-const getSkyStyleForMode = (cameraMode, dayFactor = 0) => {
-  const key = cameraMode === CAMERA_MODES.IMMERSIVE ? "immersive" :
-              cameraMode === CAMERA_MODES.CINEMATIC  ? "cinematic" : "top";
-  const night = NIGHT_SKY_STYLES[key];
-  const day   = DAY_SKY_STYLES[key];
-  if (!day || dayFactor === 0) return cloneMapStyle(night);
-  return interpolateSkyStyle(night, day, dayFactor);
+const getSkyStyleForMode = (cameraMode, themeId) => {
+  if (themeId === "light") return cloneMapStyle(LIGHT_SKY_STYLE);
+  if (cameraMode === CAMERA_MODES.IMMERSIVE)  return cloneMapStyle(IMMERSIVE_SKY_STYLE);
+  if (cameraMode === CAMERA_MODES.CINEMATIC)  return cloneMapStyle(CINEMATIC_SKY_STYLE);
+  return cloneMapStyle(TOP_SKY_STYLE);
 };
 
-const applyCameraAtmosphere = (mapInstance, cameraMode, dayFactor = 0) => {
+const applyCameraAtmosphere = (mapInstance, cameraMode, themeId) => {
   if (!mapInstance?.setSky) return;
   try {
-    mapInstance.setSky(getSkyStyleForMode(cameraMode, dayFactor), { validate: false });
+    mapInstance.setSky(getSkyStyleForMode(cameraMode, themeId), { validate: false });
   } catch (error) {
     console.warn("Unable to apply camera atmosphere:", error);
   }
 };
 
 
-const getMapStyleForTheme = () => DARK_MAP_STYLE_URL;
+const getMapStyleForTheme = (themeId) => getThemeConfig(themeId).styleUrl;
 
 const isBuildingSourceLayer = (layer) =>
   Boolean(
@@ -157,22 +134,30 @@ const isBuildingSourceLayer = (layer) =>
       layer["source-layer"].toLowerCase().includes("building")
   );
 
-const applyBuildingLighting = (mapInstance, themeId, env) => {
+const applyBuildingLighting = (mapInstance, themeId) => {
   try {
-    mapInstance.setLight(getBuildingLight(themeId, env));
+    mapInstance.setLight(getBuildingLight(themeId));
   } catch (error) {
     console.warn("Unable to apply building lighting:", error);
   }
 };
 
-const applyBuildingPaint = (mapInstance, layerId, themeId, env) => {
+const applyBuildingPaint = (mapInstance, layerId, themeId, buildingsEnabled) => {
   if (!mapInstance.getLayer(layerId)) return;
-  const paint = getBuildingPaint(themeId, env);
+  const paint = getBuildingPaint(themeId);
+  mapInstance.setPaintProperty(layerId, "fill-extrusion-height-transition", { duration: 540, delay: 0 });
+  mapInstance.setPaintProperty(layerId, "fill-extrusion-base-transition", { duration: 540, delay: 0 });
+  mapInstance.setPaintProperty(layerId, "fill-extrusion-opacity-transition", { duration: 420, delay: 0 });
   Object.entries(paint).forEach(([property, value]) => {
-    mapInstance.setPaintProperty(layerId, property, value);
+    const nextValue =
+      !buildingsEnabled && property === "fill-extrusion-height" ? 0 :
+      !buildingsEnabled && property === "fill-extrusion-base" ? 0 :
+      !buildingsEnabled && property === "fill-extrusion-opacity" ? 0 :
+      value;
+    mapInstance.setPaintProperty(layerId, property, nextValue);
   });
   mapInstance.setLayoutProperty(layerId, "visibility", "visible");
-  applyBuildingLighting(mapInstance, themeId, env);
+  applyBuildingLighting(mapInstance, themeId);
 };
 
 const removeBuildingAccentLayers = (mapInstance) => {
@@ -183,7 +168,7 @@ const removeBuildingAccentLayers = (mapInstance) => {
   });
 };
 
-const syncBuildingAccentLayers = (mapInstance, source, sourceLayer, baseFilter, themeId, beforeLayerId) => {
+const syncBuildingAccentLayers = (mapInstance, source, sourceLayer, baseFilter, themeId, beforeLayerId, buildingsEnabled) => {
   const accentLayers = getBuildingAccentLayers(themeId, source, sourceLayer, baseFilter);
   const accentLayerIds = new Set(accentLayers.map((layer) => layer.id));
 
@@ -202,18 +187,25 @@ const syncBuildingAccentLayers = (mapInstance, source, sourceLayer, baseFilter, 
         layerSpec,
         beforeLayerId && mapInstance.getLayer(beforeLayerId) ? beforeLayerId : undefined
       );
-      return;
     }
 
     Object.entries(layer.paint || {}).forEach(([property, value]) => {
-      mapInstance.setPaintProperty(layer.id, property, cloneMapStyle(value));
+      mapInstance.setPaintProperty(layer.id, "fill-extrusion-height-transition", { duration: 540, delay: 0 });
+      mapInstance.setPaintProperty(layer.id, "fill-extrusion-base-transition", { duration: 540, delay: 0 });
+      mapInstance.setPaintProperty(layer.id, "fill-extrusion-opacity-transition", { duration: 420, delay: 0 });
+      const nextValue =
+        !buildingsEnabled && property === "fill-extrusion-height" ? 0 :
+        !buildingsEnabled && property === "fill-extrusion-base" ? 0 :
+        !buildingsEnabled && property === "fill-extrusion-opacity" ? 0 :
+        cloneMapStyle(value);
+      mapInstance.setPaintProperty(layer.id, property, nextValue);
     });
     mapInstance.setFilter(layer.id, layer.filter ? cloneMapStyle(layer.filter) : null);
     mapInstance.setLayoutProperty(layer.id, "visibility", "visible");
   });
 };
 
-const applyThemeToMap = (mapInstance, themeId, cameraMode, env) => {
+const applyThemeToMap = (mapInstance, themeId, cameraMode) => {
   if (!mapInstance || !mapInstance.isStyleLoaded()) return;
 
   const bgColor = getBackgroundColor(themeId);
@@ -226,11 +218,11 @@ const applyThemeToMap = (mapInstance, themeId, cameraMode, env) => {
     container.style.backgroundColor = bgColor;
   }
 
-  applyBuildingLighting(mapInstance, themeId, env);
+  applyBuildingLighting(mapInstance, themeId);
 
-  applyCinematicDarkMapStyle(mapInstance, env);
+  applyCinematicDarkMapStyle(mapInstance, themeId);
 
-  applyCameraAtmosphere(mapInstance, cameraMode, env?.dayFactor ?? 0);
+  applyCameraAtmosphere(mapInstance, cameraMode, themeId);
 };
 
 const getDecorations = (id) => {
@@ -243,158 +235,10 @@ const getDecorations = (id) => {
   return decorationCache.get(id);
 };
 
-// ── Blazing gold — same energy as cinematic highways ──────────────────────────
-const GOLD = { r: 255, g: 200, b: 60 };
-
-const startBlackHoleAnimation = (canvas, markerEl) => {
-  const ctx = canvas.getContext("2d");
-  canvas.width = 300;
-  canvas.height = 300;
-  const cx = 150, cy = 150;
-  let animId;
-  let frame = 0;
-
-  // 8 trails at organic angles for cinematic asymmetry
-  const baseAngles = [0, 42, 90, 137, 180, 222, 270, 317];
-  const spawnRadius = 148;
-
-  let particles = baseAngles.map((angleDeg, idx) => {
-    const jitter = (Math.random() - 0.5) * 20;
-    const jRad = (angleDeg + jitter) * (Math.PI / 180);
-    return {
-      x: cx + Math.cos(jRad) * spawnRadius,
-      y: cy + Math.sin(jRad) * spawnRadius,
-      vx: 0,
-      vy: 0,
-      trail: [],
-      trailMaxLen: 26 + idx * 2,
-      absorbed: false,
-      life: 1,
-      delay: idx * 4,          // staggered spawn in frames
-      width: 2.0 + Math.random() * 1.2,
-    };
-  });
-
-  const triggerPulse = () => {
-    if (markerEl.classList.contains("absorption-pulse")) return;
-    markerEl.classList.add("absorption-pulse");
-    setTimeout(() => markerEl.classList.remove("absorption-pulse"), 700);
-  };
-
-  let pulseTriggered = false;
-  const { r, g, b } = GOLD;
-
-  const drawTrail = (p) => {
-    if (p.trail.length < 2) return;
-
-    // Pass 1 — wide outer glow
-    for (let i = 0; i < p.trail.length - 1; i++) {
-      const progress = i / (p.trail.length - 1);
-      ctx.beginPath();
-      ctx.moveTo(p.trail[i].x, p.trail[i].y);
-      ctx.lineTo(p.trail[i + 1].x, p.trail[i + 1].y);
-      ctx.strokeStyle = `rgba(${r},${g},${b},${progress * p.life * 0.3})`;
-      ctx.lineWidth = p.width * 4.5;
-      ctx.shadowBlur = 18 * progress;
-      ctx.shadowColor = `rgba(${r},${g},${b},0.85)`;
-      ctx.lineCap = "round";
-      ctx.stroke();
-    }
-
-    // Pass 2 — bright gold core
-    for (let i = 0; i < p.trail.length - 1; i++) {
-      const progress = i / (p.trail.length - 1);
-      const brightness = Math.round(210 + progress * 45);
-      ctx.beginPath();
-      ctx.moveTo(p.trail[i].x, p.trail[i].y);
-      ctx.lineTo(p.trail[i + 1].x, p.trail[i + 1].y);
-      ctx.strokeStyle = `rgba(255,${brightness},70,${progress * p.life * 0.9})`;
-      ctx.lineWidth = p.width;
-      ctx.shadowBlur = 7 * progress;
-      ctx.shadowColor = `rgba(255,240,160,0.8)`;
-      ctx.lineCap = "round";
-      ctx.stroke();
-    }
-
-    // Leading hot point
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, p.width * 1.6, 0, Math.PI * 2);
-    ctx.fillStyle = `rgba(255,252,200,${p.life * 0.95})`;
-    ctx.shadowBlur = 28;
-    ctx.shadowColor = `rgba(255,215,80,1)`;
-    ctx.fill();
-  };
-
-  const loop = () => {
-    animId = requestAnimationFrame(loop);
-    frame++;
-    ctx.clearRect(0, 0, 300, 300);
-
-    let activeParticles = [];
-
-    particles.forEach((p) => {
-      // Staggered spawn — hold until delay frame
-      if (frame < p.delay) { activeParticles.push(p); return; }
-
-      p.trail.push({ x: p.x, y: p.y });
-      if (p.trail.length > p.trailMaxLen) p.trail.shift();
-
-      const dx = p.x - cx;
-      const dy = p.y - cy;
-      const dist = Math.hypot(dx, dy);
-
-      if (dist > 88) {
-        // Phase 0 — magnetic approach with subtle lateral drift
-        const ease = 0.011 + (1 - dist / spawnRadius) * 0.009;
-        p.x += (cx - p.x) * ease;
-        p.y += (cy - p.y) * ease;
-        if (dist > 0) {
-          p.x += (-dy / dist) * 0.28;
-          p.y += (dx / dist) * 0.28;
-        }
-      } else if (dist > 4) {
-        // Phase 1 — gravitational clockwise spiral, velocity-blended
-        const closeness = 1 - dist / 88;
-        const swirl = 0.036 + closeness * 0.082;
-        const pull  = 0.013 + closeness * 0.046;
-
-        const targetVx = -dx * pull + (-dy * swirl);
-        const targetVy = -dy * pull + (dx  * swirl);
-        p.vx = p.vx * 0.74 + targetVx * 0.26;
-        p.vy = p.vy * 0.74 + targetVy * 0.26;
-        p.x += p.vx;
-        p.y += p.vy;
-      } else {
-        // Phase 2 — absorption fade
-        p.life -= 0.072;
-        if (p.life <= 0 && !p.absorbed) {
-          p.absorbed = true;
-          if (!pulseTriggered) { pulseTriggered = true; triggerPulse(); }
-        }
-      }
-
-      if (p.life > 0) {
-        activeParticles.push(p);
-        ctx.save();
-        drawTrail(p);
-        ctx.restore();
-      }
-    });
-
-    particles = activeParticles;
-    if (particles.length === 0) {
-      cancelAnimationFrame(animId);
-      ctx.clearRect(0, 0, 300, 300);
-    }
-  };
-
-  loop();
-};
-
 const MapView = forwardRef(({
   users, userLocation, theme, isFollowing, setIsFollowing,
   onAutoDisableFollowing, currentUserId, sosAlerts,
-  cameraMode, setCameraMode, onBearingChange
+  cameraMode, setCameraMode, onBearingChange, buildingsEnabled, deviceHeading
 }, ref) => {
   const mapContainer = useRef(null);
   const map = useRef(null);
@@ -402,31 +246,17 @@ const MapView = forwardRef(({
   const sosMarkers = useRef({});
   const userMarker = useRef(null);
   const initialCenterSet = useRef(false);
-  const envRef = useRef(getEnvironmentValues(getDayFactor()));
+  const styleRestoreTimer = useRef(null);
 
   const themeRef = useRef(theme);
   const cameraModeRef = useRef(cameraMode);
+  const buildingsEnabledRef = useRef(buildingsEnabled);
   const onAutoDisableFollowingRef = useRef(onAutoDisableFollowing);
 
   useEffect(() => {
     onAutoDisableFollowingRef.current = onAutoDisableFollowing;
   }, [onAutoDisableFollowing]);
 
-  // Environment tick - smooth day/night shift every 60s
-  useEffect(() => {
-    const tick = () => {
-      const env = getEnvironmentValues(getDayFactor());
-      envRef.current = env;
-      if (map.current && map.current.isStyleLoaded()) {
-        applyEnvironmentToMap(map.current, env);
-        applyBuildingLighting(map.current, themeRef.current, env);
-        applyCameraAtmosphere(map.current, cameraModeRef.current, env.dayFactor);
-      }
-    };
-    tick();
-    const id = setInterval(tick, 60000);
-    return () => clearInterval(id);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (map.current) return;
 
@@ -443,7 +273,7 @@ const MapView = forwardRef(({
 
     // 🏗️ Reliable layer restoration
     const restoreMapLayers = () => {
-      applyThemeToMap(map.current, themeRef.current, cameraModeRef.current, envRef.current);
+      applyThemeToMap(map.current, themeRef.current, cameraModeRef.current);
       add3D();
     };
 
@@ -470,6 +300,7 @@ const MapView = forwardRef(({
     });
 
     return () => {
+      if (styleRestoreTimer.current) window.clearTimeout(styleRestoreTimer.current);
       map.current?.remove();
       map.current = null;
     };
@@ -482,50 +313,75 @@ const MapView = forwardRef(({
     if (!map.current) return;
     themeRef.current = theme;
     if (prevTheme.current !== theme) {
+      map.current.__orbitBuildingThemeApplied = null;
+      map.current.__orbitBuildingsEnabled = null;
       map.current.setStyle(getMapStyleForTheme(theme));
       prevTheme.current = theme;
+      const restoreNewStyle = () => {
+        if (!map.current || !map.current.isStyleLoaded() || themeRef.current !== theme) return;
+        applyThemeToMap(map.current, theme, cameraModeRef.current);
+        add3D(true);
+      };
+      map.current.once("idle", restoreNewStyle);
+      if (styleRestoreTimer.current) window.clearTimeout(styleRestoreTimer.current);
+      styleRestoreTimer.current = window.setTimeout(restoreNewStyle, 1200);
     } else if (map.current.isStyleLoaded()) {
-      applyThemeToMap(map.current, theme, cameraModeRef.current, envRef.current);
-      add3D();
+      applyThemeToMap(map.current, theme, cameraModeRef.current);
+      add3D(true);
     }
   }, [theme]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     cameraModeRef.current = cameraMode;
     if (map.current && map.current.isStyleLoaded()) {
-      applyCameraAtmosphere(map.current, cameraMode, envRef.current?.dayFactor ?? 0);
+      applyCameraAtmosphere(map.current, cameraMode, themeRef.current);
     }
   }, [cameraMode]);
+
+  useEffect(() => {
+    buildingsEnabledRef.current = buildingsEnabled;
+    if (map.current && map.current.isStyleLoaded()) {
+      add3D(true);
+    }
+  }, [buildingsEnabled]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useImperativeHandle(ref, () => ({
     handleRecenter: () => {
       if (map.current && userLocation) {
         const { lngOffset, latOffset } = getDecorations(currentUserId);
         const nextCameraMode = getNextCameraMode(cameraMode);
+        const naturalHeading = userLocation.heading ?? deviceHeading ?? map.current.getBearing();
+        const target =
+          nextCameraMode === CAMERA_MODES.TOP
+            ? { pitch: 0, bearing: 0, duration: 1280 }
+            : nextCameraMode === CAMERA_MODES.CINEMATIC
+              ? { pitch: 54, bearing: naturalHeading, duration: 1420 }
+              : { pitch: 73, bearing: naturalHeading, duration: 1540 };
 
-        if (nextCameraMode === CAMERA_MODES.TOP) {
-          map.current.easeTo({
-            center: [userLocation.lng + lngOffset, userLocation.lat + latOffset],
-            zoom: 16, pitch: 0, bearing: 0, duration: 800, essential: true,
-          });
-        } else if (nextCameraMode === CAMERA_MODES.CINEMATIC) {
-          map.current.easeTo({
-            center: [userLocation.lng + lngOffset, userLocation.lat + latOffset],
-            zoom: 16, pitch: 60, bearing: userLocation.heading || 0, duration: 800, essential: true,
-          });
-        } else {
-          map.current.easeTo({
-            center: [userLocation.lng + lngOffset, userLocation.lat + latOffset],
-            zoom: 18.25, pitch: 78, bearing: userLocation.heading || 0, duration: 1000, essential: true,
-          });
-        }
+        map.current.easeTo({
+          center: [userLocation.lng + lngOffset, userLocation.lat + latOffset],
+          pitch: target.pitch,
+          bearing: target.bearing,
+          duration: target.duration,
+          easing: (t) => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2,
+          essential: true,
+        });
 
         setCameraMode(nextCameraMode);
       }
     },
+    resetBearing: () => {
+      if (!map.current) return;
+      map.current.easeTo({
+        bearing: 0,
+        duration: 980,
+        easing: (t) => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2,
+        essential: true,
+      });
+    },
     handleCenterOnUser: (lng, lat) => {
       if (map.current) {
-        map.current.easeTo({ center: [lng, lat], zoom: 16, duration: 1200, essential: true });
+        map.current.easeTo({ center: [lng, lat], zoom: 16, duration: 1200, easing: (t) => 1 - Math.pow(1 - t, 3), essential: true });
       }
     },
   }));
@@ -535,6 +391,7 @@ const MapView = forwardRef(({
     if (!map.current || !userLocation || !currentUserId) return;
 
     const { lng, lat, heading } = userLocation;
+    const effectiveHeading = heading ?? deviceHeading;
     const { lngOffset, latOffset, color } = getDecorations(currentUserId);
 
     const targetLng = lng + lngOffset;
@@ -555,9 +412,6 @@ const MapView = forwardRef(({
         </div>
       `;
 
-      const canvas = el.querySelector(".black-hole-canvas");
-      //startBlackHoleAnimation(canvas, el);
-
       userMarker.current = new maplibregl.Marker({ element: el, anchor: "center" })
         .setLngLat([targetLng, targetLat])
         .addTo(map.current);
@@ -576,8 +430,8 @@ const MapView = forwardRef(({
     if (pulse) pulse.style.backgroundColor = color;
     if (cone) cone.style.borderBottomColor = color;
 
-    if (heading !== null && heading !== undefined) {
-      cone.style.transform = `rotate(${heading}deg)`;
+    if (effectiveHeading !== null && effectiveHeading !== undefined) {
+      cone.style.transform = `rotate(${effectiveHeading - map.current.getBearing()}deg)`;
       cone.style.display = "block";
     } else {
       cone.style.display = "none";
@@ -589,9 +443,9 @@ const MapView = forwardRef(({
     } else if (isFollowing) {
       map.current.easeTo({ center: [targetLng, targetLat], duration: 800, essential: true });
     }
-  }, [userLocation, theme, isFollowing, currentUserId, cameraMode]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [userLocation, theme, isFollowing, currentUserId, cameraMode, deviceHeading]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const add3D = () => {
+  const add3D = (force = false) => {
     if (!map.current || !map.current.isStyleLoaded()) return;
 
     const style = map.current.getStyle();
@@ -607,9 +461,11 @@ const MapView = forwardRef(({
       themeRef.current !== "dark" || BUILDING_ACCENT_LAYER_IDS.every((layerId) => map.current.getLayer(layerId));
 
     if (
+      !force &&
       existingExtrusionLayer?.id === BUILDING_LAYER_ID &&
       accentLayersReady &&
-      map.current.__orbitBuildingThemeApplied === themeRef.current
+      map.current.__orbitBuildingThemeApplied === themeRef.current &&
+      map.current.__orbitBuildingsEnabled === buildingsEnabledRef.current
     ) {
       return;
     }
@@ -620,16 +476,18 @@ const MapView = forwardRef(({
           map.current.removeLayer(layer.id);
         }
       });
-      applyBuildingPaint(map.current, existingExtrusionLayer.id, themeRef.current);
+      applyBuildingPaint(map.current, existingExtrusionLayer.id, themeRef.current, buildingsEnabledRef.current);
       syncBuildingAccentLayers(
         map.current,
         existingExtrusionLayer.source,
         existingExtrusionLayer["source-layer"],
         existingExtrusionLayer.filter,
         themeRef.current,
-        layers.slice(layers.indexOf(existingExtrusionLayer) + 1).find((layer) => !isBuildingSourceLayer(layer))?.id
+        layers.slice(layers.indexOf(existingExtrusionLayer) + 1).find((layer) => !isBuildingSourceLayer(layer))?.id,
+        buildingsEnabledRef.current
       );
       map.current.__orbitBuildingThemeApplied = themeRef.current;
+      map.current.__orbitBuildingsEnabled = buildingsEnabledRef.current;
       return;
     }
 
@@ -637,6 +495,7 @@ const MapView = forwardRef(({
     if (!buildingLayer) {
       removeBuildingAccentLayers(map.current);
       map.current.__orbitBuildingThemeApplied = null;
+      map.current.__orbitBuildingsEnabled = null;
       return;
     }
 
@@ -660,7 +519,14 @@ const MapView = forwardRef(({
       type: "fill-extrusion",
       minzoom: BUILDING_MIN_ZOOM,
       layout: { visibility: "visible" },
-      paint: getBuildingPaint(themeRef.current),
+      paint: buildingsEnabledRef.current
+        ? getBuildingPaint(themeRef.current)
+        : {
+            ...getBuildingPaint(themeRef.current),
+            "fill-extrusion-height": 0,
+            "fill-extrusion-base": 0,
+            "fill-extrusion-opacity": 0,
+          },
       ...(buildingLayer.filter ? { filter: buildingLayer.filter } : {}),
     };
 
@@ -669,8 +535,18 @@ const MapView = forwardRef(({
       beforeLayerId && map.current.getLayer(beforeLayerId) ? beforeLayerId : undefined
     );
     applyBuildingLighting(map.current, themeRef.current);
-    syncBuildingAccentLayers(map.current, source, sourceLayer, buildingLayer.filter, themeRef.current, beforeLayerId);
+    applyBuildingPaint(map.current, BUILDING_LAYER_ID, themeRef.current, buildingsEnabledRef.current);
+    syncBuildingAccentLayers(
+      map.current,
+      source,
+      sourceLayer,
+      buildingLayer.filter,
+      themeRef.current,
+      beforeLayerId,
+      buildingsEnabledRef.current
+    );
     map.current.__orbitBuildingThemeApplied = themeRef.current;
+    map.current.__orbitBuildingsEnabled = buildingsEnabledRef.current;
   };
 
   useEffect(() => {
@@ -750,3 +626,4 @@ const MapView = forwardRef(({
 });
 
 export default MapView;
+

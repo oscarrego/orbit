@@ -1,0 +1,231 @@
+.orbit-app-shell {
+  --orbit-radius: 15px;
+  --orbit-blur: blur(22px) saturate(1.14);
+  color: var(--orbit-text);
+  transition: background-color 260ms ease, color 260ms ease;
+}
+
+.orbit-app-shell .control-cluster {
+  align-items: center;
+  gap: 10px;
+}
+
+.orbit-app-shell .control-btn,
+.orbit-app-shell .fab-main,
+.orbit-app-shell .chat-toggle,
+.orbit-app-shell .users-indicator,
+.orbit-app-shell .avatar {
+  color: var(--orbit-control-text);
+  background: var(--orbit-control-bg) !important;
+  border: 1px solid var(--orbit-control-border) !important;
+  -webkit-backdrop-filter: var(--orbit-blur);
+  backdrop-filter: var(--orbit-blur);
+  box-shadow: var(--orbit-control-shadow) !important;
+  transition:
+    transform 210ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 220ms ease,
+    box-shadow 220ms ease,
+    background 220ms ease;
+}
+
+.orbit-app-shell .control-btn:hover,
+.orbit-app-shell .fab-main:hover {
+  background: var(--orbit-control-hover) !important;
+  transform: translateY(-1px) scale(1.035);
+  box-shadow: var(--orbit-control-hover-shadow) !important;
+}
+
+.orbit-app-shell .control-btn:active,
+.orbit-app-shell .fab-main:active {
+  transform: translateY(1px) scale(0.98);
+}
+
+.orbit-app-shell .control-btn:focus-visible,
+.orbit-app-shell .fab-main:focus-visible,
+.orbit-app-shell .profile-btn:focus-visible {
+  outline: 2px solid var(--orbit-focus);
+  outline-offset: 3px;
+}
+
+.orbit-app-shell .recenter-btn.active {
+  background: var(--orbit-active-bg) !important;
+  border-color: var(--orbit-active-border) !important;
+  box-shadow: var(--orbit-active-shadow) !important;
+}
+
+.perspective-svg {
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.perspective-pulse {
+  fill: currentColor;
+  stroke: none;
+  opacity: 0.6;
+  transform-origin: center;
+  transition: opacity 220ms ease, transform 220ms ease;
+}
+
+.recenter-btn.active .perspective-pulse {
+  opacity: 1;
+  transform: scale(1.12);
+  filter: drop-shadow(0 0 5px currentColor);
+}
+
+.orbit-app-shell .compass-control-btn {
+  width: 46px !important;
+  height: 46px !important;
+  padding: 0;
+  border-radius: 50% !important;
+  background: var(--orbit-compass-bg) !important;
+}
+
+.orbit-compass {
+  display: block;
+  width: 38px !important;
+  height: 38px !important;
+}
+
+.orbit-compass-face {
+  fill: transparent;
+  stroke: currentColor;
+  stroke-width: 1;
+  opacity: 0.32;
+}
+
+.orbit-compass-mark {
+  stroke: currentColor;
+  stroke-width: 1.2;
+  stroke-linecap: round;
+  opacity: 0.38;
+}
+
+.orbit-compass-needle {
+  transition: transform 260ms cubic-bezier(0.22, 0.72, 0.16, 1);
+}
+
+.orbit-compass-north {
+  fill: currentColor;
+  opacity: 0.97;
+}
+
+.orbit-compass-south {
+  fill: currentColor;
+  opacity: 0.3;
+}
+
+.orbit-compass-center {
+  fill: var(--orbit-compass-center);
+}
+
+.compass-control-btn.bearing-active {
+  border-color: var(--orbit-active-border) !important;
+  box-shadow: var(--orbit-active-shadow) !important;
+}
+
+.compass-control-btn.bearing-active .orbit-compass-north {
+  filter: drop-shadow(0 0 5px currentColor);
+}
+
+.orbit-app-shell .profile-modal.pm-glass {
+  width: min(388px, calc(100vw - 32px));
+  max-height: min(92dvh, 720px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+}
+
+.orbit-app-shell .profile-modal.pm-glass::-webkit-scrollbar {
+  display: none;
+}
+
+.pm-view-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  padding: 12px 24px 15px;
+}
+
+.pm-segmented-toggle {
+  flex: 0 0 auto;
+  display: flex;
+  padding: 4px;
+  gap: 3px;
+  min-height: 42px;
+  border-radius: 13px;
+  background: var(--orbit-segment-bg);
+  border: 1px solid var(--orbit-segment-border);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.pm-segmented-toggle button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  height: 34px;
+  min-width: 52px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--orbit-muted);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  transition: background 230ms ease, color 230ms ease, box-shadow 230ms ease, transform 180ms ease;
+}
+
+.pm-segmented-toggle button:hover {
+  color: var(--orbit-text);
+}
+
+.pm-segmented-toggle button:active {
+  transform: scale(0.97);
+}
+
+.pm-segmented-toggle button.selected {
+  color: var(--orbit-segment-selected-text);
+  background: var(--orbit-segment-selected-bg);
+  box-shadow: var(--orbit-segment-selected-shadow);
+}
+
+.pm-segmented-toggle svg {
+  width: 15px;
+  height: 15px;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.orbit-app-shell .profile-theme-switch {
+  background: var(--orbit-toggle-bg);
+  border-color: var(--orbit-toggle-border);
+  box-shadow: var(--orbit-toggle-shadow);
+}
+
+.orbit-app-shell .profile-theme-thumb {
+  background: var(--orbit-toggle-thumb);
+}
+
+.orbit-app-shell .pm-toggle-switch--on {
+  background: var(--orbit-toggle-on-bg);
+  border-color: var(--orbit-toggle-on-border);
+  box-shadow: var(--orbit-toggle-on-shadow);
+}
+
+.orbit-app-shell .pm-toggle-switch--on .pm-toggle-thumb,
+.orbit-app-shell .pm-status--active .pm-status-dot {
+  background: var(--orbit-text);
+  box-shadow: 0 0 12px var(--orbit-soft-glow);
+}
+
+.orbit-app-shell .map-stage,
+.orbit-app-shell .map-viewport {
+  transition: background-color 340ms ease, filter 340ms ease;
+}

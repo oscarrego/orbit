@@ -1,4 +1,5 @@
 export const BUILDING_LAYER_ID = "orbit-3d-buildings";
+export const BUILDING_2D_LAYER_ID = "orbit-2d-buildings";
 export const BUILDING_ROOF_LAYER_ID = "orbit-3d-building-roofs";
 export const BUILDING_TERRAIN_BLEND_LAYER_ID = "orbit-building-terrain-blend";
 export const BUILDING_ROAD_BOUNCE_LAYER_ID = "orbit-building-road-bounce";
@@ -27,7 +28,9 @@ export const BUILDING_ACCENT_LAYER_IDS = [
   ...SKYSCRAPER_BAND_LAYER_IDS
 ];
 export const BUILDING_SOURCE_LAYER = "building";
-export const BUILDING_MIN_ZOOM = 13;
+export const BUILDING_MIN_ZOOM = 11;
+export const BUILDING_2D_MIN_ZOOM = 10;
+export const BUILDING_3D_MIN_ZOOM = 13;
 
 const BUILDING_ID_NUMBER_EXPRESSION = [
   "abs",
@@ -81,6 +84,49 @@ const DARK_BUILDING_COLOR_EXPRESSION = [
   ]
 ];
 
+const LIGHT_BUILDING_COLOR_EXPRESSION = [
+  "let",
+  "height",
+  ["max", 10, ["to-number", ["get", "render_height"], 24]],
+  "tone",
+  BUILDING_TONE_BUCKET_EXPRESSION,
+  [
+    "case",
+    ["<", ["var", "tone"], 2],
+    [
+      "interpolate",
+      ["linear"],
+      ["var", "height"],
+      0, "#d6dbe2",
+      35, "#d0d6de",
+      80, "#c8d0da",
+      150, "#bcc6d2",
+      220, "#aebac7"
+    ],
+    ["<", ["var", "tone"], 4],
+    [
+      "interpolate",
+      ["linear"],
+      ["var", "height"],
+      0, "#dde1e7",
+      35, "#d7dce3",
+      80, "#ced5de",
+      150, "#c2cad5",
+      220, "#b4bfcb"
+    ],
+    [
+      "interpolate",
+      ["linear"],
+      ["var", "height"],
+      0, "#d2d8df",
+      35, "#cbd2db",
+      80, "#c3ccd6",
+      150, "#b8c3cf",
+      220, "#abb7c4"
+    ]
+  ]
+];
+
 const PROCEDURAL_BUILDING_HEIGHT_EXPRESSION = [
   "+",
   16,
@@ -120,7 +166,7 @@ const BUILDING_FULL_HEIGHT_EXPRESSION = [
   BUILDING_BASE_VALUE_EXPRESSION,
   "raw",
   BUILDING_RAW_HEIGHT_EXPRESSION,
-  ["min", 220, ["max", ["+", ["var", "base"], 8], ["*", 1.25, ["max", 10, ["var", "raw"]]]]]
+  ["min", 300, ["max", ["+", ["var", "base"], 8], ["*", 1.45, ["max", 10, ["var", "raw"]]]]]
 ];
 
 const BUILDING_HEIGHT_EXPRESSION = [
@@ -133,21 +179,27 @@ const BUILDING_HEIGHT_EXPRESSION = [
     "interpolate",
     ["linear"],
     ["zoom"],
-    13,
+    11,
     0,
+    12,
+    [
+      "*",
+      0.25,
+      ["min", 300, ["max", ["+", ["var", "base"], 8], ["*", 1.45, ["max", 10, ["var", "raw"]]]]]
+    ],
+    13,
+    [
+      "*",
+      0.60,
+      ["min", 300, ["max", ["+", ["var", "base"], 8], ["*", 1.45, ["max", 10, ["var", "raw"]]]]]
+    ],
     14,
     [
       "*",
-      0.35,
-      ["min", 220, ["max", ["+", ["var", "base"], 8], ["*", 1.25, ["max", 10, ["var", "raw"]]]]]
+      0.88,
+      ["min", 300, ["max", ["+", ["var", "base"], 8], ["*", 1.45, ["max", 10, ["var", "raw"]]]]]
     ],
-    15.25,
-    [
-      "*",
-      0.82,
-      ["min", 220, ["max", ["+", ["var", "base"], 8], ["*", 1.25, ["max", 10, ["var", "raw"]]]]]
-    ],
-    16,
+    15,
     BUILDING_FULL_HEIGHT_EXPRESSION
   ]
 ];
@@ -160,13 +212,15 @@ const BUILDING_BASE_EXPRESSION = [
     "interpolate",
     ["linear"],
     ["zoom"],
-    13,
+    11,
     0,
+    12,
+    ["*", 0.25, ["var", "base"]],
+    13,
+    ["*", 0.60, ["var", "base"]],
     14,
-    ["*", 0.35, ["var", "base"]],
-    15.25,
-    ["*", 0.82, ["var", "base"]],
-    16,
+    ["*", 0.88, ["var", "base"]],
+    15,
     ["var", "base"]
   ]
 ];
@@ -175,12 +229,30 @@ const BUILDING_OPACITY_EXPRESSION = [
   "interpolate",
   ["linear"],
   ["zoom"],
-  13,
+  11,
   0,
-  13.35,
+  11.5,
+  0.55,
+  12,
   0.82,
-  14,
+  13,
   1
+];
+
+const LIGHT_BUILDING_OPACITY_EXPRESSION = [
+  "interpolate",
+  ["linear"],
+  ["zoom"],
+  11,
+  0,
+  12,
+  0.42,
+  13,
+  0.65,
+  14,
+  0.82,
+  16,
+  0.92
 ];
 
 const cloneExpression = (value) =>
@@ -194,35 +266,21 @@ const DARK_ROOF_COLOR_EXPRESSION = [
   BUILDING_TONE_BUCKET_EXPRESSION,
   [
     "case",
-    ["<", ["var", "tone"], 2],
-    [
-      "interpolate",
-      ["linear"],
-      ["zoom"],
-      13, "#2f343a",
-      15, "#373d45",
-      17, "#414955",
-      19, "#4a5360"
-    ],
-    ["<", ["var", "tone"], 4],
-    [
-      "interpolate",
-      ["linear"],
-      ["zoom"],
-      13, "#303237",
-      15, "#3a3d43",
-      17, "#454952",
-      19, "#4e535d"
-    ],
-    [
-      "interpolate",
-      ["linear"],
-      ["zoom"],
-      13, "#2b3537",
-      15, "#354144",
-      17, "#404d52",
-      19, "#48575d"
-    ]
+    ["<", ["var", "tone"], 2], "#3e4550",
+    ["<", ["var", "tone"], 4], "#3a4149",
+    "#364248"
+  ]
+];
+
+const LIGHT_ROOF_COLOR_EXPRESSION = [
+  "let",
+  "tone",
+  BUILDING_TONE_BUCKET_EXPRESSION,
+  [
+    "case",
+    ["<", ["var", "tone"], 2], "#e6ebf1",
+    ["<", ["var", "tone"], 4], "#eaf0f5",
+    "#e1e7ee"
   ]
 ];
 
@@ -277,6 +335,44 @@ const SKYSCRAPER_CROWN_LIGHT_COLOR_EXPRESSION = [
     "#706958",
     250,
     "#837b67"
+  ]
+];
+
+const LIGHT_SKYSCRAPER_UPPER_LIGHT_COLOR_EXPRESSION = [
+  "let",
+  "height",
+  ["max", 48, cloneExpression(BUILDING_RAW_HEIGHT_EXPRESSION)],
+  [
+    "interpolate",
+    ["linear"],
+    ["var", "height"],
+    48,
+    "#e9edf2",
+    90,
+    "#e1e7ee",
+    150,
+    "#d9e1ea",
+    220,
+    "#ced9e4"
+  ]
+];
+
+const LIGHT_SKYSCRAPER_CROWN_LIGHT_COLOR_EXPRESSION = [
+  "let",
+  "height",
+  ["max", 48, cloneExpression(BUILDING_RAW_HEIGHT_EXPRESSION)],
+  [
+    "interpolate",
+    ["linear"],
+    ["var", "height"],
+    48,
+    "#f8fafc",
+    110,
+    "#eef3f8",
+    180,
+    "#e4ebf3",
+    250,
+    "#d9e3ed"
   ]
 ];
 
@@ -375,26 +471,45 @@ const getSkyscraperWindowBandLayer = (
   };
 };
 
-export const getBuildingPaint = (themeId, env) => {
-  const dayFactor = env?.dayFactor ?? 0;
-  const dayExpr = ["let","height",["max",10,["to-number",["get","render_height"],24]],"tone",["%",["abs",["case",["==",["id"],null],17,["to-number",["id"],17]]],6],["case",["<",["var","tone"],2],["interpolate",["linear"],["var","height"],0,"#c4b8a8",22,"#bfb2a0",55,"#b8aa98",105,"#ae9f8c",180,"#a09080"],["<",["var","tone"],4],["interpolate",["linear"],["var","height"],0,"#c2b6a6",22,"#bcaf9d",55,"#b6a895",105,"#ac9d89",180,"#9e8e7c"],["interpolate",["linear"],["var","height"],0,"#c0b4a4",22,"#bab19e",55,"#b4a796",105,"#aa9c88",180,"#9d8d7b"]]];
+export const getBuildingPaint = (themeId) => {
+  const isLight = themeId === "light";
   return {
-    "fill-extrusion-color": cloneExpression(dayFactor > 0.5 ? dayExpr : DARK_BUILDING_COLOR_EXPRESSION),
+    "fill-extrusion-color": cloneExpression(isLight ? LIGHT_BUILDING_COLOR_EXPRESSION : DARK_BUILDING_COLOR_EXPRESSION),
     "fill-extrusion-height": cloneExpression(BUILDING_HEIGHT_EXPRESSION),
     "fill-extrusion-base": cloneExpression(BUILDING_BASE_EXPRESSION),
-    "fill-extrusion-opacity": cloneExpression(BUILDING_OPACITY_EXPRESSION),
+    "fill-extrusion-opacity": cloneExpression(isLight ? LIGHT_BUILDING_OPACITY_EXPRESSION : BUILDING_OPACITY_EXPRESSION),
     "fill-extrusion-vertical-gradient": true
   };
 };
 
-export const getBuildingLight = (themeId, env) => ({
+export const getBuildingFillPaint = (themeId) => {
+  const isLight = themeId === "light";
+  return {
+    "fill-color": cloneExpression(isLight ? LIGHT_BUILDING_COLOR_EXPRESSION : DARK_BUILDING_COLOR_EXPRESSION),
+    "fill-outline-color": isLight ? "rgba(112, 125, 141, 0.30)" : "rgba(245, 245, 245, 0.10)",
+    "fill-opacity": [
+      "interpolate",
+      ["linear"],
+      ["zoom"],
+      BUILDING_2D_MIN_ZOOM,
+      isLight ? 0.22 : 0.18,
+      13.5,
+      isLight ? 0.48 : 0.38,
+      15,
+      isLight ? 0.34 : 0.30
+    ]
+  };
+};
+
+export const getBuildingLight = (themeId) => ({
   anchor: "viewport",
-  position: [1.45, 50, 52],
-  color: env?.buildingLightColor || "#e5e9f1",
-  intensity: env?.buildingLightIntensity ?? 0.54
+  position: themeId === "light" ? [1.15, 210, 58] : [1.45, 220, 52],
+  color: themeId === "light" ? "#ffffff" : "#c8d2e0",
+  intensity: themeId === "light" ? 0.55 : 0.72
 });
 
 export const getBuildingAccentLayers = (themeId, source, sourceLayer, baseFilter) => {
+  const isLight = themeId === "light";
   const terrainBlendTop = [
     "min",
     cloneExpression(BUILDING_FULL_HEIGHT_EXPRESSION),
@@ -421,9 +536,9 @@ export const getBuildingAccentLayers = (themeId, source, sourceLayer, baseFilter
           BUILDING_TONE_BUCKET_EXPRESSION,
           [
             "case",
-            ["<", ["var", "tone"], 2], "#3c4349",
-            ["<", ["var", "tone"], 4], "#424348",
-            "#384649"
+            ["<", ["var", "tone"], 2], isLight ? "#e2e7ee" : "#3c4349",
+            ["<", ["var", "tone"], 4], isLight ? "#dbe2eb" : "#424348",
+            isLight ? "#d5dee8" : "#384649"
           ]
         ],
         "fill-extrusion-height": terrainBlendTop,
@@ -433,9 +548,9 @@ export const getBuildingAccentLayers = (themeId, source, sourceLayer, baseFilter
           ["linear"],
           ["zoom"],
           13, 0,
-          14.25, 0.12,
-          16, 0.22,
-          18, 0.28
+          14.25, isLight ? 0.08 : 0.12,
+          16, isLight ? 0.14 : 0.22,
+          18, isLight ? 0.18 : 0.28
         ],
         "fill-extrusion-vertical-gradient": false
       }
@@ -451,8 +566,8 @@ export const getBuildingAccentLayers = (themeId, source, sourceLayer, baseFilter
         "fill-extrusion-color": [
           "case",
           [">=", ["max", 0, cloneExpression(BUILDING_RAW_HEIGHT_EXPRESSION)], 70],
-          "#6a5538",
-          "#5a4d39"
+          isLight ? "#f4f1ea" : "#6a5538",
+          isLight ? "#ebe8e0" : "#5a4d39"
         ],
         "fill-extrusion-height": roadBounceTop,
         "fill-extrusion-base": cloneExpression(BUILDING_BASE_EXPRESSION),
@@ -461,9 +576,9 @@ export const getBuildingAccentLayers = (themeId, source, sourceLayer, baseFilter
           ["linear"],
           ["zoom"],
           13, 0,
-          14.5, 0.06,
-          16.5, 0.13,
-          18.5, 0.16
+          14.5, isLight ? 0.035 : 0.06,
+          16.5, isLight ? 0.075 : 0.13,
+          18.5, isLight ? 0.09 : 0.16
         ],
         "fill-extrusion-vertical-gradient": true
       }
@@ -476,7 +591,7 @@ export const getBuildingAccentLayers = (themeId, source, sourceLayer, baseFilter
       minzoom: BUILDING_MIN_ZOOM + 0.8,
       filter: baseFilter ? cloneExpression(baseFilter) : undefined,
       paint: {
-        "fill-extrusion-color": "#5d6873",
+        "fill-extrusion-color": isLight ? "#ffffff" : "#5d6873",
         "fill-extrusion-height": cloneExpression(BUILDING_FULL_HEIGHT_EXPRESSION),
         "fill-extrusion-base": buildingHeightAtRatio(0.28),
         "fill-extrusion-opacity": [
@@ -484,9 +599,9 @@ export const getBuildingAccentLayers = (themeId, source, sourceLayer, baseFilter
           ["linear"],
           ["zoom"],
           13.5, 0,
-          15, 0.045,
-          17, 0.075,
-          19, 0.095
+          15, isLight ? 0.02 : 0.045,
+          17, isLight ? 0.038 : 0.075,
+          19, isLight ? 0.05 : 0.095
         ],
         "fill-extrusion-vertical-gradient": true
       }
@@ -499,7 +614,7 @@ export const getBuildingAccentLayers = (themeId, source, sourceLayer, baseFilter
       minzoom: BUILDING_MIN_ZOOM + 1,
       filter: mergeFilters(baseFilter, TALL_BUILDING_FILTER),
       paint: {
-        "fill-extrusion-color": cloneExpression(SKYSCRAPER_UPPER_LIGHT_COLOR_EXPRESSION),
+        "fill-extrusion-color": cloneExpression(isLight ? LIGHT_SKYSCRAPER_UPPER_LIGHT_COLOR_EXPRESSION : SKYSCRAPER_UPPER_LIGHT_COLOR_EXPRESSION),
         "fill-extrusion-height": cloneExpression(BUILDING_FULL_HEIGHT_EXPRESSION),
         "fill-extrusion-base": buildingHeightAtRatio(0.38),
         "fill-extrusion-opacity": [
@@ -507,9 +622,9 @@ export const getBuildingAccentLayers = (themeId, source, sourceLayer, baseFilter
           ["linear"],
           ["zoom"],
           14, 0,
-          15, 0.10,
-          17, 0.18,
-          19, 0.22
+          15, isLight ? 0.07 : 0.10,
+          17, isLight ? 0.12 : 0.18,
+          19, isLight ? 0.15 : 0.22
         ],
         "fill-extrusion-vertical-gradient": true
       }
@@ -522,7 +637,7 @@ export const getBuildingAccentLayers = (themeId, source, sourceLayer, baseFilter
       minzoom: BUILDING_MIN_ZOOM + 1.5,
       filter: mergeFilters(baseFilter, TALL_BUILDING_FILTER),
       paint: {
-        "fill-extrusion-color": cloneExpression(SKYSCRAPER_CROWN_LIGHT_COLOR_EXPRESSION),
+        "fill-extrusion-color": cloneExpression(isLight ? LIGHT_SKYSCRAPER_CROWN_LIGHT_COLOR_EXPRESSION : SKYSCRAPER_CROWN_LIGHT_COLOR_EXPRESSION),
         "fill-extrusion-height": cloneExpression(BUILDING_FULL_HEIGHT_EXPRESSION),
         "fill-extrusion-base": buildingHeightAtRatio(0.64),
         "fill-extrusion-opacity": [
@@ -530,9 +645,9 @@ export const getBuildingAccentLayers = (themeId, source, sourceLayer, baseFilter
           ["linear"],
           ["zoom"],
           14,   0,
-          15.5, 0.14,
-          17,   0.22,
-          19,   0.28
+          15.5, isLight ? 0.09 : 0.14,
+          17,   isLight ? 0.15 : 0.22,
+          19,   isLight ? 0.18 : 0.28
         ],
         "fill-extrusion-vertical-gradient": true
       }
@@ -542,8 +657,8 @@ export const getBuildingAccentLayers = (themeId, source, sourceLayer, baseFilter
       SKYSCRAPER_WINDOW_BAND_LAYER_IDS[0],
       0.50,
       2.4,
-      "#807b70",
-      0.10,
+      isLight ? "#bac4d0" : "#807b70",
+      isLight ? 0.07 : 0.10,
       source,
       sourceLayer,
       baseFilter
@@ -552,8 +667,8 @@ export const getBuildingAccentLayers = (themeId, source, sourceLayer, baseFilter
       SKYSCRAPER_WINDOW_BAND_LAYER_IDS[1],
       0.65,
       2.6,
-      "#969083",
-      0.13,
+      isLight ? "#c7d0da" : "#969083",
+      isLight ? 0.09 : 0.13,
       source,
       sourceLayer,
       baseFilter
@@ -562,8 +677,8 @@ export const getBuildingAccentLayers = (themeId, source, sourceLayer, baseFilter
       SKYSCRAPER_WINDOW_BAND_LAYER_IDS[2],
       0.78,
       2.2,
-      "#8b867c",
-      0.11,
+      isLight ? "#b4bfcb" : "#8b867c",
+      isLight ? 0.075 : 0.11,
       source,
       sourceLayer,
       baseFilter
@@ -572,8 +687,8 @@ export const getBuildingAccentLayers = (themeId, source, sourceLayer, baseFilter
       SKYSCRAPER_WINDOW_BAND_LAYER_IDS[3],
       0.90,
       2.8,
-      "#a09a8c",
-      0.14,
+      isLight ? "#d2dae3" : "#a09a8c",
+      isLight ? 0.10 : 0.14,
       source,
       sourceLayer,
       baseFilter
@@ -589,7 +704,7 @@ export const getBuildingAccentLayers = (themeId, source, sourceLayer, baseFilter
       minzoom: BUILDING_MIN_ZOOM,
       filter: baseFilter ? cloneExpression(baseFilter) : undefined,
       paint: {
-        "fill-extrusion-color": cloneExpression(DARK_ROOF_COLOR_EXPRESSION),
+        "fill-extrusion-color": cloneExpression(isLight ? LIGHT_ROOF_COLOR_EXPRESSION : DARK_ROOF_COLOR_EXPRESSION),
         "fill-extrusion-height": cloneExpression(BUILDING_FULL_HEIGHT_EXPRESSION),
         "fill-extrusion-base": cloneExpression(buildingRoofBaseExpression),
         "fill-extrusion-opacity": [
@@ -597,9 +712,9 @@ export const getBuildingAccentLayers = (themeId, source, sourceLayer, baseFilter
           ["linear"],
           ["zoom"],
           13, 0,
-          14, 0.52,
-          16, 0.76,
-          18, 0.88
+          14, isLight ? 0.38 : 0.52,
+          16, isLight ? 0.56 : 0.76,
+          18, isLight ? 0.66 : 0.88
         ],
         "fill-extrusion-vertical-gradient": false
       }

@@ -1,7 +1,8 @@
 import { darkTheme } from './darkTheme';
+import { lightTheme } from './lightTheme';
 
 export const getThemeConfig = (themeId) => {
-  return darkTheme;
+  return themeId === 'light' ? lightTheme : darkTheme;
 };
 
 export const getRoadColor = (themeId, type = 'primary') => {

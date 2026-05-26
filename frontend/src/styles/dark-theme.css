@@ -1,0 +1,49 @@
+.orbit-app-shell.dark-mode {
+  color-scheme: dark;
+  --orbit-text: rgba(246, 248, 251, 0.96);
+  --orbit-muted: rgba(189, 199, 211, 0.6);
+  --orbit-soft-glow: rgba(248, 250, 252, 0.34);
+  --orbit-focus: rgba(241, 245, 249, 0.42);
+  --orbit-control-text: rgba(246, 248, 251, 0.93);
+  --orbit-control-bg: linear-gradient(150deg, rgba(27, 29, 33, 0.76), rgba(8, 10, 13, 0.7));
+  --orbit-control-hover: linear-gradient(150deg, rgba(39, 42, 47, 0.86), rgba(12, 14, 17, 0.8));
+  --orbit-control-border: rgba(246, 248, 251, 0.13);
+  --orbit-control-shadow: 0 16px 36px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  --orbit-control-hover-shadow: 0 19px 43px rgba(0, 0, 0, 0.48), 0 0 19px rgba(255, 255, 255, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  --orbit-active-bg: linear-gradient(155deg, rgba(244, 247, 250, 0.2), rgba(130, 141, 153, 0.13));
+  --orbit-active-border: rgba(245, 248, 252, 0.31);
+  --orbit-active-shadow: 0 17px 38px rgba(0, 0, 0, 0.43), 0 0 23px rgba(255, 255, 255, 0.13), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  --orbit-compass-bg: radial-gradient(circle at 48% 38%, rgba(40, 43, 47, 0.84), rgba(8, 9, 11, 0.9));
+  --orbit-compass-center: #0a0b0e;
+  --orbit-segment-bg: rgba(0, 0, 0, 0.28);
+  --orbit-segment-border: rgba(246, 248, 251, 0.1);
+  --orbit-segment-selected-bg: rgba(246, 248, 251, 0.16);
+  --orbit-segment-selected-text: rgba(250, 252, 253, 0.98);
+  --orbit-segment-selected-shadow: 0 0 18px rgba(255, 255, 255, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  --orbit-toggle-bg: linear-gradient(180deg, rgba(7, 9, 11, 0.78), rgba(18, 20, 23, 0.7));
+  --orbit-toggle-border: rgba(246, 248, 251, 0.14);
+  --orbit-toggle-shadow: 0 12px 26px rgba(0, 0, 0, 0.3), 0 0 17px rgba(255, 255, 255, 0.05);
+  --orbit-toggle-thumb: rgba(248, 250, 252, 0.96);
+  --orbit-toggle-on-bg: rgba(248, 250, 252, 0.16);
+  --orbit-toggle-on-border: rgba(248, 250, 252, 0.26);
+  --orbit-toggle-on-shadow: 0 0 17px rgba(255, 255, 255, 0.09);
+}
+
+.orbit-app-shell.dark-mode .profile-modal,
+.orbit-app-shell.dark-mode .chat-panel,
+.orbit-app-shell.dark-mode .users-panel {
+  color: var(--orbit-text);
+  background: linear-gradient(165deg, rgba(21, 23, 27, 0.86), rgba(7, 9, 12, 0.86)) !important;
+  border-color: rgba(246, 248, 251, 0.12) !important;
+}
+
+.orbit-app-shell.dark-mode .pm-toggle-label,
+.orbit-app-shell.dark-mode .pm-username,
+.orbit-app-shell.dark-mode .pm-room-name {
+  color: var(--orbit-text);
+}
+
+.orbit-app-shell.dark-mode .pm-toggle-desc,
+.orbit-app-shell.dark-mode .pm-section-label {
+  color: var(--orbit-muted);
+}

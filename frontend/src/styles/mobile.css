@@ -1,0 +1,183 @@
+@media (max-width: 768px) {
+  .entry-panel {
+    padding: max(26px, env(safe-area-inset-top)) 20px max(28px, env(safe-area-inset-bottom));
+  }
+
+  .chapter-rail {
+    top: auto;
+    left: 20px;
+    right: 20px;
+    bottom: max(18px, env(safe-area-inset-bottom));
+    flex-direction: row;
+    justify-content: center;
+    gap: 13px;
+    transform: none;
+  }
+
+  .chapter-rail span {
+    font-size: 0;
+    gap: 0;
+  }
+
+  .chapter-rail i,
+  .chapter-rail .current i {
+    width: 22px;
+    height: 2px;
+  }
+
+  .chapter-rail .current i {
+    width: 38px;
+  }
+
+  .entry-copy h1 {
+    font-size: clamp(47px, 18vw, 68px);
+  }
+
+  .entry-copy p {
+    font-size: 14px;
+  }
+
+  .entry-scroll-prompt {
+    margin-top: 62px;
+  }
+
+  .entry-sync,
+  .entry-verify {
+    justify-content: center;
+  }
+
+  .network-card {
+    width: 100%;
+    padding: 29px 24px;
+    border-radius: 21px;
+  }
+
+  .network-card > svg {
+    margin-bottom: 26px;
+  }
+
+  .network-card h2 {
+    font-size: clamp(27px, 8.8vw, 34px);
+  }
+
+  .access-terminal {
+    padding: 30px 20px 27px;
+    border-radius: 22px;
+  }
+
+  .terminal-copy {
+    margin-bottom: 29px;
+  }
+
+  .identity-field {
+    height: 68px;
+    gap: 11px;
+  }
+
+  .identity-field input {
+    font-size: 27px;
+    width: min(218px, 58vw);
+    letter-spacing: 0.34em;
+    padding-left: 0.34em;
+  }
+
+  .identity-feedback {
+    letter-spacing: 0.18em;
+    font-size: 8px;
+  }
+
+  .terminal-footer {
+    letter-spacing: 0.2em;
+  }
+
+  .orbit-app-shell .control-cluster {
+    display: block;
+    top: max(14px, env(safe-area-inset-top));
+    right: max(14px, env(safe-area-inset-right));
+    pointer-events: none;
+  }
+
+  .orbit-app-shell .control-cluster > .control-btn {
+    display: none;
+  }
+
+  .orbit-app-shell .control-cluster .profile-btn {
+    display: block;
+    pointer-events: auto;
+  }
+
+  .orbit-app-shell .fab-container {
+    display: flex;
+    right: max(14px, env(safe-area-inset-right));
+    bottom: max(16px, env(safe-area-inset-bottom));
+  }
+
+  .orbit-app-shell .fab-actions .control-btn,
+  .orbit-app-shell .fab-main {
+    min-width: 50px;
+    min-height: 50px;
+  }
+
+  .orbit-app-shell .compass-control-btn {
+    width: 50px !important;
+    height: 50px !important;
+  }
+
+  .orbit-app-shell .profile-modal.pm-glass {
+    width: calc(100vw - 24px);
+    max-height: calc(100dvh - 24px);
+    border-radius: 22px;
+  }
+
+  .pm-view-row,
+  .pm-toggle-row,
+  .pm-theme-row {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+
+  .pm-segmented-toggle button {
+    min-width: 50px;
+    min-height: 36px;
+  }
+}
+
+@media (max-width: 430px) {
+  .entry-kicker {
+    font-size: 9px;
+    letter-spacing: 0.2em;
+  }
+
+  .network-metrics {
+    flex-direction: column;
+  }
+
+  .identity-form button {
+    letter-spacing: 0.21em;
+  }
+
+  .pm-view-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+@media (max-height: 540px) and (orientation: landscape) {
+  .entry-panel {
+    padding-top: 18px;
+    padding-bottom: 18px;
+  }
+
+  .entry-copy h1 {
+    font-size: 44px;
+  }
+
+  .access-terminal {
+    transform: scale(0.9);
+    transform-origin: center;
+  }
+
+  .orbit-app-shell .profile-modal.pm-glass {
+    max-height: calc(100dvh - 16px);
+  }
+}
