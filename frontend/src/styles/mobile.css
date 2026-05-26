@@ -108,8 +108,50 @@
 
   .orbit-app-shell .fab-container {
     display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
     right: max(14px, env(safe-area-inset-right));
     bottom: max(16px, env(safe-area-inset-bottom));
+  }
+
+  .orbit-app-shell .fab-actions {
+    order: 1;
+    max-height: 0;
+    margin-bottom: 0 !important;
+    overflow: hidden;
+    opacity: 0;
+    transform: translateY(10px);
+    pointer-events: none;
+    transition:
+      max-height 320ms cubic-bezier(0.16, 1, 0.3, 1),
+      opacity 220ms ease,
+      transform 320ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .orbit-app-shell .fab-container.open .fab-actions {
+    max-height: 132px;
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+
+  .orbit-app-shell .mobile-compass-control {
+    order: 2;
+    display: flex;
+    flex: 0 0 auto;
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+    transition:
+      transform 320ms cubic-bezier(0.16, 1, 0.3, 1),
+      border-color 220ms ease,
+      box-shadow 220ms ease,
+      background 220ms ease;
+  }
+
+  .orbit-app-shell .fab-main {
+    order: 3;
   }
 
   .orbit-app-shell .fab-actions .control-btn,
@@ -179,5 +221,167 @@
 
   .orbit-app-shell .profile-modal.pm-glass {
     max-height: calc(100dvh - 16px);
+  }
+}
+
+.orbit-app-shell {
+  --chat-left: 18px;
+  --chat-top: 76px;
+  --chat-width: 306px;
+  --chat-height: min(68dvh, 640px);
+}
+
+.orbit-app-shell .chat-dock {
+  position: fixed;
+  top: var(--chat-top);
+  left: var(--chat-left);
+  width: var(--chat-width);
+  height: var(--chat-height);
+  z-index: 10000;
+  transform: translate3d(0, 0, 0);
+  transition:
+    transform 440ms cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 280ms ease;
+  will-change: transform;
+  pointer-events: none;
+}
+
+.orbit-app-shell .chat-dock.closed {
+  transform: translate3d(calc(-100% - var(--chat-left) + 9px), 0, 0);
+}
+
+.orbit-app-shell .chat-dock .chat-panel,
+.orbit-app-shell.dark-mode .chat-dock .chat-panel,
+.orbit-app-shell.light-mode .chat-dock .chat-panel {
+  position: relative !important;
+  inset: auto !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-height: none !important;
+  border-radius: 16px 0 16px 16px !important;
+  transform: none !important;
+  opacity: 1 !important;
+  pointer-events: auto;
+  touch-action: pan-y;
+  overscroll-behavior: contain;
+  transition:
+    opacity 260ms ease,
+    border-color 260ms ease,
+    box-shadow 260ms ease,
+    background 260ms ease;
+}
+
+.orbit-app-shell .chat-dock.closed .chat-panel {
+  opacity: 0 !important;
+  pointer-events: none;
+}
+
+.orbit-app-shell .chat-dock .chat-toggle,
+.orbit-app-shell.dark-mode .chat-dock .chat-toggle,
+.orbit-app-shell.light-mode .chat-dock .chat-toggle {
+  position: absolute !important;
+  top: 50% !important;
+  left: calc(100% - 1px) !important;
+  width: 38px !important;
+  height: 62px !important;
+  border-radius: 0 15px 15px 0 !important;
+  transform: translateY(-50%) !important;
+  z-index: 2;
+  pointer-events: auto;
+  touch-action: manipulation;
+}
+
+.orbit-app-shell .chat-dock.closed .chat-toggle {
+  opacity: 0.98;
+}
+
+.orbit-app-shell .chat-dock .chat-toggle:hover {
+  transform: translateY(-50%) scale(1.025) !important;
+}
+
+@media (max-width: 768px) {
+  .orbit-app-shell {
+    --chat-left: max(12px, env(safe-area-inset-left));
+    --chat-top: calc(72px + env(safe-area-inset-top));
+    --chat-width: min(82vw, 292px);
+    --chat-height: min(56dvh, calc(100dvh - 196px));
+  }
+
+  .orbit-app-shell .chat-dock .chat-panel,
+  .orbit-app-shell.dark-mode .chat-dock .chat-panel,
+  .orbit-app-shell.light-mode .chat-dock .chat-panel {
+    border-radius: 15px 0 15px 15px !important;
+  }
+
+  .orbit-app-shell .chat-dock .chat-toggle,
+  .orbit-app-shell.dark-mode .chat-dock .chat-toggle,
+  .orbit-app-shell.light-mode .chat-dock .chat-toggle {
+    width: 36px !important;
+    height: 58px !important;
+  }
+
+  .orbit-app-shell .fab-container {
+    gap: 9px;
+  }
+
+  .orbit-app-shell .fab-actions {
+    order: 2;
+    gap: 9px;
+    max-height: 0;
+    margin: 0 !important;
+    transform: translateY(8px) scale(0.96);
+  }
+
+  .orbit-app-shell .fab-container.open .fab-actions {
+    max-height: 118px;
+    transform: translateY(0) scale(1);
+  }
+
+  .orbit-app-shell .mobile-compass-control {
+    order: 1;
+    width: 48px !important;
+    height: 48px !important;
+    transform: translateY(0);
+  }
+
+  .orbit-app-shell .fab-container.open .mobile-compass-control {
+    transform: translateY(-3px);
+  }
+
+  .orbit-app-shell .fab-main {
+    order: 3;
+    width: 50px !important;
+    height: 50px !important;
+  }
+
+  .orbit-app-shell .fab-actions .control-btn {
+    width: 46px !important;
+    height: 46px !important;
+    min-width: 46px;
+    min-height: 46px;
+  }
+}
+
+@media (max-width: 390px) {
+  .orbit-app-shell {
+    --chat-width: min(80vw, 278px);
+    --chat-height: min(54dvh, calc(100dvh - 188px));
+  }
+}
+
+@media (max-height: 620px) and (max-width: 768px) {
+  .orbit-app-shell {
+    --chat-top: calc(64px + env(safe-area-inset-top));
+    --chat-height: min(52dvh, calc(100dvh - 142px));
+  }
+
+  .orbit-app-shell .chat-header {
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+
+  .orbit-app-shell .chat-messages {
+    padding-top: 10px;
+    padding-bottom: 10px;
   }
 }

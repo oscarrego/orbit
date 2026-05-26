@@ -14,6 +14,33 @@ const HIGHWAY_CLASSES = [
 ];
 
 const SECONDARY_CLASSES = ["secondary", "tertiary"];
+const GREENERY_LAYER_IDS = [
+  "orbit-environment-greenery-landuse",
+  "orbit-environment-greenery-landcover",
+  "orbit-environment-greenery-depth"
+];
+
+const GREENERY_LANDUSE_CLASSES = [
+  "park",
+  "garden",
+  "grass",
+  "wood",
+  "forest",
+  "cemetery",
+  "recreation_ground",
+  "golf_course",
+  "nature_reserve",
+  "pitch"
+];
+
+const GREENERY_LANDCOVER_CLASSES = [
+  "wood",
+  "forest",
+  "grass",
+  "scrub",
+  "park",
+  "meadow"
+];
 
 const highwayFilter = ["all", ["in", "class", ...HIGHWAY_CLASSES]];
 const secondaryFilter = ["all", ["in", "class", ...SECONDARY_CLASSES]];
@@ -69,13 +96,13 @@ const clone = (value) => JSON.parse(JSON.stringify(value));
 
 const SURFACE_THEMES = {
   dark: {
-    background: "#1c2024",
-    landcoverLow: "#20242a",
-    landcoverHigh: "#343a43",
-    residentialLow: "#232830",
-    residentialHigh: "#3a414b",
-    landuse: "#333941",
-    park: "#263628",
+    background: "#181d21",
+    landcoverLow: "#1d2528",
+    landcoverHigh: "#273335",
+    residentialLow: "#20262e",
+    residentialHigh: "#303841",
+    landuse: "#2b3339",
+    park: "#203a31",
     waterLow: "#101b24",
     waterHigh: "#203746",
     waterOutline: "#2b4658",
@@ -126,6 +153,18 @@ const insertBeforeBuilding = (mapInstance) => {
   return firstLabelLayer?.id;
 };
 
+const insertBeforeRoads = (mapInstance) => {
+  const style = mapInstance.getStyle();
+  const firstRoadLayer = style.layers?.find(
+    (layer) =>
+      layer.source === CARTO_SOURCE_ID &&
+      layer["source-layer"] === TRANSPORTATION_SOURCE_LAYER &&
+      layer.type === "line"
+  );
+
+  return firstRoadLayer?.id || insertBeforeBuilding(mapInstance);
+};
+
 const addLineLayer = (mapInstance, layer, beforeLayerId) => {
   if (!mapInstance.getLayer(layer.id)) {
     mapInstance.addLayer(
@@ -141,6 +180,32 @@ const addLineLayer = (mapInstance, layer, beforeLayerId) => {
       },
       beforeLayerId && mapInstance.getLayer(beforeLayerId) ? beforeLayerId : undefined
     );
+    return;
+  }
+
+  if (layer.filter) mapInstance.setFilter(layer.id, clone(layer.filter));
+  Object.entries(layer.paint || {}).forEach(([property, value]) => {
+    setPaint(mapInstance, layer.id, property, value);
+  });
+};
+
+const addFillLayer = (mapInstance, layer, beforeLayerId) => {
+  if (!mapInstance.getSource(CARTO_SOURCE_ID)) return;
+
+  if (!mapInstance.getLayer(layer.id)) {
+    try {
+      mapInstance.addLayer(
+        {
+          source: CARTO_SOURCE_ID,
+          type: "fill",
+          layout: { visibility: "visible" },
+          ...layer
+        },
+        beforeLayerId && mapInstance.getLayer(beforeLayerId) ? beforeLayerId : undefined
+      );
+    } catch (error) {
+      console.warn(`Unable to add ${layer.id}:`, error);
+    }
     return;
   }
 
@@ -199,6 +264,80 @@ const getRoadLayerPaintForTheme = (layer, themeId) => {
 
 // ── Cinematic Highway Layers ─────────────────────────────────────────────────
 // 4-pass system: volumetric outer diffusion → mid bloom → bright core → hot highlight
+const getGreeneryLayers = (themeId) => {
+  const isLight = themeId === "light";
+
+  return [
+    {
+      id: GREENERY_LAYER_IDS[0],
+      "source-layer": "landuse",
+      filter: ["all", ["in", "class", ...GREENERY_LANDUSE_CLASSES]],
+      paint: {
+        "fill-color": isLight
+          ? [
+              "interpolate", ["linear"], ["zoom"],
+              8, "#d9e6db", 14, "#c8dccd", 17, "#bdd3c4"
+            ]
+          : [
+              "interpolate", ["linear"], ["zoom"],
+              8, "#1b2d28", 13, "#223c32", 16, "#2a4739", 19, "#314f40"
+            ],
+        "fill-opacity": [
+          "interpolate", ["linear"], ["zoom"],
+          8, isLight ? 0.34 : 0.28,
+          13, isLight ? 0.52 : 0.45,
+          16, isLight ? 0.62 : 0.58,
+          19, isLight ? 0.68 : 0.66
+        ]
+      }
+    },
+    {
+      id: GREENERY_LAYER_IDS[1],
+      "source-layer": "landcover",
+      filter: ["all", ["in", "class", ...GREENERY_LANDCOVER_CLASSES]],
+      paint: {
+        "fill-color": isLight
+          ? [
+              "interpolate", ["linear"], ["zoom"],
+              6, "#dce7dd", 13, "#cfdfd2", 17, "#c1d5c6"
+            ]
+          : [
+              "interpolate", ["linear"], ["zoom"],
+              6, "#182621", 12, "#1f332b", 16, "#294237", 19, "#315043"
+            ],
+        "fill-opacity": [
+          "interpolate", ["linear"], ["zoom"],
+          6, isLight ? 0.28 : 0.22,
+          12, isLight ? 0.48 : 0.40,
+          16, isLight ? 0.58 : 0.54,
+          19, isLight ? 0.62 : 0.62
+        ]
+      }
+    },
+    {
+      id: GREENERY_LAYER_IDS[2],
+      "source-layer": "landuse",
+      filter: ["all", ["in", "class", ...GREENERY_LANDUSE_CLASSES]],
+      paint: {
+        "fill-color": isLight ? "rgba(110, 130, 112, 0.36)" : "rgba(78, 118, 96, 0.30)",
+        "fill-outline-color": isLight ? "rgba(88, 106, 92, 0.18)" : "rgba(120, 160, 135, 0.16)",
+        "fill-opacity": [
+          "interpolate", ["linear"], ["zoom"],
+          12, 0,
+          14, isLight ? 0.12 : 0.10,
+          17, isLight ? 0.22 : 0.19
+        ]
+      }
+    }
+  ];
+};
+
+const addEnvironmentalGreeneryLayers = (mapInstance, themeId) => {
+  if (!mapInstance.getSource(CARTO_SOURCE_ID)) return;
+  const beforeLayerId = insertBeforeRoads(mapInstance);
+  getGreeneryLayers(themeId).forEach((layer) => addFillLayer(mapInstance, layer, beforeLayerId));
+};
+
 const cinematicHighwayLayers = [
   // Pass 0 — Volumetric atmospheric diffusion (widest, softest, low opacity)
   {
@@ -534,10 +673,13 @@ const addCinematicRoadLayers = (mapInstance, themeId) => {
 export const applyCinematicDarkMapStyle = (mapInstance, themeId = "dark") => {
   if (!mapInstance || !mapInstance.isStyleLoaded()) return;
 
-  const cinematicLayersReady = cinematicHighwayLayers.every((layer) => mapInstance.getLayer(layer.id));
+  const cinematicLayersReady =
+    cinematicHighwayLayers.every((layer) => mapInstance.getLayer(layer.id)) &&
+    GREENERY_LAYER_IDS.every((layerId) => mapInstance.getLayer(layerId));
   if (mapInstance.__orbitCinematicThemeApplied === themeId && cinematicLayersReady) return;
 
   styleGroundAndWater(mapInstance, themeId);
+  addEnvironmentalGreeneryLayers(mapInstance, themeId);
   styleRoadHierarchy(mapInstance, themeId);
   styleLabels(mapInstance, themeId);
   addCinematicRoadLayers(mapInstance, themeId);

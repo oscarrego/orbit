@@ -6,6 +6,7 @@ import OrbitEasterEgg from "./components/OrbitEasterEgg";
 import CreateRoomModal from "./components/CreateRoomModal";
 import JoinRoomModal from "./components/JoinRoomModal";
 import socket from "./components/SocketManager";
+import useNotifications from "./hooks/useNotifications";
 import "./App.css";
 import "./styles/orbit-ui.css";
 import "./styles/dark-theme.css";
@@ -190,6 +191,7 @@ function App() {
   const [isFollowing, setIsFollowing] = useState(true);
   const [fabOpen, setFabOpen] = useState(false);
   const [activePanel, setActivePanel] = useState(null); // 'chat', 'users', or null
+  const activePanelRef = useRef(activePanel);
   const [showProfile, setShowProfile] = useState(false);
   const [showCreateRoomModal, setShowCreateRoomModal] = useState(false);
   const [showEasterEgg, setShowEasterEgg] = useState(false);
@@ -216,6 +218,11 @@ function App() {
   // 🔑 Auth State
   const [user, setUser] = useState(getPersistentUser());
   const mapRef = useRef(null);
+  const notifications = useNotifications(user);
+
+  useEffect(() => {
+    activePanelRef.current = activePanel;
+  }, [activePanel]);
 
   const persistRoomSelection = useCallback((room, privateRoom) => {
     currentRoomRef.current = room;
@@ -512,7 +519,8 @@ function App() {
   };
 
   // 🚪 Handle Logout
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await notifications.disableNotifications();
     localStorage.removeItem("username");
     localStorage.removeItem("avatarSeed");
     localStorage.removeItem("roomId");
@@ -560,6 +568,25 @@ function App() {
     showToast({
       message: newValue ? "You are now invisible" : "You are now visible",
       type: newValue ? "cancel" : "success"
+    });
+  };
+
+  const handleToggleNotifications = async (enabled) => {
+    const nextState = await notifications.setNotificationsEnabled(enabled);
+    const message =
+      nextState.status === "denied"
+        ? "Notifications are blocked in this browser"
+        : nextState.status === "unsupported"
+          ? "Notifications are not supported here"
+          : nextState.status === "prepared-placeholder"
+            ? "Notifications prepared for Firebase setup"
+            : nextState.enabled
+              ? "Notifications enabled"
+              : "Notifications disabled";
+
+    showToast({
+      message,
+      type: nextState.enabled ? "success" : nextState.status === "denied" ? "error" : "cancel",
     });
   };
   // Directly join a public room (no passcode required)
@@ -699,6 +726,15 @@ function App() {
     mapRef.current?.resetBearing();
   };
 
+  const handleMapInteraction = useCallback(() => {
+    const isMobileViewport =
+      typeof window !== "undefined" &&
+      window.matchMedia("(max-width: 768px)").matches;
+
+    if (!isMobileViewport || activePanelRef.current !== "chat") return;
+    setActivePanel(null);
+  }, []);
+
   if (!user.username) {
     return <Login onLogin={handleLogin} />;
   }
@@ -754,9 +790,11 @@ function App() {
         onBearingChange={setMapBearing}
         buildingsEnabled={buildingsEnabled}
         deviceHeading={deviceHeading}
+        onMapInteraction={handleMapInteraction}
       />
 
       {/* 💬 CHAT PANEL (Mica Dark) */}
+      <div className={`chat-dock ${activePanel === "chat" ? "open" : "closed"}`}>
       <div className={`chat-panel ${activePanel === "chat" ? "open" : "closed"}`}>
         <div className="chat-header">
           <div className="online-dot"></div>
@@ -864,6 +902,7 @@ function App() {
           <span className="unread-badge">{unreadCount}</span>
         )}
       </button>
+      </div>
 
       {/* 👥 ACTIVE USERS INDICATOR */}
       {(() => {
@@ -939,15 +978,6 @@ function App() {
       <div className={`fab-container ${fabOpen ? "open" : ""}`}>
         <div className="fab-actions">
           <button
-            className={`control-btn compass-control-btn ${Math.abs(mapBearing) > 0.5 ? "bearing-active" : ""}`}
-            onClick={handleCompassReset}
-            title="Reset bearing to north"
-            aria-label="Reset bearing to north"
-          >
-            <NorthCompassIcon bearing={mapBearing} />
-          </button>
-
-          <button
             className={`control-btn recenter-btn perspective-${cameraMode} active`}
             onClick={handleRecenter}
             title={`${CAMERA_MODE_LABELS[cameraMode]} active. Switch to ${nextModeLabel(cameraMode)}`}
@@ -972,6 +1002,15 @@ function App() {
             </svg>
           </button>
         </div>
+
+        <button
+          className={`control-btn compass-control-btn mobile-compass-control ${Math.abs(mapBearing) > 0.5 ? "bearing-active" : ""}`}
+          onClick={handleCompassReset}
+          title="Reset bearing to north"
+          aria-label="Reset bearing to north"
+        >
+          <NorthCompassIcon bearing={mapBearing} />
+        </button>
 
         <button
           className="fab-main"
@@ -1214,6 +1253,11 @@ function App() {
           onLogout={handleLogout}
           isInvisible={isInvisible}
           onToggleInvisible={handleToggleInvisible}
+          notificationsEnabled={notifications.enabled}
+          notificationStatus={notifications.status}
+          notificationPermission={notifications.permission}
+          notificationsSupported={notifications.supported}
+          onToggleNotifications={handleToggleNotifications}
           themeMode={theme}
           onThemeModeChange={setTheme}
           buildingsEnabled={buildingsEnabled}

@@ -238,7 +238,7 @@ const getDecorations = (id) => {
 const MapView = forwardRef(({
   users, userLocation, theme, isFollowing, setIsFollowing,
   onAutoDisableFollowing, currentUserId, sosAlerts,
-  cameraMode, setCameraMode, onBearingChange, buildingsEnabled, deviceHeading
+  cameraMode, setCameraMode, onBearingChange, buildingsEnabled, deviceHeading, onMapInteraction
 }, ref) => {
   const mapContainer = useRef(null);
   const map = useRef(null);
@@ -252,10 +252,15 @@ const MapView = forwardRef(({
   const cameraModeRef = useRef(cameraMode);
   const buildingsEnabledRef = useRef(buildingsEnabled);
   const onAutoDisableFollowingRef = useRef(onAutoDisableFollowing);
+  const onMapInteractionRef = useRef(onMapInteraction);
 
   useEffect(() => {
     onAutoDisableFollowingRef.current = onAutoDisableFollowing;
   }, [onAutoDisableFollowing]);
+
+  useEffect(() => {
+    onMapInteractionRef.current = onMapInteraction;
+  }, [onMapInteraction]);
 
   useEffect(() => {
     if (map.current) return;
@@ -288,10 +293,20 @@ const MapView = forwardRef(({
     map.current.on("rotate", emitBearing);
     map.current.on("move",   emitBearing);
 
-    // 📍 Auto-disable follow on interaction
-    map.current.on("dragstart",   () => { if (onAutoDisableFollowingRef.current) onAutoDisableFollowingRef.current(); });
-    map.current.on("zoomstart",   () => { if (onAutoDisableFollowingRef.current) onAutoDisableFollowingRef.current(); });
-    map.current.on("rotatestart", () => { if (onAutoDisableFollowingRef.current) onAutoDisableFollowingRef.current(); });
+    // 📍 Auto-disable follow and let mobile UI yield to deliberate map gestures.
+    const handleGestureStart = () => {
+      if (onAutoDisableFollowingRef.current) onAutoDisableFollowingRef.current();
+      if (onMapInteractionRef.current) onMapInteractionRef.current();
+    };
+
+    map.current.on("dragstart", handleGestureStart);
+    map.current.on("zoomstart", handleGestureStart);
+    map.current.on("rotatestart", handleGestureStart);
+    map.current.on("pitchstart", handleGestureStart);
+
+    const canvasContainer = map.current.getCanvasContainer();
+    canvasContainer?.addEventListener("pointerdown", handleGestureStart, { passive: true });
+    canvasContainer?.addEventListener("wheel", handleGestureStart, { passive: true });
 
     map.current.on("error", (e) => {
       const message = e?.error?.message || e?.message || "";
@@ -301,6 +316,8 @@ const MapView = forwardRef(({
 
     return () => {
       if (styleRestoreTimer.current) window.clearTimeout(styleRestoreTimer.current);
+      canvasContainer?.removeEventListener("pointerdown", handleGestureStart);
+      canvasContainer?.removeEventListener("wheel", handleGestureStart);
       map.current?.remove();
       map.current = null;
     };

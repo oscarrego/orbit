@@ -8,6 +8,11 @@ const ProfileModal = ({
   onLogout,
   isInvisible,
   onToggleInvisible,
+  notificationsEnabled = false,
+  notificationStatus = "idle",
+  notificationPermission = "default",
+  notificationsSupported = true,
+  onToggleNotifications,
   themeMode = "dark",
   onThemeModeChange,
   buildingsEnabled = true,
@@ -37,6 +42,15 @@ const ProfileModal = ({
   const handleThemeToggle = () => {
     onThemeModeChange?.(isLightMode ? "dark" : "light");
   };
+
+  const notificationDescription = (() => {
+    if (!notificationsSupported) return "Not supported on this browser";
+    if (notificationPermission === "denied") return "Blocked in browser settings";
+    if (notificationStatus === "requesting-permission") return "Requesting permission";
+    if (notificationStatus === "prepared-placeholder") return "Ready for Firebase config";
+    if (notificationsEnabled) return "Alert on nearby activity";
+    return "Disabled locally";
+  })();
 
   return (
     <div className="profile-overlay" onClick={onClose}>
@@ -139,6 +153,23 @@ const ProfileModal = ({
           </button>
         </div>
 
+         {/* ── Notifications toggle ── */}
+        <div className="pm-toggle-row">
+          <div className="pm-toggle-info">
+            <span className="pm-toggle-label">Notifications</span>
+            <span className="pm-toggle-desc">{notificationDescription}</span>
+          </div>
+          <button
+            type="button"
+            className={`pm-toggle-switch ${notificationsEnabled ? "pm-toggle-switch--on" : ""}`}
+            onClick={() => onToggleNotifications?.(!notificationsEnabled)}
+            aria-pressed={notificationsEnabled}
+            aria-label={`${notificationsEnabled ? "Disable" : "Enable"} notifications`}
+          >
+            <span className="pm-toggle-thumb"/>
+          </button>
+        </div>
+
         {/* ── Interface Theme toggle ── */}
         <div className="pm-theme-row">
           <div className="pm-toggle-info">
@@ -197,22 +228,6 @@ const ProfileModal = ({
             </button>
           </div>
         </div>
-
-        {/* ── Notifications toggle ── */}
-        <div className="pm-toggle-row">
-          <div className="pm-toggle-info">
-            <span className="pm-toggle-label">Notifications</span>
-            <span className="pm-toggle-desc">Alert on nearby activity</span>
-          </div>
-          <button
-            type="button"
-            className="pm-toggle-switch pm-toggle-switch--on"
-            aria-pressed={true}
-          >
-            <span className="pm-toggle-thumb"/>
-          </button>
-        </div>
-
       </div>
     </div>
   );
