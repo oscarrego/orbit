@@ -643,9 +643,9 @@ const Login = ({ onLogin }) => {
         <section className="entry-panel entry-intro">
           <motion.div className="entry-copy centered" initial="hidden" whileInView="visible" viewport={{ amount: 0.45 }} variants={easeReveal}>
             <div className="entry-kicker"><Aperture size={13} /> ORBIT / SPATIAL ENGINE</div>
-            <h1>Enter<br /><strong>The Field.</strong></h1>
-            <p>A realtime presence layer opening inside a monochrome network cube.</p>
-            <div className="entry-scroll-prompt"><span /> CORE OPENING</div>
+            <h1>Enter<br /><strong>The Orbit</strong></h1>
+            <p>A Realtime Network Built For Spatial Communication and Live Interaction</p>
+            <div className="entry-scroll-prompt"><span /> SCROLL DOWN</div>
           </motion.div>
         </section>
 
@@ -653,7 +653,7 @@ const Login = ({ onLogin }) => {
           <motion.article className="network-card right" initial="hidden" whileInView="visible" viewport={{ amount: 0.38 }} variants={easeReveal}>
             <Network size={22} />
             <div className="card-index">01 / LIVE MAP AWARENESS</div>
-            <h2>Presence resolves into shared spatial truth.</h2>
+            <h2>SYNC REALTIME</h2>
             <p>Orbit synchronizes movement, proximity and room activity into one operational field.</p>
             <MetricDeck metrics={metrics} variant="sync" />
           </motion.article>
@@ -663,8 +663,8 @@ const Login = ({ onLogin }) => {
           <motion.article className="network-card left" initial="hidden" whileInView="visible" viewport={{ amount: 0.38 }} variants={easeReveal}>
             <Fingerprint size={22} />
             <div className="card-index">02 / IDENTITY NODE</div>
-            <h2>A verified signal becomes a presence node.</h2>
-            <p>A concise identity key binds chat, location and awareness into the Orbit network.</p>
+            <h2>A live signal joins the Orbit network</h2>
+            <p>A concise identity key binds chat, location and awareness into the Orbit network</p>
             <MetricDeck metrics={metrics} variant="identity" />
           </motion.article>
         </section>
@@ -699,7 +699,7 @@ const Login = ({ onLogin }) => {
               </div>
               <button type="submit" disabled={!isValid}>
                 <Fingerprint size={15} />
-                OPEN ORBIT
+                CONNECT TO NETWORK
               </button>
             </form>
             <div className="terminal-footer">PRESENCE / MAP / CHAT / LIVE FIELD</div>
