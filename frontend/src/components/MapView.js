@@ -1,4 +1,4 @@
-﻿import { useEffect, useRef, forwardRef, useImperativeHandle } from "react";
+import { useEffect, useRef, forwardRef, useImperativeHandle } from "react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { getBackgroundColor, getMapFilters, getThemeConfig } from "../theme/themeHelpers";
@@ -55,6 +55,10 @@ const getNextCameraMode = (mode) => {
   if (mode === CAMERA_MODES.CINEMATIC) return CAMERA_MODES.IMMERSIVE;
   return CAMERA_MODES.TOP;
 };
+
+// ── Auto 3D Performance thresholds (hysteresis) ──────────────────────────
+const AUTO_3D_DISABLE_ZOOM = 13.2;  // zoom OUT past this → disable buildings
+const AUTO_3D_ENABLE_ZOOM  = 13.8;  // zoom back IN past this → restore buildings
 
 const cloneMapStyle = (style) =>
   typeof style === "string" ? style : JSON.parse(JSON.stringify(style));
@@ -247,6 +251,8 @@ const MapView = forwardRef(({
   const userMarker = useRef(null);
   const initialCenterSet = useRef(false);
   const styleRestoreTimer = useRef(null);
+  // Auto 3D optimization: tracks whether buildings are _temporarily_ hidden
+  const auto3dDisabled = useRef(false);
 
   const themeRef = useRef(theme);
   const cameraModeRef = useRef(cameraMode);
@@ -357,10 +363,44 @@ const MapView = forwardRef(({
 
   useEffect(() => {
     buildingsEnabledRef.current = buildingsEnabled;
+    // Reset auto-disable state when user explicitly changes preference
+    auto3dDisabled.current = false;
     if (map.current && map.current.isStyleLoaded()) {
       add3D(true);
     }
   }, [buildingsEnabled]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Auto 3D Performance: zoom-based optimization with hysteresis ──────
+  useEffect(() => {
+    if (!map.current) return;
+    const m = map.current;
+
+    const handleZoomAuto3D = () => {
+      if (!m.isStyleLoaded()) return;
+      // Only act when the user has 3D buildings turned ON in their settings
+      if (!buildingsEnabledRef.current) return;
+
+      const zoom = m.getZoom();
+
+      if (!auto3dDisabled.current && zoom < AUTO_3D_DISABLE_ZOOM) {
+        // Zoomed out too far → temporarily disable 3D
+        auto3dDisabled.current = true;
+        add3D(true, /* forceDisable */ true);
+      } else if (auto3dDisabled.current && zoom > AUTO_3D_ENABLE_ZOOM) {
+        // Zoomed back in → restore 3D
+        auto3dDisabled.current = false;
+        add3D(true);
+      }
+    };
+
+    m.on("zoomend", handleZoomAuto3D);
+    // Check initial state
+    handleZoomAuto3D();
+
+    return () => {
+      m.off("zoomend", handleZoomAuto3D);
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useImperativeHandle(ref, () => ({
     handleRecenter: () => {
@@ -370,15 +410,16 @@ const MapView = forwardRef(({
         const naturalHeading = userLocation.heading ?? deviceHeading ?? map.current.getBearing();
         const target =
           nextCameraMode === CAMERA_MODES.TOP
-            ? { pitch: 0, bearing: 0, duration: 1280 }
+            ? { pitch: 0, bearing: 0, zoom: 13.5, duration: 1280 }
             : nextCameraMode === CAMERA_MODES.CINEMATIC
-              ? { pitch: 54, bearing: naturalHeading, duration: 1420 }
-              : { pitch: 73, bearing: naturalHeading, duration: 1540 };
+              ? { pitch: 54, bearing: naturalHeading, zoom: 16, duration: 1420 }
+              : { pitch: 68, bearing: naturalHeading, zoom: 17.8, duration: 1540 };
 
         map.current.easeTo({
           center: [userLocation.lng + lngOffset, userLocation.lat + latOffset],
           pitch: target.pitch,
           bearing: target.bearing,
+          zoom: target.zoom,
           duration: target.duration,
           easing: (t) => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2,
           essential: true,
@@ -462,8 +503,11 @@ const MapView = forwardRef(({
     }
   }, [userLocation, theme, isFollowing, currentUserId, cameraMode, deviceHeading]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const add3D = (force = false) => {
+  const add3D = (force = false, forceDisable = false) => {
     if (!map.current || !map.current.isStyleLoaded()) return;
+
+    // Determine effective buildings state: user pref AND auto-optimization
+    const effectiveEnabled = forceDisable ? false : (buildingsEnabledRef.current && !auto3dDisabled.current);
 
     const style = map.current.getStyle();
     const layers = style.layers || [];
@@ -482,7 +526,7 @@ const MapView = forwardRef(({
       existingExtrusionLayer?.id === BUILDING_LAYER_ID &&
       accentLayersReady &&
       map.current.__orbitBuildingThemeApplied === themeRef.current &&
-      map.current.__orbitBuildingsEnabled === buildingsEnabledRef.current
+      map.current.__orbitBuildingsEnabled === effectiveEnabled
     ) {
       return;
     }
@@ -493,7 +537,7 @@ const MapView = forwardRef(({
           map.current.removeLayer(layer.id);
         }
       });
-      applyBuildingPaint(map.current, existingExtrusionLayer.id, themeRef.current, buildingsEnabledRef.current);
+      applyBuildingPaint(map.current, existingExtrusionLayer.id, themeRef.current, effectiveEnabled);
       syncBuildingAccentLayers(
         map.current,
         existingExtrusionLayer.source,
@@ -501,10 +545,10 @@ const MapView = forwardRef(({
         existingExtrusionLayer.filter,
         themeRef.current,
         layers.slice(layers.indexOf(existingExtrusionLayer) + 1).find((layer) => !isBuildingSourceLayer(layer))?.id,
-        buildingsEnabledRef.current
+        effectiveEnabled
       );
       map.current.__orbitBuildingThemeApplied = themeRef.current;
-      map.current.__orbitBuildingsEnabled = buildingsEnabledRef.current;
+      map.current.__orbitBuildingsEnabled = effectiveEnabled;
       return;
     }
 
@@ -536,7 +580,7 @@ const MapView = forwardRef(({
       type: "fill-extrusion",
       minzoom: BUILDING_MIN_ZOOM,
       layout: { visibility: "visible" },
-      paint: buildingsEnabledRef.current
+      paint: effectiveEnabled
         ? getBuildingPaint(themeRef.current)
         : {
             ...getBuildingPaint(themeRef.current),
@@ -552,7 +596,7 @@ const MapView = forwardRef(({
       beforeLayerId && map.current.getLayer(beforeLayerId) ? beforeLayerId : undefined
     );
     applyBuildingLighting(map.current, themeRef.current);
-    applyBuildingPaint(map.current, BUILDING_LAYER_ID, themeRef.current, buildingsEnabledRef.current);
+    applyBuildingPaint(map.current, BUILDING_LAYER_ID, themeRef.current, effectiveEnabled);
     syncBuildingAccentLayers(
       map.current,
       source,
@@ -560,10 +604,10 @@ const MapView = forwardRef(({
       buildingLayer.filter,
       themeRef.current,
       beforeLayerId,
-      buildingsEnabledRef.current
+      effectiveEnabled
     );
     map.current.__orbitBuildingThemeApplied = themeRef.current;
-    map.current.__orbitBuildingsEnabled = buildingsEnabledRef.current;
+    map.current.__orbitBuildingsEnabled = effectiveEnabled;
   };
 
   useEffect(() => {

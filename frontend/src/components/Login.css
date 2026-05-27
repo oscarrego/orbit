@@ -1,3 +1,7 @@
+/* ═══════════════════════════════════════════════════════════════
+   ORBIT LOGIN — Premium Cinematic Cube Experience
+   ═══════════════════════════════════════════════════════════════ */
+
 html.orbit-lenis-active,
 html.orbit-lenis-active body {
   height: auto;
@@ -7,650 +11,518 @@ html.orbit-lenis-active body {
   scroll-behavior: auto !important;
 }
 
+/* ── Root ── */
 .orbit-entry {
-  --entry-text: rgba(247, 249, 252, 0.96);
-  --entry-muted: rgba(205, 213, 224, 0.62);
-  --entry-faint: rgba(217, 225, 235, 0.3);
-  --entry-line: rgba(242, 246, 250, 0.14);
-  --entry-glass: rgba(8, 10, 13, 0.48);
+  --text: rgba(240, 243, 248, 0.96);
+  --muted: rgba(190, 200, 215, 0.6);
+  --faint: rgba(180, 192, 210, 0.28);
+  --line: rgba(255, 255, 255, 0.09);
+  --glass: rgba(6, 6, 10, 0.6);
   position: relative;
   min-height: 420svh;
   width: 100%;
   overflow: clip;
-  color: var(--entry-text);
-  background: #030405;
+  color: var(--text);
+  background: #060608;
+  font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif;
 }
 
-.network-canvas {
+/* ── 3D Canvas ── */
+.orbit-canvas-wrap {
   position: fixed;
   inset: 0;
   z-index: 0;
-  background: #030405;
+  background: #060608;
   pointer-events: none;
 }
 
-.network-vignette {
+/* ── Vignette overlay ── */
+.orbit-vignette {
   position: fixed;
   inset: 0;
   z-index: 1;
   pointer-events: none;
   background:
-    radial-gradient(ellipse 72% 56% at 50% 46%, transparent 0%, rgba(3, 4, 5, 0.14) 48%, rgba(3, 4, 5, 0.84) 100%),
-    linear-gradient(180deg, rgba(3, 4, 5, 0.34), rgba(3, 4, 5, 0.04) 43%, rgba(3, 4, 5, 0.7));
+    radial-gradient(ellipse 65% 50% at 50% 48%, transparent 0%, rgba(6, 6, 8, 0.18) 50%, rgba(6, 6, 8, 0.88) 100%),
+    linear-gradient(180deg, rgba(6, 6, 8, 0.3), rgba(6, 6, 8, 0.02) 40%, rgba(6, 6, 8, 0.65));
 }
 
-.network-vignette::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.026) 1px, transparent 1px);
-  background-size: 42px 42px;
-  mask-image: radial-gradient(circle at center, rgba(0, 0, 0, 0.55), transparent 72%);
-  opacity: 0.18;
-}
-
-.entry-status-strip {
+/* ── Progress rail ── */
+.orbit-rail {
   position: fixed;
-  top: max(18px, env(safe-area-inset-top));
-  left: 50%;
-  z-index: 4;
+  z-index: 5;
+  right: 36px;
+  top: 50%;
   display: flex;
-  gap: 14px;
-  align-items: center;
-  transform: translateX(-50%);
-  color: rgba(231, 236, 244, 0.52);
-  font-size: 10px;
-  font-weight: 650;
-  letter-spacing: 0;
-  white-space: nowrap;
+  flex-direction: column;
+  gap: 20px;
+  transform: translateY(-50%);
+  color: rgba(200, 210, 220, 0.22);
   pointer-events: none;
 }
 
-.entry-status-strip span {
-  padding: 7px 10px;
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  border-radius: 999px;
-  background: rgba(7, 9, 12, 0.36);
-  backdrop-filter: blur(18px);
+.orbit-rail span {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  transition: color 400ms ease;
 }
 
-.entry-sections {
+.orbit-rail i {
+  order: 2;
+  display: inline-block;
+  width: 16px;
+  height: 1px;
+  background: currentColor;
+  transition: width 400ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 400ms ease;
+}
+
+.orbit-rail .active {
+  color: rgba(240, 243, 248, 0.85);
+}
+
+.orbit-rail .active i {
+  width: 34px;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+}
+
+/* ── Sections container ── */
+.orbit-sections {
   position: relative;
   z-index: 2;
 }
 
-.entry-panel {
+.orbit-section {
   min-height: 100svh;
   width: 100%;
   display: flex;
   align-items: center;
-  padding: 86px 7vw;
+  padding: 80px 8vw;
 }
 
-.entry-copy {
-  width: min(740px, 100%);
-}
-
-.entry-copy.centered {
+/* ── Hero (Section 1) ── */
+.orbit-hero {
+  width: min(680px, 100%);
   margin: 0 auto;
   text-align: center;
 }
 
-.entry-kicker,
-.terminal-kicker {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  color: var(--entry-muted);
+.orbit-badge {
+  display: inline-block;
+  padding: 8px 20px;
+  margin-bottom: 48px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(10, 10, 14, 0.4);
+  backdrop-filter: blur(16px);
+  color: var(--muted);
   font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0;
-  text-transform: uppercase;
+  letter-spacing: 0.3em;
 }
 
-.entry-kicker {
-  padding: 10px 15px;
-  margin-bottom: 52px;
-  border: 1px solid var(--entry-line);
-  border-radius: 999px;
-  background: rgba(14, 17, 21, 0.34);
-  backdrop-filter: blur(18px);
-}
-
-.entry-copy h1 {
+.orbit-hero h1 {
   margin: 0;
-  font-size: 106px;
-  font-weight: 260;
-  line-height: 0.94;
-  letter-spacing: 0;
+  font-size: clamp(56px, 10vw, 100px);
+  font-weight: 200;
+  line-height: 0.95;
+  letter-spacing: -0.02em;
   text-transform: uppercase;
 }
 
-.entry-copy h1 strong {
-  font-weight: 660;
-  text-shadow: 0 0 44px rgba(255, 255, 255, 0.18);
+.orbit-hero h1 strong {
+  font-weight: 650;
+  text-shadow: 0 0 40px rgba(255, 255, 255, 0.12);
 }
 
-.entry-copy p {
-  width: min(500px, 100%);
-  margin: 34px auto 0;
-  color: var(--entry-muted);
-  font-size: 16px;
-  line-height: 1.75;
-  font-weight: 360;
+.orbit-hero p {
+  width: min(440px, 100%);
+  margin: 32px auto 0;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.7;
+  font-weight: 350;
 }
 
-.entry-scroll-prompt {
+.orbit-scroll-hint {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 18px;
-  margin-top: 92px;
-  color: rgba(220, 227, 236, 0.44);
+  gap: 16px;
+  margin-top: 80px;
+  color: rgba(200, 210, 220, 0.35);
   font-size: 9px;
   font-weight: 650;
-  letter-spacing: 0;
+  letter-spacing: 0.2em;
 }
 
-.entry-scroll-prompt span {
+.orbit-scroll-hint span {
   position: relative;
   display: block;
   width: 1px;
-  height: 48px;
-  background: rgba(226, 232, 240, 0.16);
+  height: 44px;
+  background: rgba(220, 228, 236, 0.12);
   overflow: hidden;
 }
 
-.entry-scroll-prompt span::after {
+.orbit-scroll-hint span::after {
   content: "";
   position: absolute;
-  inset: -42px 0 auto;
-  height: 32px;
-  background: #f8fafc;
-  animation: network-scroll-signal 2.5s cubic-bezier(0.2, 0.72, 0.26, 1) infinite;
+  inset: -40px 0 auto;
+  height: 28px;
+  background: rgba(240, 243, 248, 0.7);
+  animation: orbit-scroll-pulse 2.8s cubic-bezier(0.2, 0.72, 0.26, 1) infinite;
 }
 
-@keyframes network-scroll-signal {
+@keyframes orbit-scroll-pulse {
   0% { transform: translateY(0); opacity: 0; }
-  18% { opacity: 0.82; }
-  72% { opacity: 0.3; }
-  100% { transform: translateY(92px); opacity: 0; }
+  18% { opacity: 0.75; }
+  72% { opacity: 0.2; }
+  100% { transform: translateY(88px); opacity: 0; }
 }
 
-.chapter-rail {
-  position: fixed;
-  z-index: 5;
-  right: 38px;
-  top: 50%;
-  display: flex;
-  flex-direction: column;
-  gap: 22px;
-  transform: translateY(-50%);
-  color: rgba(213, 220, 228, 0.34);
+/* ── Info Cards (Sections 2 & 3) ── */
+.orbit-card {
+  position: relative;
+  width: min(420px, calc(100% - 40px));
+  padding: 36px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.04), transparent 30%),
+    var(--glass);
+  backdrop-filter: blur(28px) saturate(1.1);
+  box-shadow:
+    0 40px 80px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07);
+}
+
+.orbit-card::before {
+  content: "";
+  position: absolute;
+  inset: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 6px;
   pointer-events: none;
 }
 
-.chapter-rail span {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 12px;
-  font-size: 9px;
+.orbit-card--right {
+  margin-left: auto;
+}
+
+.orbit-card--left {
+  margin-right: auto;
+}
+
+.orbit-card-num {
+  margin-bottom: 16px;
+  color: rgba(180, 190, 205, 0.35);
+  font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0;
-  transition: color 360ms ease, opacity 360ms ease;
+  letter-spacing: 0.15em;
 }
 
-.chapter-rail i {
-  order: 2;
-  display: inline-block;
-  width: 18px;
-  height: 1px;
-  background: currentColor;
-  transition: width 360ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 360ms ease;
+.orbit-card h2 {
+  margin: 0;
+  max-width: 360px;
+  font-size: clamp(26px, 4vw, 36px);
+  line-height: 1.15;
+  font-weight: 400;
+  letter-spacing: -0.01em;
 }
 
-.chapter-rail .current {
-  color: rgba(247, 249, 252, 0.92);
+.orbit-card p {
+  margin: 20px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.7;
 }
 
-.chapter-rail .current i {
-  width: 38px;
-  box-shadow: 0 0 13px rgba(255, 255, 255, 0.65);
+/* ── Login Terminal (Section 4) ── */
+.orbit-section--login {
+  justify-content: center;
 }
 
-.entry-sync {
-  justify-content: flex-end;
-}
-
-.entry-verify {
-  justify-content: flex-start;
-}
-
-.network-card {
+.orbit-terminal {
   position: relative;
-  width: min(454px, calc(100% - 90px));
-  padding: 38px;
-  border: 1px solid var(--entry-line);
-  border-radius: 8px;
+  width: min(480px, 100%);
+  padding: 44px;
+  border-radius: 10px;
+  border: 1px solid rgba(240, 243, 248, 0.12);
   background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.07), transparent 34%),
-    var(--entry-glass);
-  backdrop-filter: blur(30px) saturate(1.12);
+    radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.06), transparent 30%),
+    rgba(6, 6, 10, 0.75);
+  backdrop-filter: blur(32px) saturate(1.1);
+  text-align: center;
   box-shadow:
-    0 38px 90px rgba(0, 0, 0, 0.46),
+    0 48px 100px rgba(0, 0, 0, 0.6),
     inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
-.network-card::before,
-.access-terminal::before {
+.orbit-terminal::before {
   content: "";
   position: absolute;
-  inset: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.065);
-  border-radius: 4px;
+  inset: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 6px;
   pointer-events: none;
 }
 
-.network-card > svg {
-  margin-bottom: 31px;
-  color: rgba(242, 246, 250, 0.9);
-  filter: drop-shadow(0 0 15px rgba(255, 255, 255, 0.22));
-}
-
-.card-index {
-  margin-bottom: 17px;
-  color: rgba(195, 205, 217, 0.46);
-  font-size: 10px;
-  letter-spacing: 0;
-  font-weight: 700;
-}
-
-.network-card h2 {
-  margin: 0;
-  max-width: 390px;
-  font-size: 38px;
-  line-height: 1.12;
-  letter-spacing: 0;
-  font-weight: 430;
-}
-
-.network-card p {
-  margin: 22px 0 30px;
-  color: var(--entry-muted);
-  font-size: 14px;
-  line-height: 1.72;
-}
-
-.live-metric-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.live-metric {
-  min-width: 0;
-  padding: 12px 10px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.035);
-}
-
-.metric-label {
-  display: flex;
+.orbit-terminal-badge {
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
-  color: rgba(218, 225, 234, 0.5);
-  font-size: 9px;
+  gap: 8px;
+  color: rgba(200, 210, 220, 0.45);
+  font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0;
+  letter-spacing: 0.18em;
 }
 
-.metric-value {
-  display: block;
-  margin-top: 9px;
-  color: rgba(248, 250, 252, 0.94);
-  font-size: 17px;
-  font-variant-numeric: tabular-nums;
-  font-weight: 620;
-  text-shadow: 0 0 16px rgba(255, 255, 255, 0.12);
-}
-
-.entry-access {
-  justify-content: center;
-}
-
-.access-terminal {
-  position: relative;
-  width: min(532px, 100%);
-  padding: 46px;
-  border-radius: 8px;
-  border: 1px solid rgba(244, 247, 251, 0.17);
-  background:
-    radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.09), transparent 36%),
-    rgba(7, 9, 12, 0.7);
-  backdrop-filter: blur(34px) saturate(1.14);
-  text-align: center;
-  box-shadow:
-    0 45px 120px rgba(0, 0, 0, 0.66),
-    inset 0 1px 0 rgba(255, 255, 255, 0.13);
-}
-
-.terminal-kicker {
-  color: rgba(215, 223, 232, 0.56);
-}
-
-.access-terminal h2 {
-  margin: 25px 0 12px;
-  font-size: 58px;
-  font-weight: 420;
+.orbit-terminal h2 {
+  margin: 22px 0 10px;
+  font-size: clamp(40px, 6vw, 54px);
+  font-weight: 350;
   line-height: 1;
-  letter-spacing: 0;
+  letter-spacing: -0.02em;
   text-transform: uppercase;
 }
 
-.terminal-copy {
-  width: min(395px, 100%);
-  margin: 0 auto 38px;
+.orbit-terminal-desc {
+  width: min(360px, 100%);
+  margin: 0 auto 36px;
   font-size: 14px;
   line-height: 1.65;
-  color: var(--entry-muted);
+  color: var(--muted);
 }
 
-.identity-form label {
+/* ── Form ── */
+.orbit-form label {
   display: block;
-  margin-bottom: 15px;
-  color: rgba(198, 208, 219, 0.52);
+  margin-bottom: 14px;
+  color: rgba(185, 195, 210, 0.45);
   font-size: 9px;
   font-weight: 700;
-  letter-spacing: 0;
+  letter-spacing: 0.2em;
 }
 
-.identity-field {
-  height: 76px;
+.orbit-input-wrap {
+  height: 72px;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 22px;
-  border: 1px solid rgba(235, 241, 248, 0.12);
-  border-radius: 8px;
-  background: rgba(0, 0, 0, 0.22);
-  transition: border-color 260ms ease, box-shadow 260ms ease, background 260ms ease;
+  border: 1px solid rgba(230, 236, 245, 0.09);
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.25);
+  transition: border-color 280ms ease, box-shadow 280ms ease, background 280ms ease;
 }
 
-.identity-field:focus-within,
-.identity-form.ready .identity-field {
-  border-color: rgba(245, 248, 252, 0.34);
-  background: rgba(255, 255, 255, 0.035);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 0 28px rgba(255, 255, 255, 0.06);
+.orbit-input-wrap:focus-within,
+.orbit-form.ready .orbit-input-wrap {
+  border-color: rgba(240, 243, 248, 0.28);
+  background: rgba(255, 255, 255, 0.025);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 0 24px rgba(255, 255, 255, 0.04);
 }
 
-.identity-field > span {
-  font-size: 30px;
-  font-weight: 260;
-  color: rgba(220, 228, 237, 0.3);
-  transition: color 240ms ease;
-}
-
-.identity-field:focus-within > span,
-.identity-form.ready .identity-field > span {
-  color: rgba(244, 248, 252, 0.88);
-}
-
-.identity-field input {
-  width: min(250px, 56vw);
+.orbit-input-wrap input {
+  width: min(240px, 60vw);
   border: 0;
   outline: 0;
   background: transparent;
-  color: rgba(248, 250, 252, 0.98);
+  color: rgba(245, 247, 250, 0.96);
   text-align: center;
-  font-size: 34px;
-  font-weight: 460;
-  letter-spacing: 0;
+  font-size: 32px;
+  font-weight: 420;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
-  caret-color: rgba(248, 250, 252, 0.75);
+  caret-color: rgba(245, 247, 250, 0.65);
+  font-family: inherit;
 }
 
-.identity-field input::placeholder {
-  color: rgba(207, 217, 228, 0.16);
+.orbit-input-wrap input::placeholder {
+  color: rgba(200, 210, 220, 0.12);
 }
 
-.identity-feedback {
-  min-height: 17px;
+.orbit-feedback {
+  min-height: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 9px;
-  margin: 14px 0 30px;
-  color: rgba(197, 207, 219, 0.52);
+  gap: 8px;
+  margin: 14px 0 28px;
+  color: rgba(185, 195, 210, 0.45);
   font-size: 9px;
   font-weight: 700;
-  letter-spacing: 0;
+  letter-spacing: 0.12em;
 }
 
-.identity-feedback span {
-  width: 6px;
-  height: 6px;
+.orbit-feedback span {
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
-  background: rgba(204, 214, 225, 0.34);
-  transition: background 250ms ease, box-shadow 250ms ease;
+  background: rgba(195, 205, 218, 0.28);
+  transition: background 280ms ease, box-shadow 280ms ease;
 }
 
-.identity-feedback span.verified {
-  background: rgba(248, 250, 252, 0.94);
-  box-shadow: 0 0 12px rgba(255, 255, 255, 0.58);
+.orbit-feedback span.verified {
+  background: rgba(245, 247, 250, 0.9);
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
 }
 
-.identity-form button {
+.orbit-form button {
   width: 100%;
-  min-height: 56px;
-  border: 1px solid rgba(235, 241, 248, 0.12);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.03);
-  color: rgba(198, 207, 219, 0.36);
+  min-height: 52px;
+  border: 1px solid rgba(230, 236, 245, 0.09);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.025);
+  color: rgba(185, 195, 210, 0.3);
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  padding: 0 18px;
+  gap: 10px;
+  padding: 0 16px;
   font-size: 10px;
   font-weight: 720;
-  letter-spacing: 0;
+  letter-spacing: 0.18em;
   cursor: not-allowed;
-  transition: transform 230ms ease, border-color 250ms ease, background 250ms ease, box-shadow 250ms ease, color 250ms ease;
+  font-family: inherit;
+  transition:
+    transform 250ms ease,
+    border-color 280ms ease,
+    background 280ms ease,
+    box-shadow 280ms ease,
+    color 280ms ease;
 }
 
-.identity-form.ready button {
+.orbit-form.ready button {
   cursor: pointer;
   color: #08090b;
-  background: rgba(249, 251, 253, 0.94);
-  border-color: rgba(249, 251, 253, 0.96);
-  box-shadow: 0 15px 40px rgba(255, 255, 255, 0.12);
+  background: rgba(245, 247, 250, 0.92);
+  border-color: rgba(245, 247, 250, 0.94);
+  box-shadow: 0 14px 36px rgba(255, 255, 255, 0.1);
 }
 
-.identity-form.ready button:hover {
+.orbit-form.ready button:hover {
   transform: translateY(-2px);
-  box-shadow: 0 22px 46px rgba(255, 255, 255, 0.18);
+  box-shadow: 0 20px 44px rgba(255, 255, 255, 0.15);
 }
 
-.identity-form.ready button:active {
+.orbit-form.ready button:active {
   transform: translateY(1px) scale(0.995);
 }
 
-.terminal-footer {
-  margin-top: 34px;
-  color: rgba(190, 201, 213, 0.34);
-  font-size: 8px;
-  font-weight: 700;
-  letter-spacing: 0;
-  line-height: 1.8;
-}
-
+/* ═══════════════════════════════════════════════════════════════
+   RESPONSIVE
+   ═══════════════════════════════════════════════════════════════ */
 @media (max-width: 900px) {
-  .entry-panel {
+  .orbit-section {
     padding-left: 24px;
     padding-right: 24px;
   }
 
-  .entry-copy h1 {
-    font-size: 72px;
-  }
-
-  .entry-sync,
-  .entry-verify {
-    justify-content: center;
-  }
-
-  .network-card {
-    width: min(454px, 100%);
+  .orbit-card--right,
+  .orbit-card--left {
+    margin-left: auto;
+    margin-right: auto;
   }
 }
 
 @media (max-width: 768px) {
-  .entry-panel {
+  .orbit-section {
     min-height: 100svh;
-    padding: max(28px, env(safe-area-inset-top)) 20px max(32px, env(safe-area-inset-bottom));
+    padding: max(28px, env(safe-area-inset-top)) 20px max(28px, env(safe-area-inset-bottom));
   }
 
-  .entry-status-strip {
-    top: max(12px, env(safe-area-inset-top));
-    gap: 8px;
-    font-size: 8px;
-  }
-
-  .entry-status-strip span {
-    padding: 6px 8px;
-  }
-
-  .chapter-rail {
+  .orbit-rail {
     top: auto;
     left: 20px;
     right: 20px;
     bottom: max(18px, env(safe-area-inset-bottom));
     flex-direction: row;
     justify-content: center;
-    gap: 13px;
+    gap: 14px;
     transform: none;
   }
 
-  .chapter-rail span {
+  .orbit-rail span {
     font-size: 0;
     gap: 0;
   }
 
-  .chapter-rail i,
-  .chapter-rail .current i {
-    width: 22px;
+  .orbit-rail i,
+  .orbit-rail .active i {
+    width: 20px;
     height: 2px;
   }
 
-  .chapter-rail .current i {
-    width: 38px;
+  .orbit-rail .active i {
+    width: 34px;
   }
 
-  .entry-kicker {
-    margin-bottom: 34px;
-    font-size: 9px;
+  .orbit-hero h1 {
+    font-size: clamp(44px, 14vw, 64px);
   }
 
-  .entry-copy h1 {
-    font-size: 54px;
+  .orbit-scroll-hint {
+    margin-top: 56px;
   }
 
-  .entry-copy p {
-    font-size: 14px;
-  }
-
-  .entry-scroll-prompt {
-    margin-top: 58px;
-  }
-
-  .network-card {
+  .orbit-card {
+    width: 100%;
     padding: 28px 22px;
   }
 
-  .network-card > svg {
-    margin-bottom: 24px;
+  .orbit-terminal {
+    padding: 28px 20px 24px;
   }
 
-  .network-card h2 {
-    font-size: 30px;
+  .orbit-terminal h2 {
+    font-size: clamp(36px, 8vw, 44px);
   }
 
-  .live-metric-grid {
-    grid-template-columns: 1fr;
+  .orbit-input-wrap {
+    height: 64px;
   }
 
-  .live-metric {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 11px 12px;
-  }
-
-  .metric-value {
-    margin-top: 0;
-    font-size: 16px;
-  }
-
-  .access-terminal {
-    padding: 30px 20px 27px;
-  }
-
-  .access-terminal h2 {
-    font-size: 44px;
-  }
-
-  .terminal-copy {
-    margin-bottom: 29px;
-  }
-
-  .identity-field {
-    height: 68px;
-    gap: 11px;
-  }
-
-  .identity-field input {
-    font-size: 28px;
-    width: min(218px, 58vw);
+  .orbit-input-wrap input {
+    font-size: 26px;
+    width: min(210px, 58vw);
   }
 }
 
 @media (max-width: 430px) {
-  .entry-copy h1 {
-    font-size: 48px;
+  .orbit-hero h1 {
+    font-size: 44px;
   }
 
-  .identity-form button {
+  .orbit-form button {
     font-size: 9px;
-  }
-
-  .terminal-footer {
-    font-size: 7px;
   }
 }
 
 @media (max-height: 540px) and (orientation: landscape) {
-  .entry-panel {
-    padding-top: 18px;
-    padding-bottom: 18px;
+  .orbit-section {
+    padding-top: 16px;
+    padding-bottom: 16px;
   }
 
-  .entry-copy h1 {
-    font-size: 44px;
+  .orbit-hero h1 {
+    font-size: 40px;
   }
 
-  .access-terminal {
-    transform: scale(0.9);
+  .orbit-terminal {
+    transform: scale(0.88);
     transform-origin: center;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .entry-scroll-prompt span::after {
+  .orbit-scroll-hint span::after {
     animation-duration: 6s;
   }
 }
