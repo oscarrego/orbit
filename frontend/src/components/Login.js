@@ -3,11 +3,18 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { motion } from "framer-motion";
 import Lenis from "lenis";
 import * as THREE from "three";
+import {
+  Activity,
+  Aperture,
+  Fingerprint,
+  Network,
+  RadioReceiver,
+  ScanSearch,
+  ShieldCheck,
+  Signal,
+} from "lucide-react";
 import "./Login.css";
 
-/* ═══════════════════════════════════════════════════════════════
-   SHARED SCROLL STATE
-   ═══════════════════════════════════════════════════════════════ */
 const journey = {
   target: 0,
   current: 0,
@@ -16,503 +23,535 @@ const journey = {
   pointerY: 0,
 };
 
-const clamp01 = (v) => Math.min(1, Math.max(0, v));
-const smoothstep = (e0, e1, v) => {
-  const t = clamp01((v - e0) / (e1 - e0));
+const easeReveal = {
+  hidden: { opacity: 0, y: 24, filter: "blur(10px)" },
+  visible: {
+    opacity: 1,
+    y: 0,
+    filter: "blur(0px)",
+    transition: { duration: 0.9, ease: [0.16, 1, 0.3, 1] },
+  },
+};
+
+const clamp01 = (value) => Math.min(1, Math.max(0, value));
+const smoothstep = (edge0, edge1, value) => {
+  const t = clamp01((value - edge0) / (edge1 - edge0));
   return t * t * (3 - 2 * t);
 };
-const lerp = THREE.MathUtils.lerp;
 
-/* ═══════════════════════════════════════════════════════════════
-   PREMIUM MONOCHROME CUBE — solid industrial surfaces
-   ═══════════════════════════════════════════════════════════════ */
-const CubeMaterial = () => {
-  return (
-    <meshStandardMaterial
-      color="#d8d8d8"
-      roughness={0.18}
-      metalness={0.42}
-      envMapIntensity={0.6}
-    />
-  );
+const buildDotCube = (compact) => {
+  const positions = [];
+  const normals = [];
+  const half = compact ? 2.45 : 3.1;
+  const density = compact ? 11 : 15;
+  const step = (half * 2) / (density - 1);
+
+  const pushPoint = (axis, sign, a, b) => {
+    const coords = [0, 0, 0];
+    const normal = [0, 0, 0];
+    coords[axis] = sign * half;
+    normal[axis] = sign;
+
+    const sideAxes = [0, 1, 2].filter((index) => index !== axis);
+    coords[sideAxes[0]] = -half + a * step;
+    coords[sideAxes[1]] = -half + b * step;
+
+    const jitter = Math.sin((a + 1.7) * 12.989 + (b + 3.1) * 78.233 + axis * 18.4 + sign) * 0.012;
+    positions.push(coords[0] + jitter, coords[1] - jitter, coords[2] + jitter * 0.5);
+    normals.push(normal[0], normal[1], normal[2]);
+  };
+
+  for (let axis = 0; axis < 3; axis += 1) {
+    [-1, 1].forEach((sign) => {
+      for (let a = 0; a < density; a += 1) {
+        for (let b = 0; b < density; b += 1) {
+          pushPoint(axis, sign, a, b);
+        }
+      }
+    });
+  }
+
+  return {
+    positions: new Float32Array(positions),
+    normals: new Float32Array(normals),
+  };
 };
 
-/* Door panel on the front face */
-const DoorPanel = () => {
-  const ref = useRef();
-  const handleRef = useRef();
+const buildInternalMatrix = (compact) => {
+  const positions = [];
+  const span = compact ? 2.05 : 2.65;
+  const density = compact ? 7 : 9;
+  const step = (span * 2) / (density - 1);
 
-  useFrame(() => {
-    if (!ref.current) return;
-    const p = journey.current;
-    const doorOpen = smoothstep(0.2, 0.55, p);
-    // Hinge rotation on Y axis (opens outward)
-    ref.current.rotation.y = -doorOpen * Math.PI * 0.55;
-    ref.current.position.x = -0.7 + doorOpen * 0.02;
-    ref.current.position.z = 1.501 - doorOpen * 0.1;
-
-    if (handleRef.current) {
-      handleRef.current.material.emissiveIntensity = doorOpen * 0.3;
+  for (let x = 0; x < density; x += 1) {
+    for (let y = 0; y < density; y += 1) {
+      for (let z = 0; z < density; z += 1) {
+        const edgeBias = x === 0 || y === 0 || z === 0 || x === density - 1 || y === density - 1 || z === density - 1;
+        if (!edgeBias && (x + y + z) % 2 === 1) continue;
+        positions.push(-span + x * step, -span + y * step, -span + z * step);
+      }
     }
+  }
+
+  return new Float32Array(positions);
+};
+
+const buildPacketLines = (compact) => {
+  const positions = [];
+  const rails = compact ? 18 : 28;
+  const length = compact ? 5.7 : 7.1;
+
+  for (let index = 0; index < rails; index += 1) {
+    const side = index % 4;
+    const offset = (index - rails / 2) * 0.16;
+    const wobble = Math.sin(index * 1.7) * 0.18;
+    let start;
+    let end;
+
+    if (side === 0) {
+      start = [-length / 2, offset, wobble];
+      end = [length / 2, offset * 0.45, -wobble];
+    } else if (side === 1) {
+      start = [offset, -length / 2, wobble];
+      end = [offset * 0.5, length / 2, -wobble];
+    } else if (side === 2) {
+      start = [offset, wobble, -length / 2];
+      end = [-offset * 0.5, -wobble, length / 2];
+    } else {
+      start = [-length / 2, wobble, offset];
+      end = [length / 2, -wobble, -offset];
+    }
+
+    positions.push(...start, ...end);
+  }
+
+  return new Float32Array(positions);
+};
+
+const MatrixPoints = ({ geometryData, size, intensity, phase, reducedMotion }) => {
+  const material = useRef(null);
+  const uniforms = useMemo(
+    () => ({
+      uTime: { value: 0 },
+      uProgress: { value: 0 },
+      uIntensity: { value: intensity },
+      uPhase: { value: phase },
+      uSize: { value: size },
+      uMotion: { value: reducedMotion ? 0.1 : 1 },
+    }),
+    [intensity, phase, reducedMotion, size]
+  );
+
+  useFrame(({ clock }) => {
+    if (!material.current) return;
+    material.current.uniforms.uTime.value = clock.elapsedTime;
+    material.current.uniforms.uProgress.value = journey.current;
   });
 
   return (
-    <group ref={ref} position={[-0.7, -0.15, 1.501]}>
-      {/* Door panel */}
-      <mesh position={[0.35, 0, -0.001]}>
-        <boxGeometry args={[0.7, 0.75, 0.04]} />
-        <meshStandardMaterial
-          color="#c8c8c8"
-          roughness={0.15}
-          metalness={0.5}
+    <points>
+      <bufferGeometry>
+        <bufferAttribute
+          attach="attributes-position"
+          array={geometryData.positions}
+          count={geometryData.positions.length / 3}
+          itemSize={3}
         />
-      </mesh>
-      {/* Seam line */}
-      <mesh position={[0.35, 0, 0.021]}>
-        <boxGeometry args={[0.72, 0.77, 0.001]} />
-        <meshStandardMaterial
-          color="#999"
-          roughness={0.3}
-          metalness={0.4}
-          transparent
-          opacity={0.3}
+        <bufferAttribute
+          attach="attributes-normal"
+          array={geometryData.normals}
+          count={geometryData.normals.length / 3}
+          itemSize={3}
         />
-      </mesh>
-      {/* Small handle */}
-      <mesh ref={handleRef} position={[0.6, 0, 0.03]}>
-        <boxGeometry args={[0.06, 0.06, 0.025]} />
-        <meshStandardMaterial
-          color="#888"
-          roughness={0.1}
-          metalness={0.8}
-          emissive="#ffffff"
-          emissiveIntensity={0}
-        />
-      </mesh>
-    </group>
+      </bufferGeometry>
+      <shaderMaterial
+        ref={material}
+        transparent
+        depthWrite={false}
+        blending={THREE.AdditiveBlending}
+        uniforms={uniforms}
+        vertexShader={`
+          uniform float uTime;
+          uniform float uProgress;
+          uniform float uPhase;
+          uniform float uSize;
+          uniform float uMotion;
+          varying float vAlpha;
+
+          void main() {
+            vec3 point = position;
+            float open = smoothstep(0.12, 0.58, uProgress);
+            float reform = smoothstep(0.76, 1.0, uProgress);
+            float shimmer = sin(point.x * 2.2 + point.y * 1.7 + point.z * 2.8 + uTime * 0.7 + uPhase);
+            vec3 opened = point + normal * (open * 1.85 - reform * 1.18);
+            opened += normalize(point + vec3(0.001)) * sin(uProgress * 3.14159) * 0.22;
+            opened.y += shimmer * 0.035 * uMotion;
+            point = mix(opened, position * 0.84 + normal * 0.18, reform * 0.46);
+
+            vec4 mv = modelViewMatrix * vec4(point, 1.0);
+            gl_Position = projectionMatrix * mv;
+            gl_PointSize = clamp(uSize * (30.0 / max(2.0, -mv.z)), 1.0, 4.6);
+            vAlpha = (0.25 + open * 0.5 - reform * 0.12) * (0.72 + shimmer * 0.18);
+          }
+        `}
+        fragmentShader={`
+          uniform float uIntensity;
+          varying float vAlpha;
+
+          void main() {
+            vec2 centered = gl_PointCoord - 0.5;
+            float radius = length(centered);
+            if (radius > 0.5) discard;
+            float glow = smoothstep(0.5, 0.05, radius);
+            gl_FragColor = vec4(vec3(0.96), glow * vAlpha * uIntensity);
+          }
+        `}
+      />
+    </points>
   );
 };
 
-/* Seam lines visible on scroll */
-const CubeSeams = () => {
-  const ref = useRef();
+const InternalMatrix = ({ positions, reducedMotion }) => {
+  const material = useRef(null);
+  const uniforms = useMemo(
+    () => ({
+      uTime: { value: 0 },
+      uProgress: { value: 0 },
+      uMotion: { value: reducedMotion ? 0.12 : 1 },
+    }),
+    [reducedMotion]
+  );
 
-  useFrame(() => {
-    if (!ref.current) return;
-    const p = journey.current;
-    ref.current.material.opacity = smoothstep(0.08, 0.3, p) * 0.6;
+  useFrame(({ clock }) => {
+    if (!material.current) return;
+    material.current.uniforms.uTime.value = clock.elapsedTime;
+    material.current.uniforms.uProgress.value = journey.current;
   });
 
   return (
-    <lineSegments ref={ref}>
-      <edgesGeometry
-        args={[new THREE.BoxGeometry(3.01, 3.01, 3.01)]}
-      />
-      <lineBasicMaterial
-        color="#666666"
+    <points>
+      <bufferGeometry>
+        <bufferAttribute attach="attributes-position" array={positions} count={positions.length / 3} itemSize={3} />
+      </bufferGeometry>
+      <shaderMaterial
+        ref={material}
         transparent
-        opacity={0}
-        linewidth={1}
+        depthWrite={false}
+        blending={THREE.AdditiveBlending}
+        uniforms={uniforms}
+        vertexShader={`
+          uniform float uTime;
+          uniform float uProgress;
+          uniform float uMotion;
+          varying float vAlpha;
+
+          void main() {
+            vec3 point = position;
+            float reveal = smoothstep(0.22, 0.7, uProgress);
+            point *= 0.8 + reveal * 0.34;
+            point.xz *= mat2(cos(uProgress * 0.72), -sin(uProgress * 0.72), sin(uProgress * 0.72), cos(uProgress * 0.72));
+            point.y += sin(uTime * 0.9 + point.x * 2.0 + point.z) * 0.045 * uMotion;
+            vec4 mv = modelViewMatrix * vec4(point, 1.0);
+            gl_Position = projectionMatrix * mv;
+            gl_PointSize = clamp((2.2 + reveal * 0.8) * (24.0 / max(2.0, -mv.z)), 1.0, 4.0);
+            vAlpha = reveal * (0.22 + 0.42 * sin(uTime * 0.45 + point.z * 2.0) * 0.5 + 0.5);
+          }
+        `}
+        fragmentShader={`
+          varying float vAlpha;
+
+          void main() {
+            vec2 centered = gl_PointCoord - 0.5;
+            float radius = length(centered);
+            if (radius > 0.5) discard;
+            gl_FragColor = vec4(vec3(0.9), smoothstep(0.5, 0.06, radius) * vAlpha);
+          }
+        `}
       />
+    </points>
+  );
+};
+
+const EdgeCube = ({ size = 6, index = 0 }) => {
+  const ref = useRef(null);
+  const geometry = useMemo(() => new THREE.EdgesGeometry(new THREE.BoxGeometry(size, size, size)), [size]);
+
+  useFrame(({ clock }) => {
+    if (!ref.current) return;
+    const progress = journey.current;
+    const open = smoothstep(0.16, 0.66, progress);
+    const reform = smoothstep(0.78, 1, progress);
+    ref.current.rotation.x = index * 0.21 + progress * 0.34 + Math.sin(clock.elapsedTime * 0.12 + index) * 0.035;
+    ref.current.rotation.y = index * 0.28 + progress * 0.48;
+    ref.current.scale.setScalar(1 + open * (0.16 + index * 0.05) - reform * 0.11);
+    ref.current.material.opacity = 0.12 + open * 0.18 - reform * 0.04;
+  });
+
+  return (
+    <lineSegments ref={ref} geometry={geometry}>
+      <lineBasicMaterial color="#f8fafc" transparent opacity={0.16} depthWrite={false} />
     </lineSegments>
   );
 };
 
-/* ═══════════════════════════════════════════════════════════════
-   COSMIC INTERIOR — stars, dust, black hole vortex
-   ═══════════════════════════════════════════════════════════════ */
-const StarField = ({ count = 600 }) => {
-  const ref = useRef();
-  const [positions, sizes] = useMemo(() => {
-    const pos = new Float32Array(count * 3);
-    const sz = new Float32Array(count);
-    for (let i = 0; i < count; i++) {
-      // Distribute in a sphere
-      const theta = Math.random() * Math.PI * 2;
-      const phi = Math.acos(2 * Math.random() - 1);
-      const r = 0.3 + Math.random() * 1.1;
-      pos[i * 3] = r * Math.sin(phi) * Math.cos(theta);
-      pos[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta) - 0.15;
-      pos[i * 3 + 2] = r * Math.cos(phi);
-      sz[i] = 0.5 + Math.random() * 2.5;
-    }
-    return [pos, sz];
-  }, [count]);
-
-  const uniforms = useMemo(() => ({
-    uTime: { value: 0 },
-    uProgress: { value: 0 },
-    uPull: { value: 0 },
-  }), []);
+const PacketLines = ({ positions, reducedMotion }) => {
+  const ref = useRef(null);
 
   useFrame(({ clock }) => {
     if (!ref.current) return;
-    const mat = ref.current.material;
-    mat.uniforms.uTime.value = clock.elapsedTime;
-    mat.uniforms.uProgress.value = journey.current;
-    mat.uniforms.uPull.value = smoothstep(0.45, 0.85, journey.current);
+    const progress = journey.current;
+    const reveal = smoothstep(0.28, 0.74, progress);
+    ref.current.rotation.y = progress * 0.6 + (reducedMotion ? 0 : clock.elapsedTime * 0.025);
+    ref.current.rotation.z = -progress * 0.18;
+    ref.current.material.opacity = 0.04 + reveal * 0.24;
   });
 
   return (
-    <points ref={ref} position={[0, 0, 0]}>
+    <lineSegments ref={ref}>
       <bufferGeometry>
-        <bufferAttribute attach="attributes-position" array={positions} count={count} itemSize={3} />
-        <bufferAttribute attach="attributes-aSize" array={sizes} count={count} itemSize={1} />
+        <bufferAttribute attach="attributes-position" array={positions} count={positions.length / 3} itemSize={3} />
       </bufferGeometry>
-      <shaderMaterial
-        transparent
-        depthWrite={false}
-        blending={THREE.AdditiveBlending}
-        uniforms={uniforms}
-        vertexShader={`
-          uniform float uTime;
-          uniform float uProgress;
-          uniform float uPull;
-          attribute float aSize;
-          varying float vAlpha;
-          varying float vDist;
-
-          void main() {
-            vec3 p = position;
-            float reveal = smoothstep(0.3, 0.65, uProgress);
-
-            // Gravitational spiral
-            float dist = length(p.xz);
-            float angle = atan(p.z, p.x) + uTime * 0.15 * (1.0 + uPull * 2.0) / max(0.3, dist);
-            float pullRadius = dist * (1.0 - uPull * 0.5 * smoothstep(0.0, 1.5, dist));
-            p.x = cos(angle) * pullRadius;
-            p.z = sin(angle) * pullRadius;
-            p.y += sin(uTime * 0.4 + dist * 3.0) * 0.02;
-
-            vec4 mv = modelViewMatrix * vec4(p, 1.0);
-            gl_Position = projectionMatrix * mv;
-            gl_PointSize = aSize * reveal * (18.0 / max(1.0, -mv.z));
-            vAlpha = reveal * (0.4 + 0.6 * smoothstep(1.5, 0.1, dist));
-            vDist = dist;
-          }
-        `}
-        fragmentShader={`
-          varying float vAlpha;
-          varying float vDist;
-
-          void main() {
-            float r = length(gl_PointCoord - 0.5);
-            if (r > 0.5) discard;
-            float glow = smoothstep(0.5, 0.0, r);
-            float warm = smoothstep(0.8, 0.0, vDist);
-            vec3 col = mix(vec3(0.7, 0.75, 0.9), vec3(1.0, 0.95, 0.85), warm * 0.3);
-            gl_FragColor = vec4(col, glow * vAlpha);
-          }
-        `}
-      />
-    </points>
+      <lineBasicMaterial color="#f6f8fb" transparent opacity={0.08} depthWrite={false} />
+    </lineSegments>
   );
 };
 
-/* Cosmic dust particles */
-const CosmicDust = ({ count = 300 }) => {
-  const ref = useRef();
-  const positions = useMemo(() => {
-    const pos = new Float32Array(count * 3);
-    for (let i = 0; i < count; i++) {
-      const theta = Math.random() * Math.PI * 2;
-      const phi = Math.acos(2 * Math.random() - 1);
-      const r = 0.15 + Math.random() * 0.9;
-      pos[i * 3] = r * Math.sin(phi) * Math.cos(theta);
-      pos[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta) - 0.15;
-      pos[i * 3 + 2] = r * Math.cos(phi);
-    }
-    return pos;
-  }, [count]);
+const CubeFace = ({ axis, sign, compact }) => {
+  const ref = useRef(null);
+  const size = compact ? 4.9 : 6.2;
+  const half = size / 2;
 
-  const uniforms = useMemo(() => ({
-    uTime: { value: 0 },
-    uProgress: { value: 0 },
-  }), []);
+  const rotation = useMemo(() => {
+    if (axis === 0) return [0, Math.PI / 2, 0];
+    if (axis === 1) return [Math.PI / 2, 0, 0];
+    return [0, 0, 0];
+  }, [axis]);
 
-  useFrame(({ clock }) => {
+  useFrame(() => {
     if (!ref.current) return;
-    ref.current.material.uniforms.uTime.value = clock.elapsedTime;
-    ref.current.material.uniforms.uProgress.value = journey.current;
+    const progress = journey.current;
+    const open = smoothstep(0.2, 0.62, progress);
+    const reform = smoothstep(0.8, 1, progress);
+    const distance = half + open * 1.05 - reform * 0.72;
+    ref.current.position.set(0, 0, 0);
+    ref.current.position.setComponent(axis, sign * distance);
+    ref.current.rotation.set(rotation[0], rotation[1], rotation[2]);
+    ref.current.rotation.x += axis !== 0 ? sign * open * 0.28 : 0;
+    ref.current.rotation.y += axis !== 1 ? sign * open * 0.28 : 0;
+    ref.current.material.opacity = 0.035 + open * 0.075 - reform * 0.025;
   });
 
   return (
-    <points ref={ref}>
-      <bufferGeometry>
-        <bufferAttribute attach="attributes-position" array={positions} count={count} itemSize={3} />
-      </bufferGeometry>
-      <shaderMaterial
-        transparent
-        depthWrite={false}
-        blending={THREE.AdditiveBlending}
-        uniforms={uniforms}
-        vertexShader={`
-          uniform float uTime;
-          uniform float uProgress;
-          varying float vAlpha;
-
-          void main() {
-            vec3 p = position;
-            float reveal = smoothstep(0.35, 0.7, uProgress);
-            float dist = length(p.xz);
-            float angle = atan(p.z, p.x) + uTime * 0.08 / max(0.2, dist);
-            p.x = cos(angle) * dist;
-            p.z = sin(angle) * dist;
-
-            vec4 mv = modelViewMatrix * vec4(p, 1.0);
-            gl_Position = projectionMatrix * mv;
-            gl_PointSize = 1.2 * reveal * (12.0 / max(1.0, -mv.z));
-            vAlpha = reveal * 0.3;
-          }
-        `}
-        fragmentShader={`
-          varying float vAlpha;
-          void main() {
-            float r = length(gl_PointCoord - 0.5);
-            if (r > 0.5) discard;
-            gl_FragColor = vec4(vec3(0.6, 0.65, 0.8), smoothstep(0.5, 0.1, r) * vAlpha);
-          }
-        `}
-      />
-    </points>
-  );
-};
-
-/* Black hole vortex ring */
-const VortexRing = () => {
-  const ref = useRef();
-  const ringCount = 3;
-  const ringGeo = useMemo(() => new THREE.TorusGeometry(0.25, 0.008, 16, 64), []);
-
-  useFrame(({ clock }) => {
-    if (!ref.current) return;
-    const p = journey.current;
-    const reveal = smoothstep(0.4, 0.75, p);
-    ref.current.children.forEach((ring, i) => {
-      ring.rotation.x = Math.PI / 2 + Math.sin(clock.elapsedTime * 0.3 + i * 1.2) * 0.15 * reveal;
-      ring.rotation.z = clock.elapsedTime * (0.1 + i * 0.05) * reveal;
-      ring.scale.setScalar(reveal * (0.8 + i * 0.4));
-      ring.material.opacity = reveal * (0.35 - i * 0.08);
-    });
-  });
-
-  return (
-    <group ref={ref} position={[0, -0.15, 0]}>
-      {Array.from({ length: ringCount }).map((_, i) => (
-        <mesh key={i} geometry={ringGeo}>
-          <meshBasicMaterial
-            color="#8888cc"
-            transparent
-            opacity={0}
-            side={THREE.DoubleSide}
-            depthWrite={false}
-            blending={THREE.AdditiveBlending}
-          />
-        </mesh>
-      ))}
-    </group>
-  );
-};
-
-/* Black hole center disk */
-const BlackHoleCenter = () => {
-  const ref = useRef();
-
-  useFrame(({ clock }) => {
-    if (!ref.current) return;
-    const reveal = smoothstep(0.45, 0.8, journey.current);
-    ref.current.scale.setScalar(reveal * 0.15);
-    ref.current.material.opacity = reveal * 0.95;
-    ref.current.rotation.z = clock.elapsedTime * 0.05;
-  });
-
-  return (
-    <mesh ref={ref} position={[0, -0.15, 0]} rotation={[Math.PI / 2, 0, 0]}>
-      <circleGeometry args={[1, 32]} />
-      <meshBasicMaterial color="#000000" transparent opacity={0} side={THREE.DoubleSide} />
+    <mesh ref={ref} rotation={rotation}>
+      <planeGeometry args={[size, size, 7, 7]} />
+      <meshBasicMaterial color="#ffffff" transparent opacity={0.04} wireframe depthWrite={false} />
     </mesh>
   );
 };
 
-/* ═══════════════════════════════════════════════════════════════
-   CAMERA RIG — cinematic scroll-linked movement
-   ═══════════════════════════════════════════════════════════════ */
 const CameraRig = ({ reducedMotion }) => {
   const { camera } = useThree();
 
-  useFrame(({ clock }) => {
-    journey.current = lerp(journey.current, journey.target, reducedMotion ? 0.18 : 0.04);
+  useFrame(() => {
+    journey.current = THREE.MathUtils.lerp(journey.current, journey.target, reducedMotion ? 0.22 : 0.045);
+    journey.velocity = THREE.MathUtils.lerp(journey.velocity, 0, 0.055);
 
-    const p = journey.current;
-    const t = clock.elapsedTime;
+    const progress = journey.current;
+    const pointerWeight = reducedMotion ? 0 : 0.42;
+    const velocityLift = Math.min(1.2, Math.abs(journey.velocity) * 0.018);
+    const targetX = journey.pointerX * pointerWeight + Math.sin(progress * Math.PI * 2) * 0.18;
+    const targetY = journey.pointerY * pointerWeight + (0.52 - progress) * 0.82;
+    const targetZ = 11.8 - progress * 5.4 + velocityLift;
 
-    // Subtle pointer parallax
-    const pw = reducedMotion ? 0 : 0.25;
-
-    // Camera path: starts far, orbits slightly, moves closer to door
-    const baseX = Math.sin(p * Math.PI * 0.4) * 1.2 + journey.pointerX * pw;
-    const baseY = 1.5 - p * 1.8 + journey.pointerY * pw * 0.5;
-    const baseZ = 7.5 - p * 3.5;
-
-    // Subtle idle sway
-    const idleX = reducedMotion ? 0 : Math.sin(t * 0.12) * 0.04;
-    const idleY = reducedMotion ? 0 : Math.cos(t * 0.09) * 0.03;
-
-    camera.position.x = lerp(camera.position.x, baseX + idleX, 0.045);
-    camera.position.y = lerp(camera.position.y, baseY + idleY, 0.045);
-    camera.position.z = lerp(camera.position.z, baseZ, 0.045);
-
-    camera.fov = lerp(camera.fov, 38 + p * 8, 0.04);
-    camera.lookAt(0, -0.1, 0);
+    camera.position.x = THREE.MathUtils.lerp(camera.position.x, targetX, 0.055);
+    camera.position.y = THREE.MathUtils.lerp(camera.position.y, targetY, 0.055);
+    camera.position.z = THREE.MathUtils.lerp(camera.position.z, targetZ, 0.055);
+    camera.rotation.z = THREE.MathUtils.lerp(camera.rotation.z, (progress - 0.5) * -0.06, 0.055);
+    camera.fov = THREE.MathUtils.lerp(camera.fov, 42 + progress * 10, 0.05);
+    camera.lookAt(0, 0, -0.35);
     camera.updateProjectionMatrix();
   });
 
   return null;
 };
 
-/* ═══════════════════════════════════════════════════════════════
-   MAIN SCENE — Cube + Interior + Atmosphere
-   ═══════════════════════════════════════════════════════════════ */
-const CubeScene = ({ compact, reducedMotion }) => {
-  const cubeGroup = useRef();
+const CubeNetworkScene = ({ compact, reducedMotion }) => {
+  const architecture = useRef(null);
+  const cube = useMemo(() => buildDotCube(compact), [compact]);
+  const inner = useMemo(() => buildInternalMatrix(compact), [compact]);
+  const packets = useMemo(() => buildPacketLines(compact), [compact]);
 
   useFrame(({ clock }) => {
-    if (!cubeGroup.current) return;
-    const t = clock.elapsedTime;
-    // Very subtle idle floating
-    const drift = reducedMotion ? 0.005 : 0.015;
-    cubeGroup.current.position.y = Math.sin(t * 0.25) * drift;
-    cubeGroup.current.rotation.y = lerp(
-      cubeGroup.current.rotation.y,
-      -0.35 + Math.sin(t * 0.08) * 0.02 + journey.current * 0.15,
-      0.03
+    if (!architecture.current) return;
+    const progress = journey.current;
+    architecture.current.rotation.y = THREE.MathUtils.lerp(
+      architecture.current.rotation.y,
+      progress * 0.52 + (reducedMotion ? 0 : Math.sin(clock.elapsedTime * 0.15) * 0.045),
+      0.04
     );
-    cubeGroup.current.rotation.x = lerp(
-      cubeGroup.current.rotation.x,
-      0.15 + Math.sin(t * 0.06) * 0.01,
-      0.03
+    architecture.current.rotation.x = THREE.MathUtils.lerp(
+      architecture.current.rotation.x,
+      -0.1 + progress * 0.24,
+      0.04
     );
   });
 
   return (
     <>
-      <color attach="background" args={["#060608"]} />
-      <fog attach="fog" args={["#060608", 6, 22]} />
-
+      <color attach="background" args={["#030405"]} />
+      <fog attach="fog" args={["#030405", 7, 24]} />
       <CameraRig reducedMotion={reducedMotion} />
-
-      {/* Lighting — cinematic, physically believable */}
-      <ambientLight intensity={0.15} color="#b0b8c8" />
-      <directionalLight position={[4, 6, 3]} intensity={1.8} color="#e8e4df" castShadow />
-      <directionalLight position={[-3, 2, -2]} intensity={0.4} color="#8890a8" />
-      <pointLight position={[0, -2, 4]} intensity={0.3} color="#ffffff" distance={8} />
-
-      {/* Soft environment reflection */}
-      <hemisphereLight args={["#c0c8d4", "#1a1a2e", 0.25]} />
-
-      <group ref={cubeGroup}>
-        {/* Main cube body */}
-        <mesh castShadow receiveShadow>
-          <boxGeometry args={[3, 3, 3]} />
-          <CubeMaterial />
-        </mesh>
-
-        {/* Subtle bevel edges */}
-        <CubeSeams />
-
-        {/* Door panel */}
-        <DoorPanel />
-
-        {/* Cosmic interior — revealed when door opens */}
-        <group position={[0, 0, 0]}>
-          <StarField count={compact ? 350 : 600} />
-          <CosmicDust count={compact ? 150 : 300} />
-          <VortexRing />
-          <BlackHoleCenter />
-        </group>
+      <group ref={architecture}>
+        <MatrixPoints geometryData={cube} size={compact ? 2.7 : 3.1} intensity={0.78} phase={0.4} reducedMotion={reducedMotion} />
+        <InternalMatrix positions={inner} reducedMotion={reducedMotion} />
+        <PacketLines positions={packets} reducedMotion={reducedMotion} />
+        <EdgeCube size={compact ? 4.9 : 6.2} index={0} />
+        <EdgeCube size={compact ? 3.4 : 4.5} index={1} />
+        <EdgeCube size={compact ? 2.1 : 2.7} index={2} />
+        {[0, 1, 2].map((axis) =>
+          [-1, 1].map((sign) => (
+            <CubeFace key={`${axis}-${sign}`} axis={axis} sign={sign} compact={compact} />
+          ))
+        )}
       </group>
-
-      {/* Ground shadow plane */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -1.8, 0]} receiveShadow>
-        <planeGeometry args={[20, 20]} />
-        <shadowMaterial transparent opacity={0.15} />
-      </mesh>
     </>
   );
 };
 
-/* ═══════════════════════════════════════════════════════════════
-   FRAMER MOTION VARIANTS
-   ═══════════════════════════════════════════════════════════════ */
-const easeReveal = {
-  hidden: { opacity: 0, y: 28, filter: "blur(12px)" },
-  visible: {
-    opacity: 1, y: 0, filter: "blur(0px)",
-    transition: { duration: 1.0, ease: [0.16, 1, 0.3, 1] },
-  },
+const createMetricState = () => ({
+  ping: 14,
+  nodes: 143,
+  sync: 98.6,
+  packets: 742,
+  throughput: 42.8,
+  signal: 96,
+});
+
+const LiveMetric = ({ label, value, suffix = "", icon: Icon }) => (
+  <div className="live-metric">
+    <span className="metric-label">{Icon && <Icon size={13} />} {label}</span>
+    <motion.span
+      className="metric-value"
+      key={`${label}-${value}`}
+      initial={{ opacity: 0.45, y: 4 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}
+    >
+      {value}{suffix}
+    </motion.span>
+  </div>
+);
+
+const MetricDeck = ({ metrics, variant }) => {
+  const rows =
+    variant === "sync"
+      ? [
+          { label: "PING", value: metrics.ping, suffix: "ms", icon: Signal },
+          { label: "NODES", value: metrics.nodes, icon: Network },
+          { label: "SYNC", value: metrics.sync.toFixed(1), suffix: "%", icon: Activity },
+        ]
+      : [
+          { label: "PACKETS", value: metrics.packets, icon: ScanSearch },
+          { label: "LINK", value: metrics.signal.toFixed(0), suffix: "%", icon: ShieldCheck },
+          { label: "FLOW", value: metrics.throughput.toFixed(1), suffix: "mb/s", icon: RadioReceiver },
+        ];
+
+  return (
+    <div className="live-metric-grid">
+      {rows.map((row) => (
+        <LiveMetric key={row.label} {...row} />
+      ))}
+    </div>
+  );
 };
 
-/* ═══════════════════════════════════════════════════════════════
-   LOGIN COMPONENT
-   ═══════════════════════════════════════════════════════════════ */
 const Login = ({ onLogin }) => {
   const [username, setUsername] = useState("");
-  const [notice, setNotice] = useState("ENTER A 5 LETTER CALLSIGN");
+  const [notice, setNotice] = useState("ENTER A 5 LETTER NODE ID");
   const [activeSection, setActiveSection] = useState(0);
   const [compact, setCompact] = useState(() => typeof window !== "undefined" && window.innerWidth <= 760);
   const [reducedMotion, setReducedMotion] = useState(
     () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches
   );
+  const [metrics, setMetrics] = useState(createMetricState);
   const noticeTimer = useRef(null);
   const isValid = /^[A-Z]{5}$/.test(username);
 
   useEffect(() => {
     const media = window.matchMedia("(max-width: 760px)");
     const motionMedia = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const sync = () => {
+    const syncMedia = () => {
       setCompact(media.matches);
       setReducedMotion(motionMedia.matches);
     };
-    sync();
-    media.addEventListener("change", sync);
-    motionMedia.addEventListener("change", sync);
+
+    syncMedia();
+    media.addEventListener("change", syncMedia);
+    motionMedia.addEventListener("change", syncMedia);
+
     return () => {
-      media.removeEventListener("change", sync);
-      motionMedia.removeEventListener("change", sync);
+      media.removeEventListener("change", syncMedia);
+      motionMedia.removeEventListener("change", syncMedia);
     };
   }, []);
 
-  /* Scroll system */
+  useEffect(() => {
+    const updateMetrics = () => {
+      setMetrics((current) => {
+        const spike = Math.random() > 0.88;
+        return {
+          ping: Math.max(8, Math.round(current.ping + (Math.random() - 0.45) * 5 + (spike ? 9 : 0))),
+          nodes: Math.max(118, Math.round(current.nodes + (Math.random() - 0.47) * 5)),
+          sync: Math.min(99.8, Math.max(96.4, current.sync + (Math.random() - 0.48) * 0.55)),
+          packets: Math.max(640, Math.round(current.packets + (Math.random() - 0.42) * 42)),
+          throughput: Math.min(62, Math.max(28, current.throughput + (Math.random() - 0.48) * 2.4)),
+          signal: Math.min(99, Math.max(88, current.signal + (Math.random() - 0.5) * 2.1)),
+        };
+      });
+    };
+
+    const interval = window.setInterval(updateMetrics, 920);
+    return () => window.clearInterval(interval);
+  }, []);
+
   useEffect(() => {
     let frame = 0;
     let lenis;
 
     const updateProgress = ({ scroll, limit, velocity, progress } = {}) => {
       const available = Math.max(1, limit ?? document.documentElement.scrollHeight - window.innerHeight);
-      const raw = typeof progress === "number" ? progress : (scroll ?? window.scrollY) / available;
-      journey.target = clamp01(raw);
+      const rawProgress = typeof progress === "number" ? progress : (scroll ?? window.scrollY) / available;
+      journey.target = clamp01(rawProgress);
       journey.velocity = velocity ?? journey.velocity;
       const section = Math.min(3, Math.floor(journey.target * 4.05));
-      setActiveSection((c) => (c === section ? c : section));
+      setActiveSection((current) => (current === section ? current : section));
     };
 
-    const updatePointer = (e) => {
-      journey.pointerX = (e.clientX / window.innerWidth) * 2 - 1;
-      journey.pointerY = -((e.clientY / window.innerHeight) * 2 - 1);
+    const updatePointer = (event) => {
+      journey.pointerX = (event.clientX / window.innerWidth) * 2 - 1;
+      journey.pointerY = -((event.clientY / window.innerHeight) * 2 - 1);
     };
-    const resetPointer = () => { journey.pointerX = 0; journey.pointerY = 0; };
+
+    const resetPointer = () => {
+      journey.pointerX = 0;
+      journey.pointerY = 0;
+    };
 
     if (!reducedMotion) {
       lenis = new Lenis({
-        duration: 1.6,
+        duration: 1.55,
         easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
         smoothWheel: true,
-        wheelMultiplier: 0.7,
-        touchMultiplier: 1.05,
+        wheelMultiplier: 0.74,
+        touchMultiplier: 1.08,
         syncTouch: true,
       });
       lenis.on("scroll", updateProgress);
-      const raf = (time) => { lenis.raf(time); frame = window.requestAnimationFrame(raf); };
+
+      const raf = (time) => {
+        lenis.raf(time);
+        frame = window.requestAnimationFrame(raf);
+      };
       frame = window.requestAnimationFrame(raf);
       document.documentElement.classList.add("orbit-lenis-active");
     } else {
@@ -531,7 +570,9 @@ const Login = ({ onLogin }) => {
       window.removeEventListener("pointermove", updatePointer);
       window.removeEventListener("pointerleave", resetPointer);
       document.documentElement.classList.remove("orbit-lenis-active");
-      journey.target = 0; journey.current = 0; journey.velocity = 0;
+      journey.target = 0;
+      journey.current = 0;
+      journey.velocity = 0;
     };
   }, [reducedMotion]);
 
@@ -545,105 +586,100 @@ const Login = ({ onLogin }) => {
     window.clearTimeout(noticeTimer.current);
 
     if (raw !== letters) {
-      setNotice("LETTERS ONLY");
+      setNotice("LETTERS ONLY - SIGNAL REJECTED");
     } else if (letters.length > 5) {
-      setNotice("5 CHARACTERS MAXIMUM");
+      setNotice("NODE ID LIMITED TO 5 LETTERS");
     } else if (next.length === 5) {
-      setNotice("IDENTITY VERIFIED");
+      setNotice("IDENTITY VERIFIED - LINK READY");
     } else {
-      setNotice(`${5 - next.length} MORE LETTER${next.length === 4 ? "" : "S"} NEEDED`);
+      setNotice(`AWAITING ${5 - next.length} MORE LETTER${next.length === 4 ? "" : "S"}`);
     }
 
     if (raw !== letters) {
       noticeTimer.current = window.setTimeout(() => {
-        setNotice(next.length === 5 ? "IDENTITY VERIFIED" : "ENTER A 5 LETTER CALLSIGN");
-      }, 1200);
+        setNotice(next.length === 5 ? "IDENTITY VERIFIED - LINK READY" : "ENTER A 5 LETTER NODE ID");
+      }, 1300);
     }
   };
 
   const handleSubmit = (event) => {
     event.preventDefault();
-    if (!isValid) { setNotice("EXACTLY 5 LETTERS REQUIRED"); return; }
+    if (!isValid) {
+      setNotice("EXACTLY 5 LETTERS REQUIRED");
+      return;
+    }
     onLogin(username, "Global");
   };
 
   return (
     <main className="orbit-entry">
-      {/* 3D Canvas */}
-      <div className="orbit-canvas-wrap" aria-hidden="true">
+      <div className="network-canvas" aria-hidden="true">
         <Canvas
-          camera={{ position: [0, 1.5, 7.5], fov: 38 }}
-          dpr={compact ? [1, 1.2] : [1, 1.6]}
-          shadows
-          gl={{
-            antialias: !compact,
-            alpha: false,
-            powerPreference: "high-performance",
-            toneMapping: THREE.ACESFilmicToneMapping,
-            toneMappingExposure: 1.1,
-          }}
+          camera={{ position: [0, 0, 11.8], fov: 42 }}
+          dpr={compact ? [1, 1.18] : [1, 1.65]}
+          gl={{ antialias: !compact, alpha: false, powerPreference: "high-performance" }}
         >
-          <CubeScene compact={compact} reducedMotion={reducedMotion} />
+          <CubeNetworkScene compact={compact} reducedMotion={reducedMotion} />
         </Canvas>
       </div>
 
-      {/* Atmospheric overlays */}
-      <div className="orbit-vignette" aria-hidden="true" />
+      <div className="network-vignette" aria-hidden="true" />
+      <div className="entry-status-strip" aria-hidden="true">
+        <span>ORBIT ENGINE</span>
+        <span>{metrics.ping}MS</span>
+        <span>{metrics.nodes} NODES</span>
+      </div>
 
-      {/* Progress rail */}
-      <nav className="orbit-rail" aria-label="Scroll progress">
-        {["I", "II", "III", "IV"].map((label, i) => (
-          <span key={label} className={activeSection === i ? "active" : ""}>
-            <i />{label}
+      <nav className="chapter-rail" aria-label="Network initialization stages">
+        {["INIT", "SYNC", "VERIFY", "LINK"].map((label, index) => (
+          <span key={label} className={activeSection === index ? "current" : ""}>
+            <i />
+            {label}
           </span>
         ))}
       </nav>
 
-      {/* Scroll sections */}
-      <div className="orbit-sections">
-        {/* Section 1: Discovery */}
-        <section className="orbit-section">
-          <motion.div className="orbit-hero" initial="hidden" whileInView="visible" viewport={{ amount: 0.4 }} variants={easeReveal}>
-            <div className="orbit-badge">ORBIT</div>
-            <h1>Discover<br /><strong>The Unknown.</strong></h1>
-            <p>A mysterious object. An impossible interior. An entry point into spatial awareness.</p>
-            <div className="orbit-scroll-hint">
-              <span />
-              SCROLL TO EXPLORE
-            </div>
+      <div className="entry-sections">
+        <section className="entry-panel entry-intro">
+          <motion.div className="entry-copy centered" initial="hidden" whileInView="visible" viewport={{ amount: 0.45 }} variants={easeReveal}>
+            <div className="entry-kicker"><Aperture size={13} /> ORBIT / SPATIAL ENGINE</div>
+            <h1>Enter<br /><strong>The Field.</strong></h1>
+            <p>A realtime presence layer opening inside a monochrome network cube.</p>
+            <div className="entry-scroll-prompt"><span /> CORE OPENING</div>
           </motion.div>
         </section>
 
-        {/* Section 2: Opening */}
-        <section className="orbit-section">
-          <motion.div className="orbit-card orbit-card--right" initial="hidden" whileInView="visible" viewport={{ amount: 0.35 }} variants={easeReveal}>
-            <div className="orbit-card-num">01</div>
-            <h2>The seams appear.<br />Something unlocks.</h2>
-            <p>Precision-engineered panels begin to separate, revealing darkness within the monolith.</p>
-          </motion.div>
+        <section className="entry-panel entry-sync">
+          <motion.article className="network-card right" initial="hidden" whileInView="visible" viewport={{ amount: 0.38 }} variants={easeReveal}>
+            <Network size={22} />
+            <div className="card-index">01 / LIVE MAP AWARENESS</div>
+            <h2>Presence resolves into shared spatial truth.</h2>
+            <p>Orbit synchronizes movement, proximity and room activity into one operational field.</p>
+            <MetricDeck metrics={metrics} variant="sync" />
+          </motion.article>
         </section>
 
-        {/* Section 3: Revelation */}
-        <section className="orbit-section">
-          <motion.div className="orbit-card orbit-card--left" initial="hidden" whileInView="visible" viewport={{ amount: 0.35 }} variants={easeReveal}>
-            <div className="orbit-card-num">02</div>
-            <h2>An entire universe<br />inside a cube.</h2>
-            <p>Stars spiral inward. Space bends. The interior is infinitely larger than the object itself.</p>
-          </motion.div>
+        <section className="entry-panel entry-verify">
+          <motion.article className="network-card left" initial="hidden" whileInView="visible" viewport={{ amount: 0.38 }} variants={easeReveal}>
+            <Fingerprint size={22} />
+            <div className="card-index">02 / IDENTITY NODE</div>
+            <h2>A verified signal becomes a presence node.</h2>
+            <p>A concise identity key binds chat, location and awareness into the Orbit network.</p>
+            <MetricDeck metrics={metrics} variant="identity" />
+          </motion.article>
         </section>
 
-        {/* Section 4: Login */}
-        <section className="orbit-section orbit-section--login">
-          <motion.div className="orbit-terminal" initial="hidden" whileInView="visible" viewport={{ amount: 0.3 }} variants={easeReveal}>
-            <div className="orbit-terminal-badge">ENTER THE SYSTEM</div>
+        <section className="entry-panel entry-access">
+          <motion.div className="access-terminal" initial="hidden" whileInView="visible" viewport={{ amount: 0.32 }} variants={easeReveal}>
+            <div className="terminal-kicker"><RadioReceiver size={14} /> NETWORK ACCESS READY</div>
             <h2>Initialize</h2>
-            <p className="orbit-terminal-desc">Choose a five-letter identity to enter Orbit.</p>
-
-            <form className={`orbit-form ${isValid ? "ready" : ""}`} onSubmit={handleSubmit} noValidate>
-              <label htmlFor="orbit-callsign">CALLSIGN</label>
-              <div className="orbit-input-wrap">
+            <p className="terminal-copy">Activate one Orbit node with a five-letter identity.</p>
+            <form className={`identity-form ${isValid ? "ready" : ""}`} onSubmit={handleSubmit} noValidate>
+              <label htmlFor="orbit-identity">IDENTITY SIGNATURE</label>
+              <div className="identity-field">
+                <span>[</span>
                 <input
-                  id="orbit-callsign"
+                  id="orbit-identity"
                   type="text"
                   value={username}
                   onChange={handleInput}
@@ -652,18 +688,21 @@ const Login = ({ onLogin }) => {
                   autoCapitalize="characters"
                   autoComplete="off"
                   spellCheck="false"
-                  aria-describedby="orbit-feedback"
+                  aria-describedby="identity-feedback"
                   aria-invalid={!isValid && username.length > 0}
                 />
+                <span>]</span>
               </div>
-              <div id="orbit-feedback" className="orbit-feedback" aria-live="polite">
+              <div id="identity-feedback" className="identity-feedback" aria-live="polite">
                 <span className={isValid ? "verified" : ""} />
                 {notice}
               </div>
               <button type="submit" disabled={!isValid}>
+                <Fingerprint size={15} />
                 OPEN ORBIT
               </button>
             </form>
+            <div className="terminal-footer">PRESENCE / MAP / CHAT / LIVE FIELD</div>
           </motion.div>
         </section>
       </div>
