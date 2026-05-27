@@ -2539,6 +2539,8 @@ body::before {
   background: linear-gradient(180deg, rgba(255,255,255,0.88), rgba(234,238,244,0.82));
   color: rgba(17,24,39,0.84);
   border-color: rgba(15,23,42,0.14);
+  width: 76px;
+  height: 42px;
 }
 
 .profile-theme-icon {
@@ -2568,6 +2570,7 @@ body::before {
 .profile-theme-switch.light .profile-theme-thumb {
   transform: translateX(44px);
   background: #111827;
+  transform: translateX(32px);
 }
 
 .compass-fullscreen {
@@ -2684,7 +2687,7 @@ body::before {
 
 
 /* ═══════════════════════════════════════════════════════════════
-   💎 PREMIUM PROFILE MODAL — Unified glass design language
+    PREMIUM PROFILE MODAL — Unified glass design language
    ═══════════════════════════════════════════════════════════════ */
 
 /* Glass panel base */
@@ -2950,29 +2953,38 @@ body::before {
 }
 
 /* ── Toggle rows ── */
-.pm-toggle-row, .pm-theme-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 24px;
-  transition: background 150ms ease;
+.pm-toggle-row,
+.pm-theme-row {
+  display:flex;
+  align-items:center;
+
+  justify-content:flex-start;
+  gap:12px;
+
+  padding:12px 24px;
 }
+
 
 .pm-toggle-row:hover { background: rgba(255,255,255,0.025); }
 
 .pm-toggle-info {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  padding-left: 6px;
+ flex:1;
+min-width:0;
 }
 
 .pm-toggle-label {
+  text-align: left;
   font-size: 13px;
   font-weight: 600;
   color: rgba(226,232,240,0.92);
 }
 
 .pm-toggle-desc {
+  text-align: left;
   font-size: 11px;
   color: rgba(148,163,184,0.55);
   letter-spacing: 0.2px;
@@ -2981,6 +2993,7 @@ body::before {
 /* ── Premium toggle switch (matches theme switch quality) ── */
 .pm-toggle-switch {
   position: relative;
+  margin-left:auto;
   width: 44px;
   height: 24px;
   border-radius: 12px;
@@ -2989,6 +3002,8 @@ body::before {
   cursor: pointer;
   transition: background 240ms ease, border-color 240ms ease, box-shadow 240ms ease;
   flex-shrink: 0;
+  transform:translateX(-6px);
+
 }
 
 .pm-toggle-switch--on {
@@ -3048,7 +3063,7 @@ body::before {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 24px;
+  padding: 12px 50px;
 }
 
 /* Profile modal width fix */
@@ -3060,4 +3075,28 @@ body::before {
 
 @media (max-width: 420px) {
   .profile-modal { width: 92vw; }
+}
+
+
+.pm-bottom-row{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:22px;
+
+  margin-top:24px;
+}
+
+.pm-theme-row{
+  display:flex;
+  align-items:center;
+  margin:0;
+  transform:translateX(-26px);
+}
+
+.pm-view-row{
+  display:flex;
+  align-items:center;
+  margin:0;
+  transform:translateX(3px);
 }

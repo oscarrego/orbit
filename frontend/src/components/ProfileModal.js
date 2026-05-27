@@ -169,13 +169,11 @@ const ProfileModal = ({
             <span className="pm-toggle-thumb"/>
           </button>
         </div>
-
+<div className="pm-bottom-row">
         {/* ── Interface Theme toggle ── */}
+        
         <div className="pm-theme-row">
-          <div className="pm-toggle-info">
-            <span className="pm-toggle-label">Interface Theme</span>
-            <span className="pm-toggle-desc">{isLightMode ? "Light Mode" : "Dark Mode"}</span>
-          </div>
+         
           <button
             type="button"
             className={`profile-theme-switch ${isLightMode ? "light" : "dark"}`}
@@ -199,10 +197,7 @@ const ProfileModal = ({
         </div>
 
         <div className="pm-view-row">
-          <div className="pm-toggle-info">
-            <span className="pm-toggle-label">Building Depth</span>
-            <span className="pm-toggle-desc">Extrusion rendering only</span>
-          </div>
+         
           <div className="pm-segmented-toggle" role="group" aria-label="Building rendering mode">
             <button
               type="button"
@@ -229,6 +224,7 @@ const ProfileModal = ({
           </div>
         </div>
       </div>
+    </div>
     </div>
   );
 };
