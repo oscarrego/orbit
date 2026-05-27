@@ -1,5 +1,9 @@
 html.orbit-lenis-active,
 html.orbit-lenis-active body {
+    user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
   height: auto;
 }
 
@@ -14,7 +18,7 @@ html.orbit-lenis-active body {
   --entry-line: rgba(242, 246, 250, 0.14);
   --entry-glass: rgba(8, 10, 13, 0.48);
   position: relative;
-  min-height: 420svh;
+  min-height: auto;
   width: 100%;
   overflow: clip;
   color: var(--entry-text);
@@ -82,7 +86,7 @@ html.orbit-lenis-active body {
 }
 
 .entry-panel {
-  min-height: 100svh;
+  min-height: 85svh;
   width: 100%;
   display: flex;
   align-items: center;
@@ -231,57 +235,90 @@ html.orbit-lenis-active body {
 
 .network-card {
   position: relative;
-  width: min(454px, calc(100% - 90px));
-  padding: 38px;
-  border: 1px solid var(--entry-line);
-  border-radius: 8px;
-  background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.07), transparent 34%),
-    var(--entry-glass);
-  backdrop-filter: blur(30px) saturate(1.12);
+
+  width: 520px;
+
+  min-height: 490px;
+
+  background: rgba(0,0,0,0.45);
+
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+
+  border: 1px solid rgba(255,255,255,0.08);
+
+  overflow: hidden;
+
   box-shadow:
-    0 38px 90px rgba(0, 0, 0, 0.46),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    0 40px 80px rgba(0,0,0,0.55);
+
+  padding: 56px 46px;
 }
 
-.network-card::before,
-.access-terminal::before {
+.network-card::before {
   content: "";
+
   position: absolute;
-  inset: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.065);
-  border-radius: 4px;
+  inset: 0;
+
+  background:
+    radial-gradient(
+      circle at top,
+      rgba(255,255,255,0.03),
+      transparent 70%
+    );
+
   pointer-events: none;
 }
 
 .network-card > svg {
-  margin-bottom: 31px;
-  color: rgba(242, 246, 250, 0.9);
-  filter: drop-shadow(0 0 15px rgba(255, 255, 255, 0.22));
+  margin-bottom: 28px;
+
+  color: rgba(255,255,255,0.82);
+
+  filter: none;
 }
 
 .card-index {
-  margin-bottom: 17px;
-  color: rgba(195, 205, 217, 0.46);
+  margin-bottom: 18px;
+
+  color: rgba(255,255,255,0.34);
+
   font-size: 10px;
-  letter-spacing: 0;
-  font-weight: 700;
+
+  font-weight: 600;
+
+  letter-spacing: 3px;
+
+  text-transform: uppercase;
 }
 
 .network-card h2 {
   margin: 0;
-  max-width: 390px;
-  font-size: 38px;
-  line-height: 1.12;
-  letter-spacing: 0;
-  font-weight: 430;
+
+  max-width: 100%;
+
+  font-size: 42px;
+
+  line-height: 1.05;
+
+  font-weight: 400;
+
+  letter-spacing: -0.04em;
+
+  color: rgba(255,255,255,0.96);
 }
 
 .network-card p {
-  margin: 22px 0 30px;
-  color: var(--entry-muted);
+  margin: 24px 0 42px;
+
+  color: rgba(255,255,255,0.46);
+
   font-size: 14px;
-  line-height: 1.72;
+
+  line-height: 1.7;
+
+  font-weight: 400;
 }
 
 .live-metric-grid {
@@ -292,10 +329,14 @@ html.orbit-lenis-active body {
 
 .live-metric {
   min-width: 0;
-  padding: 12px 10px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.035);
+
+  padding: 16px 14px;
+
+  border: 1px solid rgba(255,255,255,0.08);
+
+  background: rgba(255,255,255,0.02);
+
+  backdrop-filter: blur(10px);
 }
 
 .metric-label {
@@ -653,4 +694,238 @@ html.orbit-lenis-active body {
   .entry-scroll-prompt span::after {
     animation-duration: 6s;
   }
+}
+
+
+.orbit-login-replica {
+  width: 100%;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  position: relative;
+}
+
+.orbit-title {
+  position: relative;
+  z-index: 5;
+
+  margin-bottom: 25px;
+
+  line-height: 0.82;
+
+  text-transform: uppercase;
+}
+
+.orbit-title span {
+  display: inline-block;
+
+  font-size: clamp(90px, 12vw, 140px);
+  margin-right: 40px;
+  font-weight: 260;
+
+  letter-spacing: -0.08em;
+
+  color: rgba(255,255,255,0.96);
+}
+
+.orbit-title strong {
+  display: inline-block;
+
+  font-size: clamp(90px, 12vw, 140px);
+
+  font-weight: 700;
+
+  letter-spacing: -0.08em;
+
+  color: white;
+}
+
+.orbit-card {
+  width: 680px;
+  height: 490px;
+  background: rgba(0,0,0,0.45);
+
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+
+  border: 1px solid rgba(255,255,255,0.08);
+
+  position: relative;
+
+  overflow: hidden;
+}
+
+.orbit-card::before {
+  content: "";
+
+  position: absolute;
+  inset: 0;
+
+  background:
+    radial-gradient(
+      circle at top,
+      rgba(255,255,255,0.03),
+      transparent 70%
+    );
+
+  pointer-events: none;
+}
+
+.orbit-card-inner {
+  padding: 72px 56px;
+}
+
+.orbit-sync-icon {
+  display: flex;
+  justify-content: center;
+
+  color: rgba(255,255,255,0.82);
+
+  margin-bottom: 26px;
+}
+
+.orbit-sync-text {
+  text-align: center;
+
+  margin-bottom: 54px;
+
+  font-size: 10px;
+
+  letter-spacing: 6px;
+
+  text-transform: uppercase;
+
+  color: rgba(255,255,255,0.42);
+}
+
+.orbit-form {
+  width: 100%;
+}
+
+.orbit-input-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: 24px;
+
+  margin-bottom: 24px;
+}
+
+.orbit-input-wrap span {
+  font-size: 42px;
+
+  font-weight: 200;
+
+  color: rgba(255,255,255,0.22);
+}
+
+.orbit-input-wrap input {
+  width: 320px;
+
+  background: transparent;
+
+  border: none;
+  outline: none;
+
+  text-align: center;
+
+  font-size: 42px;
+
+  font-weight: 300;
+
+  letter-spacing: 14px;
+
+  text-transform: uppercase;
+
+  color: rgba(255,255,255,0.12);
+
+  caret-color: white;
+}
+
+.orbit-input-wrap input:focus {
+  color: rgba(255,255,255,0.92);
+}
+
+.orbit-input-wrap input::placeholder {
+  color: rgba(76, 76, 76, 0.307);
+
+  font-size: 30px;
+
+  letter-spacing: 6px;
+
+  font-weight: 500;
+}
+
+.orbit-status {
+  text-align: center;
+
+  margin-bottom: 42px;
+
+  font-size: 9px;
+
+  letter-spacing: 3px;
+
+  text-transform: uppercase;
+
+  color: rgba(255,255,255,0.32);
+}
+
+.orbit-form button {
+  width: 100%;
+
+  height: 68px;
+
+  background: transparent;
+
+  border: 1px solid rgba(255,255,255,0.1);
+
+  color: rgba(255,255,255,0.4);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+
+  font-size: 11px;
+
+  font-weight: 600;
+
+  letter-spacing: 4px;
+
+  text-transform: uppercase;
+
+  transition: all 0.35s ease;
+}
+
+.orbit-form.ready button {
+  background: white;
+
+  color: black;
+
+  border-color: white;
+}
+
+.orbit-form.ready button:hover {
+  transform: translateY(-2px);
+
+  box-shadow:
+    0 20px 40px rgba(255,255,255,0.12);
+}
+
+.orbit-footer {
+  margin-top: 34px;
+
+  text-align: center;
+
+  font-size: 9px;
+
+  letter-spacing: 2px;
+
+  text-transform: uppercase;
+
+  color: rgba(255,255,255,0.28);
 }

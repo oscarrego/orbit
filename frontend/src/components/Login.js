@@ -631,7 +631,7 @@ const Login = ({ onLogin }) => {
       </div>
 
       <nav className="chapter-rail" aria-label="Network initialization stages">
-        {["INIT", "SYNC", "VERIFY", "LINK"].map((label, index) => (
+        {["INIT", "SYNC", "LIVE", "CONNECT"].map((label, index) => (
           <span key={label} className={activeSection === index ? "current" : ""}>
             <i />
             {label}
@@ -669,42 +669,75 @@ const Login = ({ onLogin }) => {
           </motion.article>
         </section>
 
-        <section className="entry-panel entry-access">
-          <motion.div className="access-terminal" initial="hidden" whileInView="visible" viewport={{ amount: 0.32 }} variants={easeReveal}>
-            <div className="terminal-kicker"><RadioReceiver size={14} /> NETWORK ACCESS READY</div>
-            <h2>Initialize</h2>
-            <p className="terminal-copy">Activate one Orbit node with a five-letter identity.</p>
-            <form className={`identity-form ${isValid ? "ready" : ""}`} onSubmit={handleSubmit} noValidate>
-              <label htmlFor="orbit-identity">IDENTITY SIGNATURE</label>
-              <div className="identity-field">
-                <span>[</span>
-                <input
-                  id="orbit-identity"
-                  type="text"
-                  value={username}
-                  onChange={handleInput}
-                  maxLength={5}
-                  placeholder="ALPHA"
-                  autoCapitalize="characters"
-                  autoComplete="off"
-                  spellCheck="false"
-                  aria-describedby="identity-feedback"
-                  aria-invalid={!isValid && username.length > 0}
-                />
-                <span>]</span>
-              </div>
-              <div id="identity-feedback" className="identity-feedback" aria-live="polite">
-                <span className={isValid ? "verified" : ""} />
-                {notice}
-              </div>
-              <button type="submit" disabled={!isValid}>
-                <Fingerprint size={15} />
-                CONNECT TO NETWORK
-              </button>
-            </form>
-            <div className="terminal-footer">PRESENCE / MAP / CHAT / LIVE FIELD</div>
-          </motion.div>
-        </section>
+       <section className="entry-panel entry-access">
+
+  <div className="orbit-login-replica">
+
+    <div className="orbit-title">
+      <span>ENTER</span>
+      <strong>ORBIT</strong>
+    </div>
+
+    <div className="orbit-card">
+
+      <div className="orbit-card-inner">
+
+        <div className="orbit-sync-icon">
+          <RadioReceiver size={15} />
+        </div>
+
+        <div className="orbit-sync-text">
+          IDENTITY SYNCHRONIZATION
+        </div>
+
+        <form
+          className={`orbit-form ${isValid ? "ready" : ""}`}
+          onSubmit={handleSubmit}
+          noValidate
+        >
+
+          <div className="orbit-input-wrap">
+
+            <span>[</span>
+
+            <input
+              id="orbit-identity"
+              type="text"
+              value={username}
+              onChange={handleInput}
+              maxLength={5}
+              placeholder="USERNAME"
+              autoCapitalize="characters"
+              autoComplete="off"
+              spellCheck="false"
+            />
+
+            <span>]</span>
+
+          </div>
+
+          <div className="orbit-status">
+            AWAITING IDENTIFICATION . . . {username.length}/5
+          </div>
+
+          <button type="submit" disabled={!isValid}>
+            <Fingerprint size={14} />
+            CONNECT TO NETWORK
+          </button>
+
+        </form>
+
+        <div className="orbit-footer">
+          DEVELOPED BY OSCAR
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</section>
       </div>
     </main>
   );
