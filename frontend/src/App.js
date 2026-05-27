@@ -12,6 +12,7 @@ import "./styles/orbit-ui.css";
 import "./styles/dark-theme.css";
 import "./styles/light-theme.css";
 import "./styles/mobile.css";
+import { Check, CheckCheck } from "lucide-react";
 
 // Helpers for persistent identity
 const getPersistentUser = () => {
@@ -857,8 +858,12 @@ function App() {
                     </span>
                     {msg.senderId === user.userId && (
                       <span className="seen-status">
-                        {(msg.seenBy || []).length > 1 ? "SEEN" : "SENT"}
-                      </span>
+  {(msg.seenBy || []).length > 1 ? (
+    <CheckCheck size={14} className="msg-seen-icon" />
+  ) : (
+    <Check size={14} className="msg-seen-icon" />
+  )}
+</span>
                     )}
                   </div>
                 </div>
