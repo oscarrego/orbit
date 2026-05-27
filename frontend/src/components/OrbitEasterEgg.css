@@ -1,71 +1,78 @@
 .orbit-egg-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: rgba(0, 0, 0, 0.85);
-  backdrop-filter: blur(25px);
-  -webkit-backdrop-filter: blur(25px);
+  inset: 0;
   z-index: 100000;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
-  transition: opacity 0.5s ease;
-  animation: eggFadeIn 0.5s forwards;
-  pointer-events: none;
+  display: grid;
+  place-items: center;
   overflow: hidden;
+  pointer-events: none;
+  opacity: 0;
+  background:
+    radial-gradient(circle at 50% 46%, rgba(255, 255, 255, 0.06), transparent 31%),
+    radial-gradient(circle at 50% 52%, rgba(0, 0, 0, 0.38), rgba(0, 0, 0, 0.74) 68%, rgba(0, 0, 0, 0.9));
+  -webkit-backdrop-filter: blur(24px) saturate(0.74);
+  backdrop-filter: blur(24px) saturate(0.74);
+  animation: orbitEggIn 520ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .orbit-egg-overlay.exit {
-  opacity: 0;
+  animation: orbitEggOut 660ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-.vignette {
+.orbit-egg-frost {
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle, transparent 40%, rgba(0,0,0,0.8) 100%);
-  z-index: 1;
-  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), transparent 35%, rgba(0, 0, 0, 0.34)),
+    radial-gradient(ellipse 90% 70% at 50% 50%, transparent 0%, rgba(0, 0, 0, 0.5) 100%);
+  mix-blend-mode: screen;
+  opacity: 0.58;
 }
 
 .orbit-canvas {
   position: absolute;
-  top: 0;
-  left: 0;
+  inset: 0;
   width: 100%;
   height: 100%;
-  z-index: 2;
+  image-rendering: pixelated;
 }
 
-.orbit-egg-text {
-  position: relative;
-  top: 150px;
-  z-index: 3;
-  font-family: 'SF Pro Display', sans-serif;
-  color: #fff;
-  font-size: 20px;
-  font-weight: 800;
-  letter-spacing: 6px;
-  text-transform: uppercase;
-  text-shadow: 0 0 20px rgba(255, 204, 0, 0.6);
-  opacity: 0;
-  transform: translateY(30px);
-  transition: all 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+@keyframes orbitEggIn {
+  from {
+    opacity: 0;
+    transform: scale(1.012);
+    filter: blur(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+    filter: blur(0);
+  }
 }
 
-.orbit-egg-text.visible {
-  opacity: 1;
-  transform: translateY(0);
+@keyframes orbitEggOut {
+  from {
+    opacity: 1;
+    transform: scale(1);
+    filter: blur(0);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.992);
+    filter: blur(10px);
+  }
 }
 
-.orbit-egg-text.exit {
-  opacity: 0;
-  transform: scale(0.9);
+@media (max-width: 768px) {
+  .orbit-egg-overlay {
+    -webkit-backdrop-filter: blur(22px) saturate(0.78);
+    backdrop-filter: blur(22px) saturate(0.78);
+  }
 }
 
-@keyframes eggFadeIn {
-  to { opacity: 1; }
+@media (prefers-reduced-motion: reduce) {
+  .orbit-egg-overlay,
+  .orbit-egg-overlay.exit {
+    animation-duration: 180ms;
+  }
 }

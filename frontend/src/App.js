@@ -13,7 +13,7 @@ import "./styles/dark-theme.css";
 import "./styles/light-theme.css";
 import "./styles/mobile.css";
 
-// 🛠️ Helpers for persistent identity
+// Helpers for persistent identity
 const getPersistentUser = () => {
   const storedName = localStorage.getItem("username");
   const savedName = storedName && /^[A-Za-z]{5}$/.test(storedName.trim())
@@ -50,7 +50,7 @@ const CAMERA_MODES = {
 const DEFAULT_THEME_ID = "dark";
 const isValidIdentity = (value) => /^[A-Za-z]{5}$/.test(value.trim());
 
-// ── Premium 2D / 3D Toggle Icons ─────────────────────────────────────────────
+// Premium 2D / 3D toggle icons
 const CameraModeIcon = ({ mode }) => {
   if (mode === CAMERA_MODES.TOP) {
     return (
@@ -200,12 +200,12 @@ function App() {
   const [isInvisible, setIsInvisible] = useState(() => localStorage.getItem("invisibleMode") === "true");
   const { deviceHeading, requestDeviceHeading } = useDeviceHeading();
 
-  // 🔑 Join-room passcode modal state
+  // Join-room passcode modal state
   const [joinModal, setJoinModal] = useState(null);  // null | { roomName, loading, error }
   const joinModalRef = useRef(null); // keep latest modal state for socket callbacks
-  const pendingJoinRef = useRef(null); // { isPrivate: bool } — tracks the in-flight join_room emit
+  const pendingJoinRef = useRef(null); // { isPrivate: bool } tracks the in-flight join_room emit
 
-  // 💬 Chat State
+  // Chat State
   const [chatMessages, setChatMessages] = useState([]);
   const [msgInput, setMsgInput] = useState("");
   const [currentRoom, setCurrentRoom] = useState(localStorage.getItem("roomId") || "Global");
@@ -215,7 +215,7 @@ function App() {
   const currentRoomRef = useRef(currentRoom);
   const isRoomPrivateRef = useRef(isRoomPrivate);
 
-  // 🔑 Auth State
+  // Auth State
   const [user, setUser] = useState(getPersistentUser());
   const mapRef = useRef(null);
   const notifications = useNotifications(user);
@@ -233,7 +233,7 @@ function App() {
     localStorage.setItem("isRoomPrivate", String(privateRoom));
   }, []);
 
-  // 💾 Persist theme
+  // Persist theme
   useEffect(() => {
     localStorage.setItem("theme", theme);
   }, [theme]);
@@ -250,7 +250,7 @@ function App() {
     isRoomPrivateRef.current = isRoomPrivate;
   }, [isRoomPrivate]);
 
-  // 🔌 Socket Listeners
+  // Socket Listeners
   const requestPublicRoomJoin = useCallback((room) => {
     pendingJoinRef.current = { isPrivate: false };
     localStorage.setItem("roomId", room);
@@ -267,14 +267,14 @@ function App() {
       setUsers(Object.values(unique));
     });
 
-    // 👻 INVISIBLE MODE CONFIRMED
+    // INVISIBLE MODE CONFIRMED
     socket.on("invisible_confirmed", ({ invisible }) => {
       setIsInvisible(invisible);
       localStorage.setItem("invisibleMode", String(invisible));
     });
 
     socket.on("sos_alert", (data) => {
-      console.log("🚨 ALERT RECEIVED:", data);
+      console.log("ALERT RECEIVED:", data);
       setSosAlerts(prev => [...prev.filter(alert => String(alert.id) !== String(data.id)), data]);
 
       // Show clickable toast for other users' SOS
@@ -290,36 +290,36 @@ function App() {
     });
 
     socket.on("sos_cancel", (data) => {
-      console.log("🔥 CANCEL RECEIVED:", data);
+      console.log("CANCEL RECEIVED:", data);
       setSosAlerts(prev => prev.filter(alert => String(alert.id) !== String(data.id)));
     });
 
-    // 💬 LOAD OLD MESSAGES
+    // LOAD OLD MESSAGES
     socket.on("load_messages", (messages) => {
-      console.log("📜 LOADED MESSAGES:", messages);
+      console.log("LOADED MESSAGES:", messages);
       const now = Date.now() / 1000;
       setChatMessages((messages || []).filter((msg) => now - msg.timestamp < 86400));
     });
 
-    // 💬 RECEIVE NEW MESSAGE
+    // RECEIVE NEW MESSAGE
     socket.on("receive_message", (msg) => {
-      console.log("🔥 RECEIVED:", msg);
+      console.log("RECEIVED:", msg);
       setChatMessages((prev) => {
         if (msg._id && prev.some((item) => item._id === msg._id)) return prev;
         return [...prev, msg];
       });
     });
 
-    // 💬 MESSAGE UPDATED (SEEN STATUS)
+    // MESSAGE UPDATED (SEEN STATUS)
     socket.on("message_updated", (updatedMsg) => {
       setChatMessages((prev) =>
         prev.map((msg) => (msg._id === updatedMsg._id ? updatedMsg : msg))
       );
     });
 
-    // 🔒 ROOM ERROR (wrong passcode, private collision, etc.)
+    // ROOM ERROR (wrong passcode, private collision, etc.)
     socket.on("room_error", ({ message }) => {
-      console.warn("🔒 ROOM ERROR:", message);
+      console.warn("ROOM ERROR:", message);
 
       // If the passcode modal is open, surface the error inside it
       if (joinModalRef.current) {
@@ -335,9 +335,9 @@ function App() {
       showToast({ message, type: "error" });
     });
 
-    // ✅ ROOM JOINED CONFIRMATION (join flow only)
+    // ROOM JOINED CONFIRMATION (join flow only)
     socket.on("room_joined", ({ room, isPrivate }) => {
-      console.log("✅ Joined room:", room);
+      console.log("Joined room:", room);
 
       const pendingJoin = pendingJoinRef.current;
       const previousRoom = currentRoomRef.current;
@@ -359,39 +359,39 @@ function App() {
       }
     });
 
-    // 🔒 ROOM CREATED CONFIRMATION (create flow only)
+    // ROOM CREATED CONFIRMATION (create flow only)
     socket.on("room_created", ({ room }) => {
-      console.log("🔒 Room created:", room);
+      console.log("Room created:", room);
       persistRoomSelection(room, true);
       setChatMessages([]);
-      showToast({ message: `Room “${room}” created!`, type: "room" });
+      showToast({ message: `Room "${room}" created!`, type: "room" });
     });
 
-    // ❌ CREATE ROOM ERROR
+    // CREATE ROOM ERROR
     socket.on("create_room_error", ({ message }) => {
-      console.warn("❌ create_room_error:", message);
-      // Don't touch room state — just show the error
+      console.warn("create_room_error:", message);
+      // Don't touch room state; just show the error
       showToast({ message, type: "error" });
     });
 
-    // 🔍 CHECK ROOM RESULT  → decide whether to show passcode modal or error
+    // CHECK ROOM RESULT: decide whether to show passcode modal or error
     socket.on("check_room_result", ({ room, exists, isPrivate }) => {
-      console.log("🔍 check_room_result:", { room, exists, isPrivate });
+      console.log("check_room_result:", { room, exists, isPrivate });
 
       if (!exists) {
-        // Room is not in the database — reject, never join
-        console.warn(`❌ Room '${room}' does not exist in DB — blocking join`);
+        // Room is not in the database; reject, never join
+        console.warn(`Room '${room}' does not exist in DB; blocking join`);
         showToast({ message: "Room does not exist", type: "error" });
         return;
       }
 
       if (isPrivate) {
-        // Private room — open passcode modal
+        // Private room: open passcode modal
         setJoinModal({ roomName: room, loading: false, error: null });
         return;
       }
 
-      // Public room that exists in DB — join directly
+      // Public room that exists in DB: join directly
       requestPublicRoomJoin(room);
     });
 
@@ -421,12 +421,12 @@ function App() {
     joinModalRef.current = joinModal;
   }, [joinModal]);
 
-  // 📜 Auto-scroll chat
+  // Auto-scroll chat
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatMessages]);
 
-  // 🔥 MESSAGE TTL CLEANUP (Frontend)
+  // MESSAGE TTL CLEANUP (Frontend)
   useEffect(() => {
     const cleanupInterval = setInterval(() => {
       const now = Date.now() / 1000;
@@ -438,7 +438,7 @@ function App() {
     return () => clearInterval(cleanupInterval);
   }, []);
 
-  // 📍 Send live location
+  // Send live location
   useEffect(() => {
     if (!user.username) return;
 
@@ -469,7 +469,7 @@ function App() {
     return () => navigator.geolocation.clearWatch(watchId);
   }, [user.username, user.userId, user.avatarSeed]);
 
-  // 👻 Restore invisible state on reconnect
+  // Restore invisible state on reconnect
   useEffect(() => {
     const handleReconnect = () => {
       if (user.username) {
@@ -484,14 +484,14 @@ function App() {
     return () => socket.off("connect", handleReconnect);
   }, [user.username, user.userId]);
 
-  // 👻 Sync invisible state on initial load
+  // Sync invisible state on initial load
   useEffect(() => {
     if (user.username && isInvisible && user.userId) {
       socket.emit("set_invisible", { userId: user.userId, invisible: true });
     }
   }, [user.username]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // 🔑 Handle Login
+  // Handle Login
   const handleLogin = (username, roomId) => {
     const trimmed = username.trim().toUpperCase();
     if (!isValidIdentity(trimmed)) return;
@@ -518,7 +518,7 @@ function App() {
     socket.emit("join_room", { room: finalRoom });
   };
 
-  // 🚪 Handle Logout
+  // Handle Logout
   const handleLogout = async () => {
     await notifications.disableNotifications();
     localStorage.removeItem("username");
@@ -529,14 +529,14 @@ function App() {
     window.location.reload();
   };
 
-  // 🎨 Update Avatar
+  // Update Avatar
   const changeAvatar = () => {
     const newSeed = Math.random().toString(36).substring(7);
     localStorage.setItem("avatarSeed", newSeed);
     setUser(prev => ({ ...prev, avatarSeed: newSeed }));
   };
 
-  // 📝 Update Username
+  // Update Username
   const updateUsername = (newName) => {
     const trimmed = newName.trim().toUpperCase();
     if (!isValidIdentity(trimmed) || trimmed === user.username) return;
@@ -560,7 +560,7 @@ function App() {
     });
   };
 
-  // 👻 Handle Invisible Mode Toggle
+  // Handle Invisible Mode Toggle
   const handleToggleInvisible = (newValue) => {
     setIsInvisible(newValue);
     localStorage.setItem("invisibleMode", String(newValue));
@@ -590,7 +590,7 @@ function App() {
     });
   };
   // Directly join a public room (no passcode required)
-  // JOIN button handler — asks backend for room type first
+  // JOIN button handler: asks backend for room type first
   const handleSwitchRoom = () => {
     const room = roomInput.trim();
     if (!room || room === currentRoom) return;
@@ -614,7 +614,7 @@ function App() {
 
   const handleCreateRoom = (roomData) => {
     setShowCreateRoomModal(false);
-    // Emit to the dedicated CREATE event — never join_room
+    // Emit to the dedicated CREATE event, never join_room.
     // Backend will reject with create_room_error if room already exists
     socket.emit("create_room", {
       room: roomData.name,
@@ -622,13 +622,23 @@ function App() {
     });
   };
 
-  // 💬 Handle Send Message
+  const handleMessageInputChange = (e) => {
+    const nextValue = e.target.value;
+    if (nextValue.trim().toLowerCase() === "/orbit") {
+      setShowEasterEgg(true);
+      setMsgInput("");
+      return;
+    }
+    setMsgInput(nextValue);
+  };
+
+  // Handle Send Message
   const sendMessage = (e) => {
     e.preventDefault();
     const text = msgInput.trim();
     if (!text) return;
 
-    // 🔥 EASTER EGG TRIGGER
+    // EASTER EGG TRIGGER
     if (text === "/orbit") {
       setShowEasterEgg(true);
       setMsgInput("");
@@ -650,7 +660,7 @@ function App() {
     setMsgInput("");
   };
 
-  // 💬 Seen Logic Effect (Real-time)
+  // Seen Logic Effect (Real-time)
   useEffect(() => {
     if (activePanel !== "chat") return;
 
@@ -679,10 +689,10 @@ function App() {
     if (!userLocation || !user.username) return;
 
     if (isSOSActive) {
-      // 🔴 TELL SERVER YOU CANCELLED
+      // TELL SERVER YOU CANCELLED
       socket.emit("sos_cancel", { id: user.userId });
 
-      // 🔴 REMOVE LOCALLY
+      // REMOVE LOCALLY
       setSosAlerts(prev => prev.filter(alert => alert.id !== user.userId));
 
       setIsSOSActive(false);
@@ -720,7 +730,7 @@ function App() {
     }, 5000);
   };
 
-  // 🛸 If no username, show Login Page
+  // If no username, show Login Page
   const handleCompassReset = () => {
     requestDeviceHeading();
     mapRef.current?.resetBearing();
@@ -739,14 +749,14 @@ function App() {
     return <Login onLogin={handleLogin} />;
   }
 
-  // 🛰️ Handle Auto-disable Follow Me
+  // Handle Auto-disable Follow Me
   const handleAutoDisableFollowing = () => {
     if (isFollowing) {
       setIsFollowing(false);
     }
   };
 
-  // 📏 Haversine distance formula
+  // Haversine distance formula
   function getDistanceKm(lat1, lon1, lat2, lon2) {
     const R = 6371; // Earth radius in km
     const dLat = (lat2 - lat1) * (Math.PI / 180);
@@ -793,7 +803,7 @@ function App() {
         onMapInteraction={handleMapInteraction}
       />
 
-      {/* 💬 CHAT PANEL (Mica Dark) */}
+      {/* CHAT PANEL (Mica Dark) */}
       <div className={`chat-dock ${activePanel === "chat" ? "open" : "closed"}`}>
       <div className={`chat-panel ${activePanel === "chat" ? "open" : "closed"}`}>
         <div className="chat-header">
@@ -847,7 +857,7 @@ function App() {
                     </span>
                     {msg.senderId === user.userId && (
                       <span className="seen-status">
-                        {(msg.seenBy || []).length > 1 ? "✓✓" : "✓"}
+                        {(msg.seenBy || []).length > 1 ? "SEEN" : "SENT"}
                       </span>
                     )}
                   </div>
@@ -864,7 +874,7 @@ function App() {
               type="text"
               placeholder="Type a message..."
               value={msgInput}
-              onChange={(e) => setMsgInput(e.target.value)}
+              onChange={handleMessageInputChange}
             />
             <button type="submit" className="send-btn">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16 }}>
@@ -877,7 +887,7 @@ function App() {
       </div>
 
 
-      {/* ⬅️ CHAT TOGGLE BUTTON */}
+      {/* CHAT TOGGLE BUTTON */}
       <button
         className={`chat-toggle ${activePanel === "chat" ? "open" : "closed"}`}
         onClick={() => {
@@ -904,7 +914,7 @@ function App() {
       </button>
       </div>
 
-      {/* 👥 ACTIVE USERS INDICATOR */}
+      {/* ACTIVE USERS INDICATOR */}
       {(() => {
         const visibleUsers = isInvisible ? users.filter(u => u.id !== user.userId) : users;
         return (
@@ -918,7 +928,7 @@ function App() {
         );
       })()}
 
-      {/* 👥 USERS PANEL */}
+      {/* USERS PANEL */}
       {activePanel === "users" && (() => {
         const visibleUsers = isInvisible ? users.filter(u => u.id !== user.userId) : users;
         return (
@@ -956,7 +966,7 @@ function App() {
                               {u.name} {u.id === user.userId ? <span className="you-label"></span> : ""}
                             </span>
                             <span className="user-status">
-                              Online now {distance && u.id !== user.userId && <span className="distance" style={{ opacity: 0.7 }}> • {distance}</span>}
+                              Online now {distance && u.id !== user.userId && <span className="distance" style={{ opacity: 0.7 }}> - {distance}</span>}
                             </span>
                           </div>
                         </div>
@@ -974,7 +984,7 @@ function App() {
         );
       })()}
 
-      {/* 📱 MOBILE FAB */}
+      {/* MOBILE FAB */}
       <div className={`fab-container ${fabOpen ? "open" : ""}`}>
         <div className="fab-actions">
           <button
@@ -1033,7 +1043,7 @@ function App() {
         </button>
       </div>
 
-      {/* 🛠️ CONTROL CLUSTER */}
+      {/* CONTROL CLUSTER */}
       <div className="control-cluster">
         <button className="profile-btn" onClick={() => setShowProfile(true)} aria-label="Open profile settings">
           <div className="avatar">
@@ -1085,31 +1095,27 @@ function App() {
       <button
         className={`sos-btn ${isSOSActive ? "active" : ""}`}
         onClick={handleSOS}
+        aria-pressed={isSOSActive}
+        aria-label={isSOSActive ? "Cancel SOS alert" : "Send SOS alert"}
       >
-        {!isSOSActive ? (
-          <>
-            {/* Premium SOS warning icon */}
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
-              strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"
-              style={{ width: 18, height: 18, flexShrink: 0 }}>
-              <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
-              <line x1="12" y1="9" x2="12" y2="13" />
-              <line x1="12" y1="17" x2="12.01" y2="17" />
-            </svg>
-            <span>SOS</span>
-          </>
-        ) : (
-          <>
-            {/* Premium cancel X icon */}
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
-              strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
-              style={{ width: 16, height: 16, flexShrink: 0 }}>
-              <line x1="18" y1="6" x2="6" y2="18" />
-              <line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
-            <span>CANCEL</span>
-          </>
-        )}
+        <span className="sos-btn__glow" aria-hidden="true" />
+        <span className="sos-btn__state sos-btn__state--sos" aria-hidden={isSOSActive}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+            <line x1="12" y1="9" x2="12" y2="13" />
+            <line x1="12" y1="17" x2="12.01" y2="17" />
+          </svg>
+          <span>SOS</span>
+        </span>
+        <span className="sos-btn__state sos-btn__state--cancel" aria-hidden={!isSOSActive}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+          <span>CANCEL</span>
+        </span>
       </button>
 
       {toast && (

@@ -215,7 +215,47 @@ const addFillLayer = (mapInstance, layer, beforeLayerId) => {
   });
 };
 
-const getRoadLayerPaintForTheme = (layer, themeId) => {
+const getRoadLayerPaintForTheme = (layer, themeId, roadsEnhanced = true) => {
+  if (!roadsEnhanced) {
+    const paint = clone(layer.paint);
+    const layerId = layer.id;
+    const isGlowLayer =
+      layerId.includes("atmosphere") ||
+      layerId.includes("outer-glow") ||
+      layerId.includes("mid-glow") ||
+      layerId.includes("center-highlight") ||
+      layerId.includes("warm-bounce");
+
+    if (isGlowLayer) {
+      paint["line-opacity"] = 0;
+      return paint;
+    }
+
+    if (layerId.includes("core")) {
+      paint["line-color"] = themeId === "light" ? "#87919d" : "#b18454";
+      paint["line-blur"] = 0.12;
+      paint["line-opacity"] = [
+        "interpolate", ["linear"], ["zoom"],
+        9, 0.10, 12, 0.28, 15, 0.42, 18, 0.50
+      ];
+      return paint;
+    }
+
+    if (layerId.includes("depth")) {
+      paint["line-color"] = themeId === "light" ? "#8f9aa6" : "#74808c";
+      paint["line-blur"] = [
+        "interpolate", ["linear"], ["zoom"],
+        11, 0.05, 15, 0.22, 18, 0.4
+      ];
+      paint["line-opacity"] = [
+        "interpolate", ["linear"], ["zoom"],
+        11, 0.22, 14, 0.34, 17, 0.48
+      ];
+    }
+
+    return paint;
+  }
+
   if (themeId !== "light") return layer.paint;
 
   const paint = clone(layer.paint);
@@ -654,7 +694,7 @@ const styleLabels = (mapInstance, themeId) => {
   });
 };
 
-const addCinematicRoadLayers = (mapInstance, themeId) => {
+const addCinematicRoadLayers = (mapInstance, themeId, roadsEnhanced = true) => {
   if (!mapInstance.getSource(CARTO_SOURCE_ID)) return;
 
   const beforeLayerId = insertBeforeBuilding(mapInstance);
@@ -663,26 +703,32 @@ const addCinematicRoadLayers = (mapInstance, themeId) => {
       mapInstance,
       {
         ...layer,
-        paint: getRoadLayerPaintForTheme(layer, themeId)
+        paint: getRoadLayerPaintForTheme(layer, themeId, roadsEnhanced)
       },
       beforeLayerId
     );
   });
 };
 
-export const applyCinematicDarkMapStyle = (mapInstance, themeId = "dark") => {
+export const applyCinematicDarkMapStyle = (mapInstance, themeId = "dark", roadsEnhanced = true) => {
   if (!mapInstance || !mapInstance.isStyleLoaded()) return;
 
+  const modeKey = roadsEnhanced ? "3d-road-glow" : "2d-clean-roads";
   const cinematicLayersReady =
     cinematicHighwayLayers.every((layer) => mapInstance.getLayer(layer.id)) &&
     GREENERY_LAYER_IDS.every((layerId) => mapInstance.getLayer(layerId));
-  if (mapInstance.__orbitCinematicThemeApplied === themeId && cinematicLayersReady) return;
+  if (
+    mapInstance.__orbitCinematicThemeApplied === themeId &&
+    mapInstance.__orbitCinematicRoadModeApplied === modeKey &&
+    cinematicLayersReady
+  ) return;
 
   styleGroundAndWater(mapInstance, themeId);
   addEnvironmentalGreeneryLayers(mapInstance, themeId);
   styleRoadHierarchy(mapInstance, themeId);
   styleLabels(mapInstance, themeId);
-  addCinematicRoadLayers(mapInstance, themeId);
+  addCinematicRoadLayers(mapInstance, themeId, roadsEnhanced);
 
   mapInstance.__orbitCinematicThemeApplied = themeId;
+  mapInstance.__orbitCinematicRoadModeApplied = modeKey;
 };

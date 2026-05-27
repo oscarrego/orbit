@@ -22,14 +22,17 @@ html.orbit-lenis-active body {
   width: 100%;
   overflow: clip;
   color: var(--entry-text);
-  background: #030405;
+  background: #020304;
 }
 
 .network-canvas {
   position: fixed;
   inset: 0;
   z-index: 0;
-  background: #030405;
+  background:
+    radial-gradient(ellipse 80% 56% at 50% 47%, rgba(255, 255, 255, 0.055), transparent 34%),
+    radial-gradient(ellipse 95% 70% at 50% 52%, rgba(24, 26, 30, 0.72), rgba(2, 3, 4, 0.98) 70%),
+    #020304;
   pointer-events: none;
 }
 
@@ -39,8 +42,9 @@ html.orbit-lenis-active body {
   z-index: 1;
   pointer-events: none;
   background:
-    radial-gradient(ellipse 72% 56% at 50% 46%, transparent 0%, rgba(3, 4, 5, 0.14) 48%, rgba(3, 4, 5, 0.84) 100%),
-    linear-gradient(180deg, rgba(3, 4, 5, 0.34), rgba(3, 4, 5, 0.04) 43%, rgba(3, 4, 5, 0.7));
+    radial-gradient(ellipse 52% 34% at 50% 47%, rgba(255, 255, 255, 0.045), transparent 35%),
+    radial-gradient(ellipse 88% 62% at 50% 50%, transparent 0%, rgba(2, 3, 4, 0.28) 56%, rgba(2, 3, 4, 0.92) 100%),
+    linear-gradient(180deg, rgba(2, 3, 4, 0.42), rgba(2, 3, 4, 0.04) 42%, rgba(2, 3, 4, 0.76));
 }
 
 .network-vignette::after {
@@ -48,11 +52,11 @@ html.orbit-lenis-active body {
   position: absolute;
   inset: 0;
   background-image:
-    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.026) 1px, transparent 1px);
-  background-size: 42px 42px;
-  mask-image: radial-gradient(circle at center, rgba(0, 0, 0, 0.55), transparent 72%);
-  opacity: 0.18;
+    radial-gradient(circle at 50% 46%, rgba(255, 255, 255, 0.08), transparent 28%),
+    radial-gradient(circle at 34% 28%, rgba(255, 255, 255, 0.025), transparent 18%),
+    radial-gradient(circle at 76% 68%, rgba(255, 255, 255, 0.02), transparent 22%);
+  opacity: 0.44;
+  mix-blend-mode: screen;
 }
 
 .entry-status-strip {

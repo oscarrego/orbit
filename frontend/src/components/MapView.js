@@ -209,7 +209,7 @@ const syncBuildingAccentLayers = (mapInstance, source, sourceLayer, baseFilter, 
   });
 };
 
-const applyThemeToMap = (mapInstance, themeId, cameraMode) => {
+const applyThemeToMap = (mapInstance, themeId, cameraMode, buildingsEnabled = true) => {
   if (!mapInstance || !mapInstance.isStyleLoaded()) return;
 
   const bgColor = getBackgroundColor(themeId);
@@ -224,7 +224,7 @@ const applyThemeToMap = (mapInstance, themeId, cameraMode) => {
 
   applyBuildingLighting(mapInstance, themeId);
 
-  applyCinematicDarkMapStyle(mapInstance, themeId);
+  applyCinematicDarkMapStyle(mapInstance, themeId, buildingsEnabled);
 
   applyCameraAtmosphere(mapInstance, cameraMode, themeId);
 };
@@ -282,9 +282,9 @@ const MapView = forwardRef(({
       maxPitch: 85,
     });
 
-    // 🏗️ Reliable layer restoration
+    // Reliable layer restoration
     const restoreMapLayers = () => {
-      applyThemeToMap(map.current, themeRef.current, cameraModeRef.current);
+      applyThemeToMap(map.current, themeRef.current, cameraModeRef.current, buildingsEnabledRef.current);
       add3D();
     };
 
@@ -292,14 +292,14 @@ const MapView = forwardRef(({
     map.current.on("styledata", restoreMapLayers);
     map.current.on("idle", restoreMapLayers);
 
-    // 🧭 Live bearing for compass
+    // Live bearing for compass
     const emitBearing = () => {
       if (onBearingChange) onBearingChange(map.current.getBearing());
     };
     map.current.on("rotate", emitBearing);
     map.current.on("move",   emitBearing);
 
-    // 📍 Auto-disable follow and let mobile UI yield to deliberate map gestures.
+    // Auto-disable follow and let mobile UI yield to deliberate map gestures.
     const handleGestureStart = () => {
       if (onAutoDisableFollowingRef.current) onAutoDisableFollowingRef.current();
       if (onMapInteractionRef.current) onMapInteractionRef.current();
@@ -331,7 +331,7 @@ const MapView = forwardRef(({
 
   const prevTheme = useRef(theme);
 
-  // 🌓 Handle Theme Change
+  // Handle Theme Change
   useEffect(() => {
     if (!map.current) return;
     themeRef.current = theme;
@@ -342,14 +342,14 @@ const MapView = forwardRef(({
       prevTheme.current = theme;
       const restoreNewStyle = () => {
         if (!map.current || !map.current.isStyleLoaded() || themeRef.current !== theme) return;
-        applyThemeToMap(map.current, theme, cameraModeRef.current);
+        applyThemeToMap(map.current, theme, cameraModeRef.current, buildingsEnabledRef.current);
         add3D(true);
       };
       map.current.once("idle", restoreNewStyle);
       if (styleRestoreTimer.current) window.clearTimeout(styleRestoreTimer.current);
       styleRestoreTimer.current = window.setTimeout(restoreNewStyle, 1200);
     } else if (map.current.isStyleLoaded()) {
-      applyThemeToMap(map.current, theme, cameraModeRef.current);
+      applyThemeToMap(map.current, theme, cameraModeRef.current, buildingsEnabledRef.current);
       add3D(true);
     }
   }, [theme]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -366,6 +366,7 @@ const MapView = forwardRef(({
     // Reset auto-disable state when user explicitly changes preference
     auto3dDisabled.current = false;
     if (map.current && map.current.isStyleLoaded()) {
+      applyThemeToMap(map.current, themeRef.current, cameraModeRef.current, buildingsEnabled);
       add3D(true);
     }
   }, [buildingsEnabled]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -444,7 +445,7 @@ const MapView = forwardRef(({
     },
   }));
 
-  // 🎯 Update user location marker
+  // Update user location marker
   useEffect(() => {
     if (!map.current || !userLocation || !currentUserId) return;
 
@@ -645,7 +646,7 @@ const MapView = forwardRef(({
     });
   }, [users, theme, currentUserId]);
 
-  // 🚨 SOS Markers
+  // SOS Markers
   useEffect(() => {
     if (!map.current) return;
 

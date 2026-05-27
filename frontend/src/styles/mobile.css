@@ -228,7 +228,7 @@
   --chat-left: 18px;
   --chat-top: 76px;
   --chat-width: 306px;
-  --chat-height: min(68dvh, 640px);
+  --chat-height: min(82dvh, calc(100dvh - var(--chat-top) - 24px), 760px);
 }
 
 .orbit-app-shell .chat-dock {
@@ -265,10 +265,32 @@
   touch-action: pan-y;
   overscroll-behavior: contain;
   transition:
-    opacity 260ms ease,
+  opacity 260ms ease,
     border-color 260ms ease,
     box-shadow 260ms ease,
     background 260ms ease;
+}
+
+.orbit-app-shell .chat-dock .chat-header {
+  flex: 0 0 auto;
+  padding: 15px 16px;
+}
+
+.orbit-app-shell .chat-dock .room-controls {
+  flex: 0 0 auto;
+  padding: 13px 16px 12px;
+  gap: 9px;
+}
+
+.orbit-app-shell .chat-dock .chat-messages {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 16px 16px 14px;
+}
+
+.orbit-app-shell .chat-dock .chat-input-container {
+  flex: 0 0 auto;
+  padding: 13px 14px 14px;
 }
 
 .orbit-app-shell .chat-dock.closed .chat-panel {
@@ -310,9 +332,9 @@
 
   .orbit-app-shell {
     --chat-left: max(12px, env(safe-area-inset-left));
-    --chat-top: calc(72px + env(safe-area-inset-top));
+    --chat-top: calc(98px + env(safe-area-inset-top));
     --chat-width: min(82vw, 292px);
-    --chat-height: min(56dvh, calc(100dvh - 196px));
+    --chat-height: min(58dvh, 478px);
   }
 
   .orbit-app-shell .chat-dock .chat-panel,
@@ -372,92 +394,113 @@
   /* ═══════════════════════════════════════════════════════════════
      MOBILE CHAT UI — Compact & App-like
      ═══════════════════════════════════════════════════════════════ */
-  .orbit-app-shell .chat-header {
-    padding: 10px 12px;
-    gap: 8px;
-  }
-
-  .orbit-app-shell .chat-header span {
-    font-size: 11px;
-    letter-spacing: 0.5px;
-  }
-
-  .orbit-app-shell .room-controls {
+  .orbit-app-shell .chat-dock .chat-header {
+    min-height: 36px;
     padding: 8px 10px;
+    gap: 7px;
+  }
+
+  .orbit-app-shell .chat-dock .online-dot {
+    width: 6px;
+    height: 6px;
+  }
+
+  .orbit-app-shell .chat-dock .chat-header span {
+    font-size: 10.5px;
+    letter-spacing: 0.35px;
+  }
+
+  .orbit-app-shell .chat-dock .room-controls {
+    padding: 6px 9px;
+    gap: 5px;
+  }
+
+  .orbit-app-shell .chat-dock .join-row {
     gap: 6px;
   }
 
-  .orbit-app-shell .room-input {
-    padding: 6px 10px !important;
-    font-size: 12px !important;
-    height: 34px;
+  .orbit-app-shell .chat-dock .room-input {
+    padding: 5px 9px !important;
+    font-size: 11.5px !important;
+    height: 30px;
+    border-radius: 9px !important;
   }
 
-  .orbit-app-shell .join-btn {
-    height: 34px;
-    font-size: 10px;
-    padding: 0 12px;
+  .orbit-app-shell .chat-dock .join-btn {
+    width: 54px;
+    height: 30px;
+    font-size: 9.5px;
+    padding: 0 10px;
+    border-radius: 9px;
   }
 
-  .orbit-app-shell .create-room-trigger {
-    font-size: 10px;
-    padding: 2px 0;
+  .orbit-app-shell .chat-dock .create-room-trigger {
+    font-size: 9.5px;
+    padding: 1px 0;
+    line-height: 1.2;
   }
 
-  .orbit-app-shell .chat-messages {
-    padding: 8px 10px;
-    gap: 6px;
+  .orbit-app-shell .chat-dock .chat-messages {
+    padding: 7px 9px;
+    gap: 4px;
   }
 
-  .orbit-app-shell .chat-msg {
-    margin: 2px 0;
+  .orbit-app-shell .chat-dock .chat-msg {
+    margin: 1px 0;
   }
 
-  .orbit-app-shell .chat-bubble {
-    padding: 7px 10px;
-    border-radius: 13px;
-    font-size: 13px;
-    gap: 2px;
+  .orbit-app-shell .chat-dock .chat-bubble {
+    max-width: 82%;
+    padding: 6px 9px;
+    border-radius: 12px;
+    font-size: 12.5px;
+    gap: 1px;
   }
 
-  .orbit-app-shell .msg-user {
-    font-size: 10px;
+  .orbit-app-shell .chat-dock .msg-user {
+    font-size: 9.5px;
     margin-bottom: 1px;
   }
 
-  .orbit-app-shell .msg-text {
-    font-size: 13px;
-    line-height: 1.4;
+  .orbit-app-shell .chat-dock .msg-text {
+    font-size: 12.5px;
+    line-height: 1.35;
   }
 
-  .orbit-app-shell .msg-time {
-    font-size: 9px;
+  .orbit-app-shell .chat-dock .msg-time,
+  .orbit-app-shell .chat-dock .seen-status {
+    font-size: 8.5px;
   }
 
-  .orbit-app-shell .chat-input-container {
-    padding: 6px 8px;
+  .orbit-app-shell .chat-dock .msg-meta {
+    gap: 5px;
+    margin-top: 1px;
   }
 
-  .orbit-app-shell .message-input-wrapper {
-    gap: 6px;
-    padding: 2px;
+  .orbit-app-shell .chat-dock .chat-input-container {
+    padding: 5px 7px 6px;
   }
 
-  .orbit-app-shell .chat-panel input {
-    padding: 7px 10px;
-    font-size: 13px;
-    height: 32px;
-    border-radius: 10px;
+  .orbit-app-shell .chat-dock .message-input-wrapper {
+    gap: 5px;
+    padding: 1px;
   }
 
-  .orbit-app-shell .send-btn {
-    width: 30px;
+  .orbit-app-shell .chat-dock .chat-panel input {
+    padding: 6px 9px;
+    font-size: 12.5px;
     height: 30px;
+    border-radius: 9px;
   }
 
-  .orbit-app-shell .send-btn svg {
-    width: 14px;
-    height: 14px;
+  .orbit-app-shell .chat-dock .send-btn {
+    width: 28px;
+    height: 28px;
+  }
+
+  .orbit-app-shell .chat-dock .send-btn svg {
+    width: 13px;
+    height: 13px;
   }
 
   /* ═══════════════════════════════════════════════════════════════
@@ -598,23 +641,23 @@
 @media (max-width: 390px) {
   .orbit-app-shell {
     --chat-width: min(80vw, 278px);
-    --chat-height: min(54dvh, calc(100dvh - 188px));
+    --chat-height: min(56dvh, 432px);
   }
 }
 
 @media (max-height: 620px) and (max-width: 768px) {
   .orbit-app-shell {
-    --chat-top: calc(64px + env(safe-area-inset-top));
-    --chat-height: min(52dvh, calc(100dvh - 142px));
+    --chat-top: calc(84px + env(safe-area-inset-top));
+    --chat-height: min(55dvh, 360px);
   }
 
-  .orbit-app-shell .chat-header {
-    padding-top: 10px;
-    padding-bottom: 10px;
+  .orbit-app-shell .chat-dock .chat-header {
+    padding-top: 7px;
+    padding-bottom: 7px;
   }
 
-  .orbit-app-shell .chat-messages {
-    padding-top: 10px;
-    padding-bottom: 10px;
+  .orbit-app-shell .chat-dock .chat-messages {
+    padding-top: 6px;
+    padding-bottom: 6px;
   }
 }

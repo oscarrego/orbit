@@ -1,6 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap');
 
-/* 🌍 Global Typography */
+/* Global Typography */
 html, body, #root {
   margin: 0;
   padding: 0;
@@ -24,12 +24,12 @@ input, button, textarea, select {
   font-family: 'Outfit', sans-serif !important;
 }
 
-/* 🧱 Root container fix - Remove flex to prevent shrinking */
+/* Root container fix - Remove flex to prevent shrinking */
 #root {
   display: block;
 }
 
-/* 📍 Map marker */
+/* Map marker */
 .marker {
   width: 14px;
   height: 14px;
@@ -39,7 +39,7 @@ input, button, textarea, select {
   box-shadow: 0 2px 6px rgba(0,0,0,0.4);
 }
 
-/* 🚨 SOS BUTTON (center bottom) */
+/* SOS BUTTON (center bottom) */
 .sos-btn {
   position: fixed;
   bottom: 40px;
@@ -73,7 +73,7 @@ input, button, textarea, select {
   overflow: hidden; /* Clip the shimmer effect */
 }
 
-/* ✨ SHIMMER EFFECT */
+/* SHIMMER EFFECT */
 .sos-btn::after {
   content: "";
   position: absolute;
@@ -142,7 +142,7 @@ input, button, textarea, select {
   animation: sosPulse 3s infinite ease-in-out;
 } */
 
-/* 🔔 TOAST POPUP */
+/* TOAST POPUP */
 .toast {
   position: fixed;
   top: 30px;
@@ -176,7 +176,7 @@ input, button, textarea, select {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* 🚨 SOS Specialization */
+/* SOS Specialization */
 .toast.sos {
   cursor: pointer;
   background: rgba(220, 38, 38, 0.85); /* Stronger red for urgency */
@@ -256,9 +256,9 @@ input, button, textarea, select {
 }
 
 
-/* green color 🟢 */
+/* green color */
 
-/* 🟢 GREEN GLOW for CANCEL button */
+/* GREEN GLOW for CANCEL button */
 .sos-btn.active {
   background: linear-gradient(135deg, #22c55e, #16a34a);
 
@@ -289,9 +289,9 @@ input, button, textarea, select {
 
 
 
-/*  */
-/* 🔄 rotation */
-/* 🚨 SOS Animated Marker */
+/* */
+/* rotation */
+/* SOS Animated Marker */
 .sos-marker {
   position: relative;
   display: flex;
@@ -345,7 +345,7 @@ input, button, textarea, select {
   }
 }
 
-/* ✈️ FOLLOW ME ANIMATION */
+/* FOLLOW ME ANIMATION */
 .follow-fly {
   transform-origin: center;
   animation: followDiagonal 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
@@ -371,7 +371,7 @@ input, button, textarea, select {
 
 
 
-/* 📡 RADAR SWEEP ANIMATION (TRACKING) */
+/* RADAR SWEEP ANIMATION (TRACKING) */
 
 .radar-sweep {
   transform-origin: center;

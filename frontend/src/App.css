@@ -3,7 +3,7 @@
 }
 
 /* ═══════════════════════════════════════════
-   📍 CINEMATIC USER LOCATION MARKER
+    CINEMATIC USER LOCATION MARKER
    ═══════════════════════════════════════════ */
 .user-location-marker {
   position: relative;
@@ -155,7 +155,7 @@
   z-index: 2;
 }
 
-/* 🛠️ Control Cluster (Top Right) */
+/* Control Cluster (Top Right) */
 .control-cluster {
   position: fixed;
   top: 20px;
@@ -166,7 +166,7 @@
   gap: 12px;
 }
 
-/* 📱 Mobile FAB Container (Hidden by Default) */
+/* Mobile FAB Container (Hidden by Default) */
 .fab-container {
   display: none;
 }
@@ -190,7 +190,7 @@ backdrop-filter: none;
   color: #f1f5f9;
 }
 
-/* 🌙 DARK MODE (keep your current or refine) */
+/* DARK MODE (keep your current or refine) */
 .dark-mode .control-btn {
   background: rgba(255, 255, 255, 0.1); /* light glass */
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -431,7 +431,7 @@ backdrop-filter: none;
   }
 }
 
-/* ✨ Mica Dark Global Effect */
+/* Mica Dark Global Effect */
 .mica-effect {
   background: rgba(10, 10, 10, 0.7);   /* darker than before */
   backdrop-filter: blur(22px);
@@ -443,7 +443,7 @@ backdrop-filter: none;
   color: #ffffff;
 }
 
-/* 👥 Active Users Indicator (Mica Dark) */
+/* Active Users Indicator (Mica Dark) */
 .users-indicator {
   position: fixed;
   top: 20px;
@@ -482,7 +482,7 @@ backdrop-filter: none;
   letter-spacing: 0.2px;
 }
 
-/* 💬 Chat Panel (Mica Dark Sidebar) */
+/* Chat Panel (Mica Dark Sidebar) */
 .chat-panel {
   position: fixed;
   left: 20px;
@@ -555,7 +555,7 @@ backdrop-filter: none;
   100% { transform: scale(1); }
 }
 
-/* 🏠 Room Join/Create Controls */
+/* Room Join/Create Controls */
 .room-controls {
   padding: 14px 16px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
@@ -635,7 +635,7 @@ backdrop-filter: none;
   gap: 12px;
 }
 
-/* ✨ Premium Custom Scrollbar */
+/* Premium Custom Scrollbar */
 .chat-messages::-webkit-scrollbar {
   width: 5px;
 }
@@ -733,7 +733,7 @@ backdrop-filter: none;
   margin: 4px 0;
 }
 
-/* ⌨️ Chat Input Area */
+/* Chat Input Area */
 .chat-input-container {
   padding: 16px;
   background: rgba(255, 255, 255, 0.03);
@@ -784,7 +784,7 @@ backdrop-filter: none;
   background: rgba(255, 255, 255, 0.2);
 }
 
-/* ⬅️ Toggle Button (Mica Dark) */
+/* Toggle Button (Mica Dark) */
 .chat-toggle {
   position: fixed;
   top: 50%;
@@ -816,7 +816,7 @@ backdrop-filter: none;
   background: rgba(40, 40, 40, 0.8);
 }
 
-/* 🔴 Unread Message Badge */
+/* Unread Message Badge */
 .unread-badge {
   position: absolute;
   top: -8px;
@@ -842,7 +842,7 @@ backdrop-filter: none;
   100% { transform: scale(1); }
 }
 
-/* 👥 Users Panel (Adaptive) */
+/* Users Panel (Adaptive) */
 .users-panel {
   position: fixed;
   top: 75px;
@@ -926,7 +926,7 @@ backdrop-filter: none;
   color: rgba(255, 255, 255, 0.5);
 }
 
-/* 🌓 Global Dark Layer (for clarity) */
+/* Global Dark Layer (for clarity) */
 body::before {
   content: "";
   position: fixed;
@@ -949,7 +949,7 @@ body::before {
   border-radius: 10px;
 }
 
-/* 👤 Profile Avatar Button */
+/* Profile Avatar Button */
 .profile-btn {
   background: none;
   border: none;
@@ -981,7 +981,7 @@ body::before {
   overflow: hidden;
 }
 
-/* 🖼️ Profile Modal (Glassmorphism) */
+/* Profile Modal (Glassmorphism) */
 .profile-overlay {
   position: fixed;
   top: 0;
@@ -1287,10 +1287,10 @@ body::before {
 }
 
 /* =========================================
-   📱 RESPONSIVE DESIGN BREAKPOINTS
+    RESPONSIVE DESIGN BREAKPOINTS
    ========================================= */
 
-/* 💻 Tablet (max-width: 1024px) */
+/* Tablet (max-width: 1024px) */
 @media (max-width: 1024px) {
   .chat-panel {
     width: 280px;
@@ -1302,7 +1302,7 @@ body::before {
   }
 }
 
-/* 📱 Mobile (max-width: 768px) */
+/* Mobile (max-width: 768px) */
 @media (max-width: 768px) {
   /* Prevent horizontal scrolling & body overflow issues */
   html, body {
@@ -1411,7 +1411,7 @@ body::before {
     display: none;
   }
 
-  /* 📱 Mobile FAB */
+  /* Mobile FAB */
   .fab-container {
     display: flex;
     flex-direction: column;
@@ -1422,7 +1422,7 @@ body::before {
     z-index: 1000;
   }
 
-  /* 📱 Mobile FAB Actions Styling */
+  /* Mobile FAB Actions Styling */
   .fab-container .control-btn {
     width: 44px;
     height: 44px;
@@ -1569,7 +1569,7 @@ body::before {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   🌃 CINEMATIC MAP STAGE — Atmospheric Dark Night Environment
+    CINEMATIC MAP STAGE — Atmospheric Dark Night Environment
    ═══════════════════════════════════════════════════════════════
    Design intent: cloudy urban night, overcast sky trapping city
    glow, atmospheric depth and volumetric fog — never pure black.
@@ -1749,7 +1749,7 @@ body::before {
 }
 
 
-/* 🌙 DARK MODE — keep glass look */
+/* DARK MODE — keep glass look */
 .dark-mode .avatar {
   background: rgba(255, 255, 255, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -2352,6 +2352,166 @@ body::before {
 .profile-btn:focus-visible {
   outline: 2px solid rgba(148, 163, 184, 0.42) !important;
   outline-offset: 3px !important;
+}
+
+.orbit-app-shell .sos-btn {
+  --sos-accent: 239, 68, 68;
+  --sos-core: 185, 28, 28;
+  --sos-deep: 92, 12, 18;
+  --sos-rim: 255, 208, 208;
+  position: fixed;
+  left: 50%;
+  bottom: max(20px, env(safe-area-inset-bottom));
+  z-index: 10004;
+  width: 142px;
+  height: 54px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgba(var(--sos-rim), 0.34);
+  border-radius: 999px;
+  color: rgba(255, 255, 255, 0.96);
+  cursor: pointer;
+  overflow: hidden;
+  isolation: isolate;
+  transform: translate3d(-50%, 0, 0);
+  background:
+    radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.34), transparent 30%),
+    radial-gradient(circle at 50% 115%, rgba(var(--sos-accent), 0.42), transparent 58%),
+    linear-gradient(160deg, rgba(var(--sos-accent), 0.56), rgba(var(--sos-core), 0.54) 48%, rgba(var(--sos-deep), 0.66));
+  -webkit-backdrop-filter: blur(26px) saturate(1.35);
+  backdrop-filter: blur(26px) saturate(1.35);
+  box-shadow:
+    0 22px 48px rgba(0, 0, 0, 0.48),
+    0 12px 34px rgba(var(--sos-accent), 0.34),
+    0 0 0 1px rgba(255, 255, 255, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.42),
+    inset 0 -18px 30px rgba(0, 0, 0, 0.28);
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.34);
+  transition:
+    background 560ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 560ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 560ms cubic-bezier(0.16, 1, 0.3, 1),
+    color 420ms ease,
+    transform 260ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.orbit-app-shell .sos-btn::before,
+.orbit-app-shell .sos-btn::after,
+.orbit-app-shell .sos-btn__glow {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.orbit-app-shell .sos-btn::before {
+  z-index: -2;
+  background:
+    linear-gradient(115deg, rgba(255, 255, 255, 0.22), transparent 32%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.16), transparent 46%);
+  mix-blend-mode: screen;
+  opacity: 0.7;
+}
+
+.orbit-app-shell .sos-btn::after {
+  z-index: -1;
+  inset: 1px;
+  border-radius: inherit;
+  background:
+    radial-gradient(circle at 32% 18%, rgba(255, 255, 255, 0.36), transparent 15%),
+    radial-gradient(circle at 72% 74%, rgba(255, 255, 255, 0.1), transparent 30%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.075), rgba(0, 0, 0, 0.18));
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+    inset 0 10px 18px rgba(255, 255, 255, 0.08);
+}
+
+.orbit-app-shell .sos-btn__glow {
+  z-index: -3;
+  inset: -42%;
+  border-radius: 50%;
+  background:
+    conic-gradient(from 120deg, transparent, rgba(var(--sos-accent), 0.3), transparent, rgba(255, 255, 255, 0.16), transparent);
+  filter: blur(10px);
+  opacity: 0.82;
+  animation: sosAuraOrbit 5.2s linear infinite;
+}
+
+.orbit-app-shell .sos-btn__state {
+  grid-area: 1 / 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  width: 100%;
+  height: 100%;
+  font-size: 15px;
+  font-weight: 820;
+  letter-spacing: 0.55px;
+  line-height: 1;
+  transform: translateY(0);
+  opacity: 1;
+  filter: blur(0);
+  transition:
+    opacity 360ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 560ms cubic-bezier(0.16, 1, 0.3, 1),
+    filter 360ms ease;
+}
+
+.orbit-app-shell .sos-btn__state svg {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 17px;
+  stroke: currentColor;
+  filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.28));
+  transition: transform 560ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.orbit-app-shell .sos-btn__state--cancel {
+  opacity: 0;
+  transform: translateY(9px);
+  filter: blur(8px);
+}
+
+.orbit-app-shell .sos-btn.active {
+  --sos-accent: 52, 211, 118;
+  --sos-core: 22, 163, 74;
+  --sos-deep: 9, 88, 42;
+  --sos-rim: 187, 247, 208;
+}
+
+.orbit-app-shell .sos-btn.active .sos-btn__state--sos {
+  opacity: 0;
+  transform: translateY(-9px);
+  filter: blur(8px);
+}
+
+.orbit-app-shell .sos-btn.active .sos-btn__state--cancel {
+  opacity: 1;
+  transform: translateY(0);
+  filter: blur(0);
+}
+
+.orbit-app-shell .sos-btn:hover {
+  transform: translate3d(-50%, -1px, 0);
+  border-color: rgba(var(--sos-rim), 0.5);
+  box-shadow:
+    0 26px 56px rgba(0, 0, 0, 0.52),
+    0 16px 38px rgba(var(--sos-accent), 0.42),
+    0 0 0 1px rgba(255, 255, 255, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    inset 0 -20px 34px rgba(0, 0, 0, 0.3);
+}
+
+.orbit-app-shell .sos-btn:active {
+  transform: translate3d(-50%, 1px, 0);
+}
+
+@keyframes sosAuraOrbit {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .chat-panel,

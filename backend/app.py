@@ -45,18 +45,18 @@ try:
     messages_collection.create_index(
         "createdAt", expireAfterSeconds=86400, background=True
     )
-    print("✅ messages TTL index OK")
+    print("messages TTL index OK")
 except Exception as e:
-    print(f"⚠️  messages index: {e}")
+    print(f" messages index: {e}")
 
 # ── rooms — full index reset ──────────────────────
-print("\n🔎 Current indexes on 'rooms' collection:")
+print("\n Current indexes on 'rooms' collection:")
 try:
     idx_info = rooms_collection.index_information()
     for idx_name, idx_data in idx_info.items():
-        print(f"   • {idx_name}: {idx_data}")
+        print(f"  • {idx_name}: {idx_data}")
 except Exception as e:
-    print(f"   ⚠️  Could not read indexes: {e}")
+    print(f"    Could not read indexes: {e}")
     idx_info = {}
 
 # Drop every custom index (keep _id_)
@@ -65,9 +65,9 @@ for idx_name in list(idx_info.keys()):
         continue
     try:
         rooms_collection.drop_index(idx_name)
-        print(f"   🗑️  Dropped stale index: {idx_name}")
+        print(f"    Dropped stale index: {idx_name}")
     except Exception as e:
-        print(f"   ⚠️  Could not drop '{idx_name}': {e}")
+        print(f"    Could not drop '{idx_name}': {e}")
 
 # Rebuild the ONE index we actually want
 try:
@@ -78,9 +78,9 @@ try:
         name="roomName_unique",
         background=True,
     )
-    print("✅ rooms unique+sparse index on 'roomName' ready\n")
+    print("rooms unique+sparse index on 'roomName' ready\n")
 except Exception as e:
-    print(f"❌ Could not create rooms index: {e}\n")
+    print(f"Could not create rooms index: {e}\n")
 
 # --------------------------------------------------
 # FLASK + SOCKETIO
@@ -117,9 +117,9 @@ def get_room(room_name):
     """
     doc = rooms_collection.find_one({"roomName": room_name})
     if doc:
-        print(f"🔍 get_room('{room_name}') → FOUND  _id={doc['_id']}")
+        print(f"get_room('{room_name}') → FOUND  _id={doc['_id']}")
     else:
-        print(f"🔍 get_room('{room_name}') → NOT FOUND")
+        print(f"get_room('{room_name}') → NOT FOUND")
     return doc
 
 
@@ -135,25 +135,25 @@ def db_create_room(room_name, passcode, creator_sid):
         "createdAt": datetime.utcnow(),
         "isPrivate": True,
     }
-    print(f"📝 db_create_room: roomName='{room_name}'  passcode='{passcode}'")
+    print(f"db_create_room: roomName='{room_name}'  passcode='{passcode}'")
     try:
         result = rooms_collection.insert_one(doc)
         _id = str(result.inserted_id)
         doc["_id"] = _id
-        print(f"✅ Room '{room_name}' saved to MongoDB  _id={_id}")
+        print(f"Room '{room_name}' saved to MongoDB  _id={_id}")
         return doc, None
 
     except DuplicateKeyError as exc:
         # Log the EXACT field that caused the conflict so we can diagnose
         details = getattr(exc, "details", {}) or {}
         key_val = details.get("keyValue", "unknown")
-        print(f"❌ DuplicateKeyError on room '{room_name}'")
-        print(f"   conflicting key → {key_val}")
-        print(f"   full details   → {details}")
+        print(f"DuplicateKeyError on room '{room_name}'")
+        print(f"  conflicting key → {key_val}")
+        print(f"  full details   → {details}")
         return None, "Room already exists"
 
     except Exception as exc:
-        print(f"❌ insert_one failed for '{room_name}': {exc}")
+        print(f"insert_one failed for '{room_name}': {exc}")
         return None, str(exc)
 
 
@@ -207,7 +207,7 @@ def nuke_rooms():
 # --------------------------------------------------
 @socketio.on("connect")
 def handle_connect():
-    print(f"✅ connect: {request.sid}")
+    print(f"connect: {request.sid}")
 
 # --------------------------------------------------
 # CREATE ROOM  (creation only — never joins)
@@ -216,13 +216,13 @@ def handle_connect():
 @socketio.on("create_room")
 def handle_create_room(data):
     print(f"\n{'='*55}")
-    print(f"🔒 create_room: {data}")
+    print(f"create_room: {data}")
 
     room_name = (data.get("room") or "").strip()
     passcode  = (data.get("passcode") or "").strip()
     sid       = request.sid
 
-    print(f"   roomName='{room_name}'  passcode='{passcode}'")
+    print(f"  roomName='{room_name}'  passcode='{passcode}'")
 
     # ── Basic validation ──────────────────────────
     if not room_name:
@@ -235,18 +235,18 @@ def handle_create_room(data):
     # ── Uniqueness check — BLOCK if already exists ─
     existing = get_room(room_name)
     if existing:
-        print(f"   ❌ Room '{room_name}' already exists — rejecting creation")
+        print(f"   Room '{room_name}' already exists — rejecting creation")
         emit("create_room_error", {"message": "Room name already in use"})
         return
 
     # ── Insert new room ───────────────────────────
     new_doc, err = db_create_room(room_name, passcode, sid)
     if err:
-        print(f"   ❌ db_create_room error: {err}")
+        print(f"   db_create_room error: {err}")
         emit("create_room_error", {"message": f"Could not create room: {err}"})
         return
 
-    print(f"   ✅ Room '{room_name}' created — now joining socket room")
+    print(f"   Room '{room_name}' created — now joining socket room")
 
     # ── Join the socket room immediately ──────────
     old = socket_to_room.get(sid)
@@ -267,7 +267,7 @@ def handle_create_room(data):
 @socketio.on("join_room")
 def handle_join(data):
     print(f"\n{'='*55}")
-    print(f"📦 join_room: {data}")
+    print(f"join_room: {data}")
 
     room       = (data.get("room") or "Global").strip()
     passcode   = (data.get("passcode") or "").strip()
@@ -275,7 +275,7 @@ def handle_join(data):
     sid        = request.sid
     room_is_private = False
 
-    print(f"   room='{room}'  passcode='{passcode}'  is_private={is_private}")
+    print(f"  room='{room}'  passcode='{passcode}'  is_private={is_private}")
 
     # --------------------------------------------------
     # PRIVATE ROOM — join only, never create
@@ -284,17 +284,17 @@ def handle_join(data):
         existing = get_room(room)
         if not existing:
             # Room does not exist — refuse (creation is a separate flow)
-            print(f"   ❌ Private room '{room}' not found")
+            print(f"   Private room '{room}' not found")
             emit("room_error", {"message": "Room does not exist"})
             return
 
         # Room exists — verify passcode
         stored = existing.get("passcode", "")
-        print(f"   Passcode check: stored='{stored}'  given='{passcode}'  match={stored == passcode}")
+        print(f"  Passcode check: stored='{stored}'  given='{passcode}'  match={stored == passcode}")
         if stored != passcode:
             emit("room_error", {"message": "Invalid room passcode"})
             return
-        print("   ✅ Passcode correct")
+        print("   Passcode correct")
         room_is_private = bool(existing.get("isPrivate", True))
 
     else:
@@ -305,7 +305,7 @@ def handle_join(data):
         if room != "Global":
             existing = get_room(room)
             if not existing:
-                print(f"   ❌ Public room '{room}' not found in DB — rejecting")
+                print(f"   Public room '{room}' not found in DB — rejecting")
                 emit("room_error", {"message": "Room does not exist"})
                 return
             if existing.get("isPrivate"):
@@ -321,7 +321,7 @@ def handle_join(data):
         leave_room(old)
     join_room(room)
     socket_to_room[sid] = room
-    print(f"👤 {sid} joined '{room}'")
+    print(f"{sid} joined '{room}'")
 
     # --------------------------------------------------
     # LOAD LAST 24 h MESSAGES
@@ -343,7 +343,7 @@ def handle_join(data):
 @socketio.on("rejoin_room")
 def handle_rejoin(data):
     print(f"\n{'='*55}")
-    print(f"🔄 rejoin_room: {data}")
+    print(f"rejoin_room: {data}")
 
     room = (data.get("room") or "Global").strip()
     sid  = request.sid
@@ -357,14 +357,14 @@ def handle_rejoin(data):
         socket_to_room[sid] = room
         emit("load_messages", load_recent_messages(room))
         emit("room_joined", {"room": room, "isPrivate": False})
-        print(f"   → rejoined Global")
+        print(f"  → rejoined Global")
         print(f"{'='*55}\n")
         return
 
     # Verify the room still exists in MongoDB
     existing = get_room(room)
     if not existing:
-        print(f"   ❌ Room '{room}' no longer exists — falling back to Global")
+        print(f"   Room '{room}' no longer exists — falling back to Global")
         emit("room_error", {"message": "Room no longer exists"})
         return
 
@@ -374,7 +374,7 @@ def handle_rejoin(data):
         leave_room(old)
     join_room(room)
     socket_to_room[sid] = room
-    print(f"👤 {sid} rejoined '{room}'")
+    print(f"{sid} rejoined '{room}'")
 
     # Load messages
     messages = load_recent_messages(room)
@@ -389,7 +389,7 @@ def handle_rejoin(data):
 @socketio.on("check_room")
 def handle_check_room(data):
     room_name = (data.get("room") or "").strip()
-    print(f"🔍 check_room: '{room_name}'")
+    print(f"check_room: '{room_name}'")
     if not room_name:
         emit("check_room_result", {"exists": False, "isPrivate": False, "room": ""})
         return
@@ -399,7 +399,7 @@ def handle_check_room(data):
         "isPrivate": doc.get("isPrivate", False) if doc else False,
         "room":      room_name,
     }
-    print(f"   → {result}")
+    print(f"  → {result}")
     emit("check_room_result", result)
 
 # --------------------------------------------------
@@ -414,9 +414,9 @@ def handle_disconnect():
         users.pop(user_id, None)
         socket_to_user.pop(sid, None)
         invisible_users.discard(user_id)
-        print(f"🔌 {user_id} disconnected")
+        print(f"{user_id} disconnected")
     else:
-        print(f"🔌 {sid} disconnected")
+        print(f"{sid} disconnected")
     visible = [u for u in users.values() if u["id"] not in invisible_users]
     socketio.emit("update_users", visible)
 
@@ -452,10 +452,10 @@ def handle_set_invisible(data):
         return
     if invisible:
         invisible_users.add(user_id)
-        print(f"👻 {user_id} went invisible")
+        print(f"{user_id} went invisible")
     else:
         invisible_users.discard(user_id)
-        print(f"👁️  {user_id} is now visible")
+        print(f" {user_id} is now visible")
     # Broadcast the updated (filtered) user list to everyone
     visible = [u for u in users.values() if u["id"] not in invisible_users]
     socketio.emit("update_users", visible)
