@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import "./Login.css";
 
-const heroMotion = {
+const journey = {
   target: 0,
   current: 0,
   velocity: 0,
@@ -39,100 +39,130 @@ const smoothstep = (edge0, edge1, value) => {
   return t * t * (3 - 2 * t);
 };
 
-const buildAccretionField = (compact) => {
-  const count = compact ? 220 : 420;
+const buildDotCube = (compact) => {
   const positions = [];
-  const seeds = [];
-  const innerRadius = compact ? 1.15 : 1.25;
-  const outerRadius = compact ? 5.2 : 7.1;
+  const normals = [];
+  const half = compact ? 2.45 : 3.1;
+  const density = compact ? 11 : 15;
+  const step = (half * 2) / (density - 1);
 
-  for (let index = 0; index < count; index += 1) {
-    const lane = index % 11;
-    const normalized = index / count;
-    const shell = Math.pow(((index * 37) % 100) / 100, 1.6);
-    const radius = THREE.MathUtils.lerp(innerRadius, outerRadius, shell);
-    const angle = normalized * Math.PI * 2 * (lane % 2 === 0 ? 2.1 : -1.55) + lane * 0.31;
-    positions.push(radius, angle, lane);
-    seeds.push((index * 0.61803398875) % 1);
+  const pushPoint = (axis, sign, a, b) => {
+    const coords = [0, 0, 0];
+    const normal = [0, 0, 0];
+    coords[axis] = sign * half;
+    normal[axis] = sign;
+
+    const sideAxes = [0, 1, 2].filter((index) => index !== axis);
+    coords[sideAxes[0]] = -half + a * step;
+    coords[sideAxes[1]] = -half + b * step;
+
+    const jitter = Math.sin((a + 1.7) * 12.989 + (b + 3.1) * 78.233 + axis * 18.4 + sign) * 0.012;
+    positions.push(coords[0] + jitter, coords[1] - jitter, coords[2] + jitter * 0.5);
+    normals.push(normal[0], normal[1], normal[2]);
+  };
+
+  for (let axis = 0; axis < 3; axis += 1) {
+    [-1, 1].forEach((sign) => {
+      for (let a = 0; a < density; a += 1) {
+        for (let b = 0; b < density; b += 1) {
+          pushPoint(axis, sign, a, b);
+        }
+      }
+    });
   }
 
   return {
     positions: new Float32Array(positions),
-    seeds: new Float32Array(seeds),
+    normals: new Float32Array(normals),
   };
 };
 
-const buildDebrisField = (compact) => {
-  const count = compact ? 90 : 160;
+const buildInternalMatrix = (compact) => {
   const positions = [];
-  const seeds = [];
+  const span = compact ? 2.05 : 2.65;
+  const density = compact ? 7 : 9;
+  const step = (span * 2) / (density - 1);
 
-  for (let index = 0; index < count; index += 1) {
-    const lane = index % 7;
-    const angle = (index / count) * Math.PI * 2 * 1.4 + lane * 0.62;
-    const radius = (compact ? 5.4 : 7.6) * (0.52 + ((index * 23) % 100) / 115);
-    const y = (((index * 19) % 100) / 100 - 0.5) * (compact ? 3.2 : 4.4);
-    positions.push(Math.cos(angle) * radius, y, Math.sin(angle) * radius * 0.72);
-    seeds.push((index * 0.41421356237) % 1);
-  }
-
-  return {
-    positions: new Float32Array(positions),
-    seeds: new Float32Array(seeds),
-  };
-};
-
-const buildWarpField = (compact) => {
-  const positions = [];
-  const rings = compact ? 7 : 10;
-  const segments = compact ? 96 : 144;
-  const maxRadius = compact ? 7.4 : 10.4;
-
-  for (let ring = 0; ring < rings; ring += 1) {
-    const radius = maxRadius * (0.22 + ring / rings);
-    for (let segment = 0; segment < segments; segment += 1) {
-      const angleA = (segment / segments) * Math.PI * 2;
-      const angleB = ((segment + 1) / segments) * Math.PI * 2;
-      const warpA = 1 - 0.12 / Math.max(0.22, ring / rings + 0.14);
-      const warpB = 1 - 0.12 / Math.max(0.22, ring / rings + 0.14);
-      positions.push(
-        Math.cos(angleA) * radius * warpA,
-        -1.7 + Math.sin(angleA * 2) * 0.08,
-        Math.sin(angleA) * radius * 0.42,
-        Math.cos(angleB) * radius * warpB,
-        -1.7 + Math.sin(angleB * 2) * 0.08,
-        Math.sin(angleB) * radius * 0.42
-      );
+  for (let x = 0; x < density; x += 1) {
+    for (let y = 0; y < density; y += 1) {
+      for (let z = 0; z < density; z += 1) {
+        const edgeBias = x === 0 || y === 0 || z === 0 || x === density - 1 || y === density - 1 || z === density - 1;
+        if (!edgeBias && (x + y + z) % 2 === 1) continue;
+        positions.push(-span + x * step, -span + y * step, -span + z * step);
+      }
     }
   }
 
   return new Float32Array(positions);
 };
 
-const AccretionField = ({ compact, reducedMotion }) => {
+const buildPacketLines = (compact) => {
+  const positions = [];
+  const rails = compact ? 18 : 28;
+  const length = compact ? 5.7 : 7.1;
+
+  for (let index = 0; index < rails; index += 1) {
+    const side = index % 4;
+    const offset = (index - rails / 2) * 0.16;
+    const wobble = Math.sin(index * 1.7) * 0.18;
+    let start;
+    let end;
+
+    if (side === 0) {
+      start = [-length / 2, offset, wobble];
+      end = [length / 2, offset * 0.45, -wobble];
+    } else if (side === 1) {
+      start = [offset, -length / 2, wobble];
+      end = [offset * 0.5, length / 2, -wobble];
+    } else if (side === 2) {
+      start = [offset, wobble, -length / 2];
+      end = [-offset * 0.5, -wobble, length / 2];
+    } else {
+      start = [-length / 2, wobble, offset];
+      end = [length / 2, -wobble, -offset];
+    }
+
+    positions.push(...start, ...end);
+  }
+
+  return new Float32Array(positions);
+};
+
+const MatrixPoints = ({ geometryData, size, intensity, phase, reducedMotion }) => {
   const material = useRef(null);
-  const field = useMemo(() => buildAccretionField(compact), [compact]);
   const uniforms = useMemo(
     () => ({
       uTime: { value: 0 },
       uProgress: { value: 0 },
-      uSize: { value: compact ? 2.1 : 2.55 },
-      uMotion: { value: reducedMotion ? 0.16 : 1 },
+      uIntensity: { value: intensity },
+      uPhase: { value: phase },
+      uSize: { value: size },
+      uMotion: { value: reducedMotion ? 0.1 : 1 },
     }),
-    [compact, reducedMotion]
+    [intensity, phase, reducedMotion, size]
   );
 
   useFrame(({ clock }) => {
     if (!material.current) return;
     material.current.uniforms.uTime.value = clock.elapsedTime;
-    material.current.uniforms.uProgress.value = heroMotion.current;
+    material.current.uniforms.uProgress.value = journey.current;
   });
 
   return (
     <points>
       <bufferGeometry>
-        <bufferAttribute attach="attributes-position" array={field.positions} count={field.positions.length / 3} itemSize={3} />
-        <bufferAttribute attach="attributes-aSeed" array={field.seeds} count={field.seeds.length} itemSize={1} />
+        <bufferAttribute
+          attach="attributes-position"
+          array={geometryData.positions}
+          count={geometryData.positions.length / 3}
+          itemSize={3}
+        />
+        <bufferAttribute
+          attach="attributes-normal"
+          array={geometryData.normals}
+          count={geometryData.normals.length / 3}
+          itemSize={3}
+        />
       </bufferGeometry>
       <shaderMaterial
         ref={material}
@@ -141,36 +171,31 @@ const AccretionField = ({ compact, reducedMotion }) => {
         blending={THREE.AdditiveBlending}
         uniforms={uniforms}
         vertexShader={`
-          attribute float aSeed;
           uniform float uTime;
           uniform float uProgress;
+          uniform float uPhase;
           uniform float uSize;
           uniform float uMotion;
           varying float vAlpha;
 
           void main() {
-            float radius = position.x;
-            float angle = position.y;
-            float lane = position.z;
-            float breath = sin(uTime * 0.42 + aSeed * 14.0) * 0.5 + 0.5;
-            float scrollOpen = smoothstep(0.1, 0.78, uProgress);
-            float direction = mod(lane, 2.0) < 1.0 ? 1.0 : -1.0;
-            float orbital = angle + direction * uTime * (0.08 + lane * 0.004) * uMotion + scrollOpen * 0.38;
-            float collapse = 1.0 - scrollOpen * 0.06 + sin(uTime * 0.18 + lane) * 0.012 * uMotion;
-            vec3 point = vec3(
-              cos(orbital) * radius * collapse,
-              (aSeed - 0.5) * 0.42 + sin(orbital * 3.0 + uTime * 0.35) * 0.075 * uMotion,
-              sin(orbital) * radius * (0.46 + lane * 0.012) * collapse
-            );
-            point.xz *= 1.0 + scrollOpen * 0.1;
+            vec3 point = position;
+            float open = smoothstep(0.12, 0.58, uProgress);
+            float reform = smoothstep(0.76, 1.0, uProgress);
+            float shimmer = sin(point.x * 2.2 + point.y * 1.7 + point.z * 2.8 + uTime * 0.7 + uPhase);
+            vec3 opened = point + normal * (open * 1.85 - reform * 1.18);
+            opened += normalize(point + vec3(0.001)) * sin(uProgress * 3.14159) * 0.22;
+            opened.y += shimmer * 0.035 * uMotion;
+            point = mix(opened, position * 0.84 + normal * 0.18, reform * 0.46);
 
             vec4 mv = modelViewMatrix * vec4(point, 1.0);
             gl_Position = projectionMatrix * mv;
-            gl_PointSize = clamp((uSize + breath * 1.1) * (34.0 / max(2.2, -mv.z)), 0.8, 4.6);
-            vAlpha = (0.1 + breath * 0.24) * (1.0 - scrollOpen * 0.12);
+            gl_PointSize = clamp(uSize * (30.0 / max(2.0, -mv.z)), 1.0, 4.6);
+            vAlpha = (0.25 + open * 0.5 - reform * 0.12) * (0.72 + shimmer * 0.18);
           }
         `}
         fragmentShader={`
+          uniform float uIntensity;
           varying float vAlpha;
 
           void main() {
@@ -178,7 +203,7 @@ const AccretionField = ({ compact, reducedMotion }) => {
             float radius = length(centered);
             if (radius > 0.5) discard;
             float glow = smoothstep(0.5, 0.05, radius);
-            gl_FragColor = vec4(vec3(0.86), glow * vAlpha);
+            gl_FragColor = vec4(vec3(0.96), glow * vAlpha * uIntensity);
           }
         `}
       />
@@ -186,9 +211,8 @@ const AccretionField = ({ compact, reducedMotion }) => {
   );
 };
 
-const DebrisField = ({ compact, reducedMotion }) => {
+const InternalMatrix = ({ positions, reducedMotion }) => {
   const material = useRef(null);
-  const field = useMemo(() => buildDebrisField(compact), [compact]);
   const uniforms = useMemo(
     () => ({
       uTime: { value: 0 },
@@ -201,14 +225,13 @@ const DebrisField = ({ compact, reducedMotion }) => {
   useFrame(({ clock }) => {
     if (!material.current) return;
     material.current.uniforms.uTime.value = clock.elapsedTime;
-    material.current.uniforms.uProgress.value = heroMotion.current;
+    material.current.uniforms.uProgress.value = journey.current;
   });
 
   return (
     <points>
       <bufferGeometry>
-        <bufferAttribute attach="attributes-position" array={field.positions} count={field.positions.length / 3} itemSize={3} />
-        <bufferAttribute attach="attributes-aSeed" array={field.seeds} count={field.seeds.length} itemSize={1} />
+        <bufferAttribute attach="attributes-position" array={positions} count={positions.length / 3} itemSize={3} />
       </bufferGeometry>
       <shaderMaterial
         ref={material}
@@ -217,7 +240,6 @@ const DebrisField = ({ compact, reducedMotion }) => {
         blending={THREE.AdditiveBlending}
         uniforms={uniforms}
         vertexShader={`
-          attribute float aSeed;
           uniform float uTime;
           uniform float uProgress;
           uniform float uMotion;
@@ -225,14 +247,14 @@ const DebrisField = ({ compact, reducedMotion }) => {
 
           void main() {
             vec3 point = position;
-            float sweep = uTime * 0.018 * uMotion + uProgress * 0.2;
-            mat2 spin = mat2(cos(sweep), -sin(sweep), sin(sweep), cos(sweep));
-            point.xz = spin * point.xz;
-            point.y += sin(uTime * 0.12 + aSeed * 10.0) * 0.16 * uMotion;
+            float reveal = smoothstep(0.22, 0.7, uProgress);
+            point *= 0.8 + reveal * 0.34;
+            point.xz *= mat2(cos(uProgress * 0.72), -sin(uProgress * 0.72), sin(uProgress * 0.72), cos(uProgress * 0.72));
+            point.y += sin(uTime * 0.9 + point.x * 2.0 + point.z) * 0.045 * uMotion;
             vec4 mv = modelViewMatrix * vec4(point, 1.0);
             gl_Position = projectionMatrix * mv;
-            gl_PointSize = clamp((1.6 + aSeed * 1.6) * (28.0 / max(2.0, -mv.z)), 0.7, 3.2);
-            vAlpha = (0.065 + aSeed * 0.11) * (1.0 - uProgress * 0.16);
+            gl_PointSize = clamp((2.2 + reveal * 0.8) * (24.0 / max(2.0, -mv.z)), 1.0, 4.0);
+            vAlpha = reveal * (0.22 + 0.42 * sin(uTime * 0.45 + point.z * 2.0) * 0.5 + 0.5);
           }
         `}
         fragmentShader={`
@@ -240,8 +262,9 @@ const DebrisField = ({ compact, reducedMotion }) => {
 
           void main() {
             vec2 centered = gl_PointCoord - 0.5;
-            if (length(centered) > 0.5) discard;
-            gl_FragColor = vec4(vec3(0.72), vAlpha);
+            float radius = length(centered);
+            if (radius > 0.5) discard;
+            gl_FragColor = vec4(vec3(0.9), smoothstep(0.5, 0.06, radius) * vAlpha);
           }
         `}
       />
@@ -249,178 +272,147 @@ const DebrisField = ({ compact, reducedMotion }) => {
   );
 };
 
-const PhotonRing = ({ radius, tube, rotation, speed, opacity, compact, phase }) => {
-  const ring = useRef(null);
-  const material = useRef(null);
+const EdgeCube = ({ size = 6, index = 0 }) => {
+  const ref = useRef(null);
+  const geometry = useMemo(() => new THREE.EdgesGeometry(new THREE.BoxGeometry(size, size, size)), [size]);
 
   useFrame(({ clock }) => {
-    if (!ring.current || !material.current) return;
-    const time = clock.elapsedTime;
-    const progress = heroMotion.current;
-    ring.current.rotation.x = rotation[0] + Math.sin(time * 0.08 + phase) * 0.018 + progress * 0.08;
-    ring.current.rotation.y = rotation[1] + time * speed + progress * 0.4;
-    ring.current.rotation.z = rotation[2] + Math.cos(time * 0.07 + phase) * 0.018;
-    ring.current.scale.setScalar(1 + Math.sin(time * 0.13 + phase) * 0.009 + progress * 0.026);
-    material.current.opacity = opacity + Math.sin(time * 0.18 + phase) * 0.014;
+    if (!ref.current) return;
+    const progress = journey.current;
+    const open = smoothstep(0.16, 0.66, progress);
+    const reform = smoothstep(0.78, 1, progress);
+    ref.current.rotation.x = index * 0.21 + progress * 0.34 + Math.sin(clock.elapsedTime * 0.12 + index) * 0.035;
+    ref.current.rotation.y = index * 0.28 + progress * 0.48;
+    ref.current.scale.setScalar(1 + open * (0.16 + index * 0.05) - reform * 0.11);
+    ref.current.material.opacity = 0.12 + open * 0.18 - reform * 0.04;
   });
 
   return (
-    <mesh ref={ring} rotation={rotation}>
-      <torusGeometry args={[radius, tube, compact ? 128 : 192, 12]} />
-      <meshStandardMaterial
-        ref={material}
-        color="#e7eaee"
-        emissive="#ffffff"
-        emissiveIntensity={0.05}
-        metalness={0.74}
-        roughness={0.28}
-        transparent
-        opacity={opacity}
-      />
-    </mesh>
-  );
-};
-
-const Singularity = ({ compact }) => {
-  const group = useRef(null);
-  const glow = useRef(null);
-
-  useFrame(({ clock }) => {
-    if (!group.current || !glow.current) return;
-    const time = clock.elapsedTime;
-    const progress = heroMotion.current;
-    group.current.rotation.z = time * 0.035 + progress * 0.22;
-    group.current.scale.setScalar(1 + Math.sin(time * 0.22) * 0.012 + progress * 0.035);
-    glow.current.opacity = 0.18 + Math.sin(time * 0.2) * 0.035;
-  });
-
-  return (
-    <group ref={group}>
-      <mesh>
-        <sphereGeometry args={[compact ? 0.68 : 0.84, 48, 48]} />
-        <meshBasicMaterial color="#000000" />
-      </mesh>
-      <mesh rotation={[Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[compact ? 0.82 : 1, compact ? 1.3 : 1.58, compact ? 128 : 192]} />
-        <meshBasicMaterial ref={glow} color="#f4f6f8" transparent opacity={0.2} side={THREE.DoubleSide} depthWrite={false} />
-      </mesh>
-    </group>
-  );
-};
-
-const WarpField = ({ compact }) => {
-  const field = useRef(null);
-  const material = useRef(null);
-  const positions = useMemo(() => buildWarpField(compact), [compact]);
-
-  useFrame(({ clock }) => {
-    if (!field.current || !material.current) return;
-    const time = clock.elapsedTime;
-    field.current.rotation.y = time * 0.01 + heroMotion.current * 0.18;
-    field.current.rotation.x = -0.18 + Math.sin(time * 0.08) * 0.02;
-    material.current.opacity = 0.045 + smoothstep(0.18, 0.88, heroMotion.current) * 0.035;
-  });
-
-  return (
-    <lineSegments ref={field} position={[0, compact ? -0.42 : -0.56, -1.2]}>
-      <bufferGeometry>
-        <bufferAttribute attach="attributes-position" array={positions} count={positions.length / 3} itemSize={3} />
-      </bufferGeometry>
-      <lineBasicMaterial ref={material} color="#e4e8ee" transparent opacity={0.045} depthWrite={false} />
+    <lineSegments ref={ref} geometry={geometry}>
+      <lineBasicMaterial color="#f8fafc" transparent opacity={0.16} depthWrite={false} />
     </lineSegments>
   );
 };
 
-const EventHorizonShadow = ({ compact }) => {
-  const mesh = useRef(null);
+const PacketLines = ({ positions, reducedMotion }) => {
+  const ref = useRef(null);
 
   useFrame(({ clock }) => {
-    if (!mesh.current) return;
-    const time = clock.elapsedTime;
-    mesh.current.rotation.z = time * -0.018;
-    mesh.current.scale.setScalar(1 + Math.sin(time * 0.11) * 0.01);
+    if (!ref.current) return;
+    const progress = journey.current;
+    const reveal = smoothstep(0.28, 0.74, progress);
+    ref.current.rotation.y = progress * 0.6 + (reducedMotion ? 0 : clock.elapsedTime * 0.025);
+    ref.current.rotation.z = -progress * 0.18;
+    ref.current.material.opacity = 0.04 + reveal * 0.24;
   });
 
   return (
-    <mesh ref={mesh} rotation={[Math.PI / 2, 0, 0]}>
-      <circleGeometry args={[compact ? 1.22 : 1.52, 96]} />
-      <meshBasicMaterial color="#000000" transparent opacity={0.96} depthWrite={false} />
+    <lineSegments ref={ref}>
+      <bufferGeometry>
+        <bufferAttribute attach="attributes-position" array={positions} count={positions.length / 3} itemSize={3} />
+      </bufferGeometry>
+      <lineBasicMaterial color="#f6f8fb" transparent opacity={0.08} depthWrite={false} />
+    </lineSegments>
+  );
+};
+
+const CubeFace = ({ axis, sign, compact }) => {
+  const ref = useRef(null);
+  const size = compact ? 4.9 : 6.2;
+  const half = size / 2;
+
+  const rotation = useMemo(() => {
+    if (axis === 0) return [0, Math.PI / 2, 0];
+    if (axis === 1) return [Math.PI / 2, 0, 0];
+    return [0, 0, 0];
+  }, [axis]);
+
+  useFrame(() => {
+    if (!ref.current) return;
+    const progress = journey.current;
+    const open = smoothstep(0.2, 0.62, progress);
+    const reform = smoothstep(0.8, 1, progress);
+    const distance = half + open * 1.05 - reform * 0.72;
+    ref.current.position.set(0, 0, 0);
+    ref.current.position.setComponent(axis, sign * distance);
+    ref.current.rotation.set(rotation[0], rotation[1], rotation[2]);
+    ref.current.rotation.x += axis !== 0 ? sign * open * 0.28 : 0;
+    ref.current.rotation.y += axis !== 1 ? sign * open * 0.28 : 0;
+    ref.current.material.opacity = 0.035 + open * 0.075 - reform * 0.025;
+  });
+
+  return (
+    <mesh ref={ref} rotation={rotation}>
+      <planeGeometry args={[size, size, 7, 7]} />
+      <meshBasicMaterial color="#ffffff" transparent opacity={0.04} wireframe depthWrite={false} />
     </mesh>
   );
 };
 
-const CameraRig = ({ compact, reducedMotion }) => {
+const CameraRig = ({ reducedMotion }) => {
   const { camera } = useThree();
 
-  useFrame(({ clock }) => {
-    const progressEase = reducedMotion ? 0.22 : 0.045;
-    heroMotion.current = THREE.MathUtils.lerp(heroMotion.current, heroMotion.target, progressEase);
-    heroMotion.velocity = THREE.MathUtils.lerp(heroMotion.velocity, 0, 0.055);
+  useFrame(() => {
+    journey.current = THREE.MathUtils.lerp(journey.current, journey.target, reducedMotion ? 0.22 : 0.045);
+    journey.velocity = THREE.MathUtils.lerp(journey.velocity, 0, 0.055);
 
-    const time = clock.elapsedTime;
-    const progress = heroMotion.current;
-    const pointerWeight = reducedMotion ? 0 : compact ? 0.22 : 0.38;
-    const velocityLift = Math.min(0.72, Math.abs(heroMotion.velocity) * 0.012);
-    const targetX = heroMotion.pointerX * pointerWeight + Math.sin(time * 0.055) * (compact ? 0.12 : 0.2);
-    const targetY = heroMotion.pointerY * pointerWeight * 0.44 + 0.1 - progress * 0.26;
-    const targetZ = (compact ? 10.3 : 11.5) - progress * (compact ? 1.05 : 1.85) + velocityLift;
+    const progress = journey.current;
+    const pointerWeight = reducedMotion ? 0 : 0.42;
+    const velocityLift = Math.min(1.2, Math.abs(journey.velocity) * 0.018);
+    const targetX = journey.pointerX * pointerWeight + Math.sin(progress * Math.PI * 2) * 0.18;
+    const targetY = journey.pointerY * pointerWeight + (0.52 - progress) * 0.82;
+    const targetZ = 11.8 - progress * 5.4 + velocityLift;
 
-    camera.position.x = THREE.MathUtils.lerp(camera.position.x, targetX, 0.05);
-    camera.position.y = THREE.MathUtils.lerp(camera.position.y, targetY, 0.05);
-    camera.position.z = THREE.MathUtils.lerp(camera.position.z, targetZ, 0.05);
-    camera.rotation.z = THREE.MathUtils.lerp(camera.rotation.z, (progress - 0.5) * -0.035, 0.055);
-    camera.fov = THREE.MathUtils.lerp(camera.fov, 41 + progress * 4, 0.04);
-    camera.lookAt(0, progress * 0.1, -0.32);
+    camera.position.x = THREE.MathUtils.lerp(camera.position.x, targetX, 0.055);
+    camera.position.y = THREE.MathUtils.lerp(camera.position.y, targetY, 0.055);
+    camera.position.z = THREE.MathUtils.lerp(camera.position.z, targetZ, 0.055);
+    camera.rotation.z = THREE.MathUtils.lerp(camera.rotation.z, (progress - 0.5) * -0.06, 0.055);
+    camera.fov = THREE.MathUtils.lerp(camera.fov, 42 + progress * 10, 0.05);
+    camera.lookAt(0, 0, -0.35);
     camera.updateProjectionMatrix();
   });
 
   return null;
 };
 
-const BlackHoleSystemScene = ({ compact, reducedMotion }) => {
-  const system = useRef(null);
-  const scale = compact ? 0.82 : 1.04;
+const CubeNetworkScene = ({ compact, reducedMotion }) => {
+  const architecture = useRef(null);
+  const cube = useMemo(() => buildDotCube(compact), [compact]);
+  const inner = useMemo(() => buildInternalMatrix(compact), [compact]);
+  const packets = useMemo(() => buildPacketLines(compact), [compact]);
 
   useFrame(({ clock }) => {
-    if (!system.current) return;
-    const time = clock.elapsedTime;
-    system.current.rotation.y = THREE.MathUtils.lerp(
-      system.current.rotation.y,
-      -0.18 + heroMotion.current * 0.38 + (reducedMotion ? 0 : Math.sin(time * 0.065) * 0.04),
+    if (!architecture.current) return;
+    const progress = journey.current;
+    architecture.current.rotation.y = THREE.MathUtils.lerp(
+      architecture.current.rotation.y,
+      progress * 0.52 + (reducedMotion ? 0 : Math.sin(clock.elapsedTime * 0.15) * 0.045),
       0.04
     );
-    system.current.rotation.x = THREE.MathUtils.lerp(
-      system.current.rotation.x,
-      0.02 + heroMotion.current * 0.1 + Math.sin(time * 0.055) * 0.02,
-      0.04
-    );
-    system.current.position.y = THREE.MathUtils.lerp(
-      system.current.position.y,
-      compact ? -0.08 : -0.02,
+    architecture.current.rotation.x = THREE.MathUtils.lerp(
+      architecture.current.rotation.x,
+      -0.1 + progress * 0.24,
       0.04
     );
   });
 
   return (
     <>
-      <color attach="background" args={["#020304"]} />
-      <fog attach="fog" args={["#020304", compact ? 6.8 : 7.6, compact ? 18 : 24]} />
-      <ambientLight intensity={0.11} />
-      <directionalLight position={[-4, 5, 6]} intensity={0.62} color="#f5f6f8" />
-      <directionalLight position={[5, -2, -3]} intensity={0.18} color="#7f8792" />
-      <pointLight position={[0, 0.1, 2.8]} intensity={0.76} color="#ffffff" distance={8} />
-      <CameraRig compact={compact} reducedMotion={reducedMotion} />
-      <group ref={system} scale={scale} position={[0, compact ? -0.08 : 0, -0.45]}>
-        <WarpField compact={compact} />
-        <DebrisField compact={compact} reducedMotion={reducedMotion} />
-        <AccretionField compact={compact} reducedMotion={reducedMotion} />
-        <group rotation={[compact ? 1.2 : 1.12, 0.08, -0.08]}>
-          <PhotonRing radius={compact ? 1.44 : 1.82} tube={0.026} rotation={[0, 0, 0]} speed={0.034} opacity={0.34} compact={compact} phase={0.2} />
-          <PhotonRing radius={compact ? 2.02 : 2.58} tube={0.017} rotation={[0.04, 0.06, 0.04]} speed={-0.022} opacity={0.2} compact={compact} phase={1.5} />
-          <PhotonRing radius={compact ? 2.72 : 3.48} tube={0.011} rotation={[-0.03, -0.04, 0.02]} speed={0.014} opacity={0.12} compact={compact} phase={2.7} />
-          <Singularity compact={compact} />
-          <EventHorizonShadow compact={compact} />
-        </group>
+      <color attach="background" args={["#030405"]} />
+      <fog attach="fog" args={["#030405", 7, 24]} />
+      <CameraRig reducedMotion={reducedMotion} />
+      <group ref={architecture}>
+        <MatrixPoints geometryData={cube} size={compact ? 2.7 : 3.1} intensity={0.78} phase={0.4} reducedMotion={reducedMotion} />
+        <InternalMatrix positions={inner} reducedMotion={reducedMotion} />
+        <PacketLines positions={packets} reducedMotion={reducedMotion} />
+        <EdgeCube size={compact ? 4.9 : 6.2} index={0} />
+        <EdgeCube size={compact ? 3.4 : 4.5} index={1} />
+        <EdgeCube size={compact ? 2.1 : 2.7} index={2} />
+        {[0, 1, 2].map((axis) =>
+          [-1, 1].map((sign) => (
+            <CubeFace key={`${axis}-${sign}`} axis={axis} sign={sign} compact={compact} />
+          ))
+        )}
       </group>
     </>
   );
@@ -529,20 +521,20 @@ const Login = ({ onLogin }) => {
     const updateProgress = ({ scroll, limit, velocity, progress } = {}) => {
       const available = Math.max(1, limit ?? document.documentElement.scrollHeight - window.innerHeight);
       const rawProgress = typeof progress === "number" ? progress : (scroll ?? window.scrollY) / available;
-      heroMotion.target = clamp01(rawProgress);
-      heroMotion.velocity = velocity ?? heroMotion.velocity;
-      const section = Math.min(3, Math.floor(heroMotion.target * 4.05));
+      journey.target = clamp01(rawProgress);
+      journey.velocity = velocity ?? journey.velocity;
+      const section = Math.min(3, Math.floor(journey.target * 4.05));
       setActiveSection((current) => (current === section ? current : section));
     };
 
     const updatePointer = (event) => {
-      heroMotion.pointerX = (event.clientX / window.innerWidth) * 2 - 1;
-      heroMotion.pointerY = -((event.clientY / window.innerHeight) * 2 - 1);
+      journey.pointerX = (event.clientX / window.innerWidth) * 2 - 1;
+      journey.pointerY = -((event.clientY / window.innerHeight) * 2 - 1);
     };
 
     const resetPointer = () => {
-      heroMotion.pointerX = 0;
-      heroMotion.pointerY = 0;
+      journey.pointerX = 0;
+      journey.pointerY = 0;
     };
 
     if (!reducedMotion) {
@@ -578,9 +570,9 @@ const Login = ({ onLogin }) => {
       window.removeEventListener("pointermove", updatePointer);
       window.removeEventListener("pointerleave", resetPointer);
       document.documentElement.classList.remove("orbit-lenis-active");
-      heroMotion.target = 0;
-      heroMotion.current = 0;
-      heroMotion.velocity = 0;
+      journey.target = 0;
+      journey.current = 0;
+      journey.velocity = 0;
     };
   }, [reducedMotion]);
 
@@ -623,11 +615,11 @@ const Login = ({ onLogin }) => {
     <main className="orbit-entry">
       <div className="network-canvas" aria-hidden="true">
         <Canvas
-          camera={{ position: [0, 0, compact ? 10.6 : 11.8], fov: 42 }}
-          dpr={compact ? [1, 1.12] : [1, 1.55]}
+          camera={{ position: [0, 0, 11.8], fov: 42 }}
+          dpr={compact ? [1, 1.18] : [1, 1.65]}
           gl={{ antialias: !compact, alpha: false, powerPreference: "high-performance" }}
         >
-          <BlackHoleSystemScene compact={compact} reducedMotion={reducedMotion} />
+          <CubeNetworkScene compact={compact} reducedMotion={reducedMotion} />
         </Canvas>
       </div>
 
@@ -651,7 +643,7 @@ const Login = ({ onLogin }) => {
         <section className="entry-panel entry-intro">
           <motion.div className="entry-copy centered" initial="hidden" whileInView="visible" viewport={{ amount: 0.45 }} variants={easeReveal}>
             <div className="entry-kicker"><Aperture size={13} /> ORBIT / SPATIAL ENGINE</div>
-            <h1>Enter<br /><strong>The Orbit</strong></h1>
+            <h1>WELCOME<br /><strong>To Orbit</strong></h1>
             <p>A Realtime Network Built For Spatial Communication and Live Interaction</p>
             <div className="entry-scroll-prompt"><span /> SCROLL DOWN</div>
           </motion.div>
@@ -677,61 +669,75 @@ const Login = ({ onLogin }) => {
           </motion.article>
         </section>
 
-        <section className="entry-panel entry-access">
-          <div className="orbit-login-replica">
-            <div className="orbit-title">
-              <span>ENTER</span>
-              <strong>ORBIT</strong>
-            </div>
+       <section className="entry-panel entry-access">
 
-            <div className="orbit-card">
-              <div className="orbit-card-inner">
-                <div className="orbit-sync-icon">
-                  <RadioReceiver size={15} />
-                </div>
+  <div className="orbit-login-replica">
 
-                <div className="orbit-sync-text">
-                  IDENTITY SYNCHRONIZATION
-                </div>
+    <div className="orbit-title">
+      <span>ENTER</span>
+      <strong>ORBIT</strong>
+    </div>
 
-                <form
-                  className={`orbit-form ${isValid ? "ready" : ""}`}
-                  onSubmit={handleSubmit}
-                  noValidate
-                >
-                  <div className="orbit-input-wrap">
-                    <span>[</span>
-                    <input
-                      id="orbit-identity"
-                      type="text"
-                      value={username}
-                      onChange={handleInput}
-                      maxLength={5}
-                      placeholder="USERNAME"
-                      autoCapitalize="characters"
-                      autoComplete="off"
-                      spellCheck="false"
-                    />
-                    <span>]</span>
-                  </div>
+    <div className="orbit-card">
 
-                  <div className="orbit-status">
-                    {notice} . . . {username.length}/5
-                  </div>
+      <div className="orbit-card-inner">
 
-                  <button type="submit" disabled={!isValid}>
-                    <Fingerprint size={14} />
-                    CONNECT TO NETWORK
-                  </button>
-                </form>
+        <div className="orbit-sync-icon">
+          <RadioReceiver size={15} />
+        </div>
 
-                <div className="orbit-footer">
-                  DEVELOPED BY OSCAR
-                </div>
-              </div>
-            </div>
+        <div className="orbit-sync-text">
+          IDENTITY SYNCHRONIZATION
+        </div>
+
+        <form
+          className={`orbit-form ${isValid ? "ready" : ""}`}
+          onSubmit={handleSubmit}
+          noValidate
+        >
+
+          <div className="orbit-input-wrap">
+
+            <span>[</span>
+
+            <input
+              id="orbit-identity"
+              type="text"
+              value={username}
+              onChange={handleInput}
+              maxLength={5}
+              placeholder="USERNAME"
+              autoCapitalize="characters"
+              autoComplete="off"
+              spellCheck="false"
+            />
+
+            <span>]</span>
+
           </div>
-        </section>
+
+          <div className="orbit-status">
+            AWAITING IDENTIFICATION . . . {username.length}/5
+          </div>
+
+          <button type="submit" disabled={!isValid}>
+            <Fingerprint size={14} />
+            CONNECT TO NETWORK
+          </button>
+
+        </form>
+
+        <div className="orbit-footer">
+          DEVELOPED BY OSCAR
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</section>
       </div>
     </main>
   );

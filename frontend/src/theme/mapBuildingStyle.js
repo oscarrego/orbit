@@ -45,42 +45,18 @@ const DARK_BUILDING_COLOR_EXPRESSION = [
   "let",
   "height",
   ["max", 10, ["to-number", ["get", "render_height"], 24]],
-  "tone",
-  BUILDING_TONE_BUCKET_EXPRESSION,
+
   [
-    "case",
-    ["<", ["var", "tone"], 2],
-    [
-      "interpolate",
-      ["linear"],
-      ["var", "height"],
-      0, "#3b3334",
-      22, "#5a463e",
-      55, "#6b5245",
-      105, "#5a4842",
-      180, "#43393a"
-    ],
-    ["<", ["var", "tone"], 4],
-    [
-      "interpolate",
-      ["linear"],
-      ["var", "height"],
-      0, "#363132",
-      22, "#51413b",
-      55, "#604a40",
-      105, "#52423e",
-      180, "#3f3637"
-    ],
-    [
-      "interpolate",
-      ["linear"],
-      ["var", "height"],
-      0, "#3f3431",
-      22, "#60483d",
-      55, "#705243",
-      105, "#5d463e",
-      180, "#443735"
-    ]
+    "interpolate",
+    ["linear"],
+    ["var", "height"],
+
+    0, "#262d36",
+    20, "#313b47",
+    55, "#445363",
+    110, "#64788e",
+    180, "#8ea7bf",
+    260, "#dbe7f3"
   ]
 ];
 
@@ -259,17 +235,14 @@ const cloneExpression = (value) =>
   Array.isArray(value) ? JSON.parse(JSON.stringify(value)) : value;
 
 // Rooftops catch slightly more atmospheric ambient light than walls.
-// They should be slightly lighter and cooler than the wall base colour.
 const DARK_ROOF_COLOR_EXPRESSION = [
-  "let",
-  "tone",
-  BUILDING_TONE_BUCKET_EXPRESSION,
-  [
-    "case",
-    ["<", ["var", "tone"], 2], "#6e5649",
-    ["<", ["var", "tone"], 4], "#634d43",
-    "#735846"
-  ]
+  "interpolate",
+  ["linear"],
+  ["max", 10, ["to-number", ["get", "render_height"], 24]],
+
+  0, "#4b5d70",
+  80, "#7088a1",
+  220, "#d8e8f7"
 ];
 
 const LIGHT_ROOF_COLOR_EXPRESSION = [
@@ -302,18 +275,16 @@ const SKYSCRAPER_UPPER_LIGHT_COLOR_EXPRESSION = [
   "let",
   "height",
   ["max", 48, cloneExpression(BUILDING_RAW_HEIGHT_EXPRESSION)],
+
   [
     "interpolate",
     ["linear"],
     ["var", "height"],
-    48,
-    "#5d4b45",
-    90,
-    "#665247",
-    150,
-    "#735b4d",
-    220,
-    "#806655"
+
+    48, "#6e8298",
+    90, "#89a3bf",
+    150, "#adc6dd",
+    220, "#dbeaf7"
   ]
 ];
 
@@ -323,18 +294,16 @@ const SKYSCRAPER_CROWN_LIGHT_COLOR_EXPRESSION = [
   "let",
   "height",
   ["max", 48, cloneExpression(BUILDING_RAW_HEIGHT_EXPRESSION)],
+
   [
     "interpolate",
     ["linear"],
     ["var", "height"],
-    48,
-    "#70584b",
-    110,
-    "#7c6252",
-    180,
-    "#896b58",
-    250,
-    "#96765f"
+
+    48, "#9fb6cc",
+    110, "#bfd2e4",
+    180, "#dbe8f3",
+    250, "#f7fbff"
   ]
 ];
 
@@ -504,7 +473,7 @@ export const getBuildingFillPaint = (themeId) => {
 export const getBuildingLight = (themeId) => ({
   anchor: "viewport",
   position: themeId === "light" ? [1.15, 210, 58] : [1.45, 220, 52],
-  color: themeId === "light" ? "#ffffff" : "#f0d1b3",
+  color: themeId === "light" ? "#ffffff" : "#c7d9ea",
   intensity: themeId === "light" ? 0.55 : 0.78
 });
 
@@ -591,7 +560,7 @@ export const getBuildingAccentLayers = (themeId, source, sourceLayer, baseFilter
       minzoom: BUILDING_MIN_ZOOM + 0.8,
       filter: baseFilter ? cloneExpression(baseFilter) : undefined,
       paint: {
-        "fill-extrusion-color": isLight ? "#ffffff" : "#9a7c66",
+        "fill-extrusion-color": isLight ? "#ffffff" : "#7ed0ff",
         "fill-extrusion-height": cloneExpression(BUILDING_FULL_HEIGHT_EXPRESSION),
         "fill-extrusion-base": buildingHeightAtRatio(0.28),
         "fill-extrusion-opacity": [
@@ -657,7 +626,7 @@ export const getBuildingAccentLayers = (themeId, source, sourceLayer, baseFilter
       SKYSCRAPER_WINDOW_BAND_LAYER_IDS[0],
       0.50,
       2.4,
-      isLight ? "#bac4d0" : "#8c7565",
+      isLight ? "#bac4d0" : "#7f96ad",
       isLight ? 0.07 : 0.10,
       source,
       sourceLayer,
@@ -667,7 +636,7 @@ export const getBuildingAccentLayers = (themeId, source, sourceLayer, baseFilter
       SKYSCRAPER_WINDOW_BAND_LAYER_IDS[1],
       0.65,
       2.6,
-      isLight ? "#c7d0da" : "#9b8170",
+      isLight ? "#c7d0da" : "#9db5cc",
       isLight ? 0.09 : 0.13,
       source,
       sourceLayer,
@@ -677,7 +646,7 @@ export const getBuildingAccentLayers = (themeId, source, sourceLayer, baseFilter
       SKYSCRAPER_WINDOW_BAND_LAYER_IDS[2],
       0.78,
       2.2,
-      isLight ? "#b4bfcb" : "#846f62",
+      isLight ? "#b4bfcb" : "#6f879f",
       isLight ? 0.075 : 0.11,
       source,
       sourceLayer,
@@ -687,7 +656,7 @@ export const getBuildingAccentLayers = (themeId, source, sourceLayer, baseFilter
       SKYSCRAPER_WINDOW_BAND_LAYER_IDS[3],
       0.90,
       2.8,
-      isLight ? "#d2dae3" : "#aa8d78",
+      isLight ? "#d2dae3" : "#c8dae9",
       isLight ? 0.10 : 0.14,
       source,
       sourceLayer,
