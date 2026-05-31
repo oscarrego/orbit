@@ -2,6 +2,7 @@ import eventlet
 eventlet.monkey_patch()
 
 import os
+import json
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from flask_socketio import SocketIO, emit, join_room, leave_room
@@ -11,6 +12,9 @@ from bson.objectid import ObjectId
 from pymongo import MongoClient, ASCENDING
 from pymongo.errors import DuplicateKeyError
 from datetime import datetime
+
+import firebase_admin
+from firebase_admin import credentials, messaging
 
 
 
@@ -81,6 +85,29 @@ try:
     print("rooms unique+sparse index on 'roomName' ready\n")
 except Exception as e:
     print(f"Could not create rooms index: {e}\n")
+
+# --------------------------------------------------
+# FIREBASE ADMIN & FCM
+# --------------------------------------------------
+firebase_cred_json = os.environ.get("FIREBASE_SERVICE_ACCOUNT")
+firebase_initialized = False
+if firebase_cred_json:
+    try:
+        cred_dict = json.loads(firebase_cred_json)
+        cred = credentials.Certificate(cred_dict)
+        firebase_admin.initialize_app(cred)
+        firebase_initialized = True
+        print("Firebase Admin SDK initialized successfully.")
+    except Exception as e:
+        print(f"Failed to initialize Firebase Admin SDK: {e}")
+else:
+    print("Warning: FIREBASE_SERVICE_ACCOUNT env var not found. FCM push notifications disabled.")
+
+fcm_tokens_collection = db["fcm_tokens"]
+try:
+    fcm_tokens_collection.create_index("token", unique=True, background=True)
+except Exception as e:
+    print(f"fcm_tokens index: {e}")
 
 # --------------------------------------------------
 # FLASK + SOCKETIO
@@ -201,6 +228,41 @@ def nuke_rooms():
     """
     result = rooms_collection.delete_many({})
     return jsonify({"deleted": result.deleted_count})
+
+@app.route("/api/notifications/register", methods=["POST"])
+def register_fcm_token():
+    data = request.json or {}
+    token = data.get("token")
+    user_id = data.get("userId", "anonymous")
+    
+    if not token:
+        return jsonify({"error": "Token is required"}), 400
+        
+    doc = {
+        "token": token,
+        "userId": user_id,
+        "username": data.get("username", "Unknown"),
+        "platform": data.get("platform", "web"),
+        "updatedAt": datetime.utcnow()
+    }
+    
+    fcm_tokens_collection.update_one(
+        {"token": token},
+        {"$set": doc},
+        upsert=True
+    )
+    return jsonify({"success": True})
+
+@app.route("/api/notifications/unregister", methods=["POST"])
+def unregister_fcm_token():
+    data = request.json or {}
+    token = data.get("token")
+    
+    if not token:
+        return jsonify({"error": "Token is required"}), 400
+        
+    fcm_tokens_collection.delete_one({"token": token})
+    return jsonify({"success": True})
 
 # --------------------------------------------------
 # CONNECT
@@ -515,11 +577,64 @@ def handle_message_seen(data):
 # --------------------------------------------------
 @socketio.on("sos_alert")
 def handle_sos(data):
+    # 1. Broadcast via Socket.IO to active users
     socketio.emit("sos_alert", data)
+    
+    # 2. Send FCM push notifications
+    if firebase_initialized:
+        try:
+            tokens = list(fcm_tokens_collection.find({}, {"_id": 0, "token": 1}))
+            token_list = [t["token"] for t in tokens if "token" in t]
+            
+            sender_name = data.get("name", "Someone")
+            
+            if token_list:
+                message = messaging.MulticastMessage(
+                    notification=messaging.Notification(
+                        title="EMERGENCY SOS",
+                        body=f"{sender_name} has triggered an SOS alert!",
+                    ),
+                    data={
+                        "type": "sos_alert",
+                        "senderId": str(data.get("id", "")),
+                        "senderName": sender_name,
+                    },
+                    tokens=token_list,
+                )
+                response = messaging.send_multicast(message)
+                print(f"FCM SOS Alert sent: {response.success_count} success, {response.failure_count} failure")
+        except Exception as e:
+            print(f"FCM SOS Error: {e}")
 
 @socketio.on("sos_cancel")
 def handle_sos_cancel(data):
+    # 1. Broadcast via Socket.IO
     socketio.emit("sos_cancel", data)
+    
+    # 2. Send FCM cancellation
+    if firebase_initialized:
+        try:
+            tokens = list(fcm_tokens_collection.find({}, {"_id": 0, "token": 1}))
+            token_list = [t["token"] for t in tokens if "token" in t]
+            
+            sender_name = data.get("name", "Someone")
+            
+            if token_list:
+                message = messaging.MulticastMessage(
+                    notification=messaging.Notification(
+                        title="SOS Cancelled",
+                        body=f"{sender_name} has cancelled the SOS alert.",
+                    ),
+                    data={
+                        "type": "sos_cancel",
+                        "senderId": str(data.get("id", "")),
+                    },
+                    tokens=token_list,
+                )
+                response = messaging.send_multicast(message)
+                print(f"FCM SOS Cancel sent: {response.success_count} success, {response.failure_count} failure")
+        except Exception as e:
+            print(f"FCM SOS Cancel Error: {e}")
 
 # --------------------------------------------------
 # RUN

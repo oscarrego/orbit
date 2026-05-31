@@ -4,3 +4,4 @@ flask-socketio
 eventlet
 pymongo
 gunicorn==21.2.0
+firebase-admin
