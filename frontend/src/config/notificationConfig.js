@@ -1,5 +1,5 @@
-// Explicit Vite env variable references
-const envApiBaseUrl = typeof import.meta !== "undefined" && import.meta.env ? import.meta.env.VITE_NOTIFICATION_API_BASE_URL : undefined;
+// Explicit Vite and CRA env variable references
+const envApiBaseUrl = (typeof import.meta !== "undefined" && import.meta.env ? import.meta.env.VITE_NOTIFICATION_API_BASE_URL : undefined) || (typeof process !== "undefined" && process.env ? process.env.REACT_APP_NOTIFICATION_API_BASE_URL || process.env.VITE_NOTIFICATION_API_BASE_URL : undefined);
 
 export const notificationConfig = {
   storageKeys: {
