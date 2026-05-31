@@ -334,7 +334,7 @@
     --chat-left: max(12px, env(safe-area-inset-left));
     --chat-top: calc(98px + env(safe-area-inset-top));
     --chat-width: min(82vw, 292px);
-    --chat-height: min(58dvh, 478px);
+    --chat-height: min(65dvh, 478px);
   }
 
   .orbit-app-shell .chat-dock .chat-panel,
