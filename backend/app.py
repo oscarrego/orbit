@@ -30,6 +30,7 @@ db        = client["orbit"]
 
 messages_collection = db["messages"]
 rooms_collection    = db["rooms"]
+room_members_collection = db["room_members"]
 
 # --------------------------------------------------
 # INDEX SETUP
@@ -156,9 +157,17 @@ except Exception as e:
 fcm_tokens_collection = db["fcm_tokens"]
 try:
     fcm_tokens_collection.create_index("token", unique=True, background=True)
+    fcm_tokens_collection.create_index("userId", background=True)
     print("[FCM] fcm_tokens unique token index ready")
 except Exception as e:
     print(f"[FCM] fcm_tokens index: {e}")
+
+try:
+    room_members_collection.create_index("userId", unique=True, background=True)
+    room_members_collection.create_index("room", background=True)
+    print("[Rooms] room_members indexes ready")
+except Exception as e:
+    print(f"[Rooms] room_members index: {e}")
 
 
 def mask_token(token):
@@ -199,6 +208,52 @@ def load_fcm_tokens():
     return token_docs
 
 
+def load_fcm_tokens_for_room(room):
+    try:
+        member_docs = list(
+            room_members_collection.find(
+                {"room": room},
+                {"_id": 0, "userId": 1, "username": 1, "updatedAt": 1},
+            )
+        )
+    except Exception as e:
+        print(f"[FCM] Failed to load room members from MongoDB: {e}")
+        raise
+
+    user_ids = sorted({str(doc.get("userId")) for doc in member_docs if doc.get("userId")})
+    if not user_ids:
+        print("[FCM] No persisted room members for SOS room", {"room": room})
+        return []
+
+    try:
+        docs = list(
+            fcm_tokens_collection.find(
+                {"userId": {"$in": user_ids}},
+                {"_id": 0, "token": 1, "userId": 1, "username": 1, "platform": 1},
+            )
+        )
+    except Exception as e:
+        print(f"[FCM] Failed to load room-scoped tokens from MongoDB: {e}")
+        raise
+
+    token_docs = [doc for doc in docs if doc.get("token")]
+    print("[FCM] Room token count loaded", {
+        "room": room,
+        "member_count": len(user_ids),
+        "usable_tokens": len(token_docs),
+        "users": [
+            {
+                "userId": doc.get("userId"),
+                "username": doc.get("username"),
+                "platform": doc.get("platform"),
+                "token": mask_token(doc.get("token")),
+            }
+            for doc in token_docs
+        ],
+    })
+    return token_docs
+
+
 def build_fcm_message(event_type, data, tokens):
     sender_name = data.get("name", "Someone")
     sender_id = str(data.get("id", ""))
@@ -218,6 +273,7 @@ def build_fcm_message(event_type, data, tokens):
         "body": body,
         "lat": str(data.get("lat", "")),
         "lng": str(data.get("lng", "")),
+        "room": str(data.get("room", "")),
     }
 
     print("[FCM] Notification payload created", {
@@ -287,11 +343,11 @@ def send_fcm_multicast(message, token_docs):
     return response
 
 
-def send_sos_fcm(event_type, data):
-    token_docs = load_fcm_tokens()
+def send_sos_fcm(event_type, data, room):
+    token_docs = load_fcm_tokens_for_room(room)
     token_list = [doc["token"] for doc in token_docs]
     if not token_list:
-        print("[FCM] SOS push skipped before payload build: no registered browser tokens")
+        print("[FCM] SOS push skipped before payload build: no registered browser tokens for room", {"room": room})
         return None
 
     message = build_fcm_message(event_type, data, token_list)
@@ -321,6 +377,93 @@ users          = {}
 socket_to_user = {}
 socket_to_room = {}
 invisible_users = set()          # user IDs currently in invisible mode
+
+DEFAULT_ROOM = "Global"
+
+
+def normalize_room_name(room):
+    room = (room or DEFAULT_ROOM).strip()
+    return room or DEFAULT_ROOM
+
+
+def persist_room_membership(user_id, room, username=None):
+    if not user_id:
+        return
+
+    doc = {
+        "userId": str(user_id),
+        "room": normalize_room_name(room),
+        "updatedAt": datetime.utcnow(),
+    }
+    if username:
+        doc["username"] = username
+
+    try:
+        room_members_collection.update_one(
+            {"userId": str(user_id)},
+            {"$set": doc},
+            upsert=True,
+        )
+    except Exception as e:
+        print(f"[Rooms] Failed to persist room membership for {user_id}: {e}")
+
+
+def get_user_room(user_id=None, sid=None, fallback=DEFAULT_ROOM):
+    if sid and socket_to_room.get(sid):
+        return socket_to_room[sid]
+    if user_id and users.get(user_id, {}).get("room"):
+        return users[user_id]["room"]
+    return normalize_room_name(fallback)
+
+
+def get_event_room(data, sid=None, user_id=None):
+    fallback = normalize_room_name((data or {}).get("room"))
+    return get_user_room(user_id=user_id, sid=sid, fallback=fallback)
+
+
+def visible_users_for_room(room):
+    room = normalize_room_name(room)
+    return [
+        user
+        for user in users.values()
+        if user.get("room") == room and user.get("id") not in invisible_users
+    ]
+
+
+def emit_room_users(room):
+    room = normalize_room_name(room)
+    visible = visible_users_for_room(room)
+    print("[Presence] Emitting room users", {
+        "room": room,
+        "count": len(visible),
+        "users": [user.get("id") for user in visible],
+    })
+    socketio.emit("update_users", visible, room=room)
+
+
+def switch_socket_room(sid, room, user_id=None, username=None):
+    room = normalize_room_name(room)
+    old_room = socket_to_room.get(sid)
+
+    if old_room and old_room != room:
+        leave_room(old_room)
+
+    join_room(room)
+    socket_to_room[sid] = room
+
+    if user_id:
+        user_id = str(user_id)
+        socket_to_user[sid] = user_id
+        if user_id in users:
+            users[user_id]["room"] = room
+            if username:
+                users[user_id]["name"] = username
+        persist_room_membership(user_id, room, username)
+
+    if old_room and old_room != room:
+        emit_room_users(old_room)
+
+    return old_room, room
 
 # --------------------------------------------------
 # ROOM HELPERS
@@ -546,12 +689,15 @@ def handle_connect():
 # --------------------------------------------------
 @socketio.on("create_room")
 def handle_create_room(data):
+    data = data or {}
     print(f"\n{'='*55}")
     print(f"create_room: {data}")
 
     room_name = (data.get("room") or "").strip()
     passcode  = (data.get("passcode") or "").strip()
     sid       = request.sid
+    user_id   = data.get("userId")
+    username  = data.get("username")
 
     print(f"  roomName='{room_name}'  passcode='{passcode}'")
 
@@ -580,14 +726,11 @@ def handle_create_room(data):
     print(f"   Room '{room_name}' created — now joining socket room")
 
     # ── Join the socket room immediately ──────────
-    old = socket_to_room.get(sid)
-    if old:
-        leave_room(old)
-    join_room(room_name)
-    socket_to_room[sid] = room_name
+    switch_socket_room(sid, room_name, user_id=user_id, username=username)
 
     emit("load_messages", [])           # new room — no messages yet
     emit("room_created", {"room": room_name, "isPrivate": True})
+    emit_room_users(room_name)
     print(f"{'='*55}\n")
 
 
@@ -597,13 +740,16 @@ def handle_create_room(data):
 # --------------------------------------------------
 @socketio.on("join_room")
 def handle_join(data):
+    data = data or {}
     print(f"\n{'='*55}")
     print(f"join_room: {data}")
 
-    room       = (data.get("room") or "Global").strip()
+    room       = normalize_room_name(data.get("room"))
     passcode   = (data.get("passcode") or "").strip()
     is_private = bool(data.get("isPrivate", False))
     sid        = request.sid
+    user_id    = data.get("userId")
+    username   = data.get("username")
     room_is_private = False
 
     print(f"  room='{room}'  passcode='{passcode}'  is_private={is_private}")
@@ -647,11 +793,7 @@ def handle_join(data):
     # --------------------------------------------------
     # SWITCH SOCKET ROOM
     # --------------------------------------------------
-    old = socket_to_room.get(sid)
-    if old:
-        leave_room(old)
-    join_room(room)
-    socket_to_room[sid] = room
+    switch_socket_room(sid, room, user_id=user_id, username=username)
     print(f"{sid} joined '{room}'")
 
     # --------------------------------------------------
@@ -661,6 +803,7 @@ def handle_join(data):
 
     emit("load_messages", messages)
     emit("room_joined", {"room": room, "isPrivate": room_is_private})
+    emit_room_users(room)
     print(f"{'='*55}\n")
 
 # --------------------------------------------------
@@ -673,21 +816,21 @@ def handle_join(data):
 # --------------------------------------------------
 @socketio.on("rejoin_room")
 def handle_rejoin(data):
+    data = data or {}
     print(f"\n{'='*55}")
     print(f"rejoin_room: {data}")
 
-    room = (data.get("room") or "Global").strip()
+    room = normalize_room_name(data.get("room"))
     sid  = request.sid
+    user_id = data.get("userId")
+    username = data.get("username")
 
     # Global is always allowed
     if room == "Global":
-        old = socket_to_room.get(sid)
-        if old:
-            leave_room(old)
-        join_room(room)
-        socket_to_room[sid] = room
+        switch_socket_room(sid, room, user_id=user_id, username=username)
         emit("load_messages", load_recent_messages(room))
         emit("room_joined", {"room": room, "isPrivate": False})
+        emit_room_users(room)
         print(f"  → rejoined Global")
         print(f"{'='*55}\n")
         return
@@ -700,11 +843,7 @@ def handle_rejoin(data):
         return
 
     # Room exists — rejoin the socket room
-    old = socket_to_room.get(sid)
-    if old:
-        leave_room(old)
-    join_room(room)
-    socket_to_room[sid] = room
+    switch_socket_room(sid, room, user_id=user_id, username=username)
     print(f"{sid} rejoined '{room}'")
 
     # Load messages
@@ -712,6 +851,7 @@ def handle_rejoin(data):
 
     emit("load_messages", messages)
     emit("room_joined", {"room": room, "isPrivate": bool(existing.get("isPrivate", False))})
+    emit_room_users(room)
     print(f"{'='*55}\n")
 
 # --------------------------------------------------
@@ -719,6 +859,7 @@ def handle_rejoin(data):
 # --------------------------------------------------
 @socketio.on("check_room")
 def handle_check_room(data):
+    data = data or {}
     room_name = (data.get("room") or "").strip()
     print(f"check_room: '{room_name}'")
     if not room_name:
@@ -740,7 +881,7 @@ def handle_check_room(data):
 def handle_disconnect():
     sid     = request.sid
     user_id = socket_to_user.get(sid)
-    socket_to_room.pop(sid, None)
+    room = socket_to_room.pop(sid, None) or (users.get(user_id, {}).get("room") if user_id else None)
     if user_id:
         users.pop(user_id, None)
         socket_to_user.pop(sid, None)
@@ -748,48 +889,56 @@ def handle_disconnect():
         print(f"{user_id} disconnected")
     else:
         print(f"{sid} disconnected")
-    visible = [u for u in users.values() if u["id"] not in invisible_users]
-    socketio.emit("update_users", visible)
+    if room:
+        emit_room_users(room)
 
 # --------------------------------------------------
 # LOCATION
 # --------------------------------------------------
 @socketio.on("send_location")
 def handle_location(data):
+    data = data or {}
     user_id = data.get("id")
     if not user_id:
         return
     sid = request.sid
+    room = get_event_room(data, sid=sid, user_id=user_id)
+    username = data.get("name", "Unknown")
+    socket_room = socket_to_room.get(sid)
+    if socket_room != room:
+        switch_socket_room(sid, room, user_id=user_id, username=username)
+    else:
+        socket_to_user[sid] = str(user_id)
+        persist_room_membership(user_id, room, username)
     users[user_id] = {
         "id":        user_id,
-        "name":      data.get("name", "Unknown"),
+        "name":      username,
         "lat":       data.get("lat"),
         "lng":       data.get("lng"),
         "heading":   data.get("heading", 0),
+        "room":      room,
         "timestamp": time.time(),
     }
-    socket_to_user[sid] = user_id
-    visible = [u for u in users.values() if u["id"] not in invisible_users]
-    socketio.emit("update_users", visible)
+    emit_room_users(room)
 
 # --------------------------------------------------
 # INVISIBLE MODE
 # --------------------------------------------------
 @socketio.on("set_invisible")
 def handle_set_invisible(data):
+    data = data or {}
     user_id   = data.get("userId")
     invisible = data.get("invisible", False)
     if not user_id:
         return
+    room = get_event_room(data, sid=request.sid, user_id=user_id)
     if invisible:
         invisible_users.add(user_id)
         print(f"{user_id} went invisible")
     else:
         invisible_users.discard(user_id)
         print(f" {user_id} is now visible")
-    # Broadcast the updated (filtered) user list to everyone
-    visible = [u for u in users.values() if u["id"] not in invisible_users]
-    socketio.emit("update_users", visible)
+    emit_room_users(room)
     # Confirm back to the requesting client
     emit("invisible_confirmed", {"invisible": invisible})
 
@@ -798,6 +947,7 @@ def handle_set_invisible(data):
 # --------------------------------------------------
 @socketio.on("send_message")
 def handle_message(data):
+    data = data or {}
     user      = data.get("user")
     text      = data.get("text", "").strip()
     room      = data.get("room", "Global")
@@ -827,6 +977,7 @@ def handle_message(data):
 # --------------------------------------------------
 @socketio.on("message_seen")
 def handle_message_seen(data):
+    data = data or {}
     mid = data.get("messageId")
     uid = data.get("userId")
     if not mid or not uid:
@@ -846,29 +997,37 @@ def handle_message_seen(data):
 # --------------------------------------------------
 @socketio.on("sos_alert")
 def handle_sos(data):
+    data = data or {}
     print("[SOS][Trace] Backend SOS handler received", data)
+    sender_id = data.get("id")
+    room = get_event_room(data, sid=request.sid, user_id=sender_id)
+    payload = {**data, "room": room}
 
     # 1. Broadcast via Socket.IO to active users
-    print("[SOS][Trace] Socket.IO broadcast: sos_alert")
-    socketio.emit("sos_alert", data)
+    print("[SOS][Trace] Socket.IO room broadcast: sos_alert", {"room": room})
+    socketio.emit("sos_alert", payload, room=room)
     
     # 2. Send FCM push notifications
     try:
-        send_sos_fcm("sos_alert", data)
+        send_sos_fcm("sos_alert", payload, room)
     except Exception as e:
         print(f"[FCM] SOS send error: {e}")
 
 @socketio.on("sos_cancel")
 def handle_sos_cancel(data):
+    data = data or {}
     print("[SOS][Trace] Backend SOS cancel handler received", data)
+    sender_id = data.get("id")
+    room = get_event_room(data, sid=request.sid, user_id=sender_id)
+    payload = {**data, "room": room}
 
     # 1. Broadcast via Socket.IO
-    print("[SOS][Trace] Socket.IO broadcast: sos_cancel")
-    socketio.emit("sos_cancel", data)
+    print("[SOS][Trace] Socket.IO room broadcast: sos_cancel", {"room": room})
+    socketio.emit("sos_cancel", payload, room=room)
     
     # 2. Send FCM cancellation
     try:
-        send_sos_fcm("sos_cancel", data)
+        send_sos_fcm("sos_cancel", payload, room)
     except Exception as e:
         print(f"[FCM] SOS cancel send error: {e}")
 

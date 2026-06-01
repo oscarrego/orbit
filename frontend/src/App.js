@@ -219,6 +219,7 @@ function App() {
   // Auth State
   const [user, setUser] = useState(getPersistentUser());
   const mapRef = useRef(null);
+  const userLocationRef = useRef(userLocation);
   const notifications = useNotifications(user);
 
   useEffect(() => {
@@ -251,18 +252,36 @@ function App() {
     isRoomPrivateRef.current = isRoomPrivate;
   }, [isRoomPrivate]);
 
+  useEffect(() => {
+    userLocationRef.current = userLocation;
+  }, [userLocation]);
+
+  const emitLocationUpdate = useCallback((coords = userLocationRef.current, overrides = {}) => {
+    if (!coords || !user.username || !user.userId) return;
+
+    socket.emit("send_location", {
+      id: user.userId,
+      name: overrides.name || user.username,
+      avatarSeed: user.avatarSeed,
+      room: overrides.room || currentRoomRef.current,
+      ...coords,
+    });
+  }, [user.userId, user.username, user.avatarSeed]);
+
   // Socket Listeners
   const requestPublicRoomJoin = useCallback((room) => {
     pendingJoinRef.current = { isPrivate: false };
     localStorage.setItem("roomId", room);
-    socket.emit("join_room", { room });
+    socket.emit("join_room", { room, userId: user.userId, username: user.username });
     setRoomInput("");
-  }, []);
+  }, [user.userId, user.username]);
 
   useEffect(() => {
     socket.on("update_users", (data) => {
       const unique = {};
-      data.forEach((u) => {
+      const activeRoom = currentRoomRef.current;
+      (data || []).forEach((u) => {
+        if (u.room && u.room !== activeRoom) return;
         unique[u.id] = u;
       });
       setUsers(Object.values(unique));
@@ -276,6 +295,7 @@ function App() {
 
     socket.on("sos_alert", (data) => {
       console.info("[SOS][Trace] Socket.IO event received: sos_alert", data);
+      if (data.room && data.room !== currentRoomRef.current) return;
       setSosAlerts(prev => [...prev.filter(alert => String(alert.id) !== String(data.id)), data]);
 
       // Show clickable toast for other users' SOS
@@ -292,6 +312,7 @@ function App() {
 
     socket.on("sos_cancel", (data) => {
       console.info("[SOS][Trace] Socket.IO event received: sos_cancel", data);
+      if (data.room && data.room !== currentRoomRef.current) return;
       setSosAlerts(prev => prev.filter(alert => String(alert.id) !== String(data.id)));
     });
 
@@ -305,6 +326,7 @@ function App() {
     // RECEIVE NEW MESSAGE
     socket.on("receive_message", (msg) => {
       console.log("RECEIVED:", msg);
+      if (msg.room && msg.room !== currentRoomRef.current) return;
       setChatMessages((prev) => {
         if (msg._id && prev.some((item) => item._id === msg._id)) return prev;
         return [...prev, msg];
@@ -313,6 +335,7 @@ function App() {
 
     // MESSAGE UPDATED (SEEN STATUS)
     socket.on("message_updated", (updatedMsg) => {
+      if (updatedMsg.room && updatedMsg.room !== currentRoomRef.current) return;
       setChatMessages((prev) =>
         prev.map((msg) => (msg._id === updatedMsg._id ? updatedMsg : msg))
       );
@@ -332,7 +355,10 @@ function App() {
       const rolledBack = "Global";
       persistRoomSelection(rolledBack, false);
       setChatMessages([]);
-      socket.emit("join_room", { room: rolledBack });
+      setUsers([]);
+      setSosAlerts([]);
+      setIsSOSActive(false);
+      socket.emit("join_room", { room: rolledBack, userId: user.userId, username: user.username });
       showToast({ message, type: "error" });
     });
 
@@ -343,6 +369,7 @@ function App() {
       const pendingJoin = pendingJoinRef.current;
       const previousRoom = currentRoomRef.current;
       const wasRestore = !pendingJoin && room === previousRoom;
+      const roomChanged = room !== previousRoom;
       const wasPrivate =
         typeof isPrivate === "boolean"
           ? isPrivate
@@ -350,6 +377,18 @@ function App() {
       pendingJoinRef.current = null;
 
       persistRoomSelection(room, wasPrivate);
+
+      if (roomChanged) {
+        setUsers([]);
+        setSosAlerts([]);
+        setIsSOSActive(false);
+      }
+
+      emitLocationUpdate(userLocationRef.current, { room });
+
+      if (localStorage.getItem("invisibleMode") === "true" && user.userId) {
+        socket.emit("set_invisible", { userId: user.userId, invisible: true, room });
+      }
 
       if (joinModalRef.current) {
         setJoinModal(null);
@@ -365,6 +404,13 @@ function App() {
       console.log("Room created:", room);
       persistRoomSelection(room, true);
       setChatMessages([]);
+      setUsers([]);
+      setSosAlerts([]);
+      setIsSOSActive(false);
+      emitLocationUpdate(userLocationRef.current, { room });
+      if (localStorage.getItem("invisibleMode") === "true" && user.userId) {
+        socket.emit("set_invisible", { userId: user.userId, invisible: true, room });
+      }
       showToast({ message: `Room "${room}" created!`, type: "room" });
     });
 
@@ -397,7 +443,11 @@ function App() {
     });
 
     if (user.username) {
-      socket.emit("rejoin_room", { room: currentRoomRef.current });
+      socket.emit("rejoin_room", {
+        room: currentRoomRef.current,
+        userId: user.userId,
+        username: user.username,
+      });
     }
 
     return () => {
@@ -415,7 +465,7 @@ function App() {
       socket.off("invisible_confirmed");
     };
 
-  }, [persistRoomSelection, requestPublicRoomJoin, user.username, user.userId]);
+  }, [emitLocationUpdate, persistRoomSelection, requestPublicRoomJoin, user.username, user.userId]);
 
   // Keep ref in sync so socket callbacks can read latest modal state
   useEffect(() => {
@@ -452,13 +502,8 @@ function App() {
           altitude: pos.coords.altitude,
         };
         setUserLocation(coords);
-
-        socket.emit("send_location", {
-          id: user.userId,
-          name: user.username,
-          avatarSeed: user.avatarSeed,
-          ...coords,
-        });
+        userLocationRef.current = coords;
+        emitLocationUpdate(coords);
       },
       (err) => {
         console.error("Geolocation error:", err);
@@ -468,17 +513,25 @@ function App() {
     );
 
     return () => navigator.geolocation.clearWatch(watchId);
-  }, [user.username, user.userId, user.avatarSeed]);
+  }, [emitLocationUpdate, user.username]);
 
   // Restore invisible state on reconnect
   useEffect(() => {
     const handleReconnect = () => {
       if (user.username) {
-        socket.emit("rejoin_room", { room: currentRoomRef.current });
+        socket.emit("rejoin_room", {
+          room: currentRoomRef.current,
+          userId: user.userId,
+          username: user.username,
+        });
       }
       const savedInvisible = localStorage.getItem("invisibleMode") === "true";
       if (savedInvisible && user.userId) {
-        socket.emit("set_invisible", { userId: user.userId, invisible: true });
+        socket.emit("set_invisible", {
+          userId: user.userId,
+          invisible: true,
+          room: currentRoomRef.current,
+        });
       }
     };
     socket.on("connect", handleReconnect);
@@ -488,7 +541,11 @@ function App() {
   // Sync invisible state on initial load
   useEffect(() => {
     if (user.username && isInvisible && user.userId) {
-      socket.emit("set_invisible", { userId: user.userId, invisible: true });
+      socket.emit("set_invisible", {
+        userId: user.userId,
+        invisible: true,
+        room: currentRoomRef.current,
+      });
     }
   }, [user.username]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -516,7 +573,7 @@ function App() {
 
 
     setUser((prev) => ({ ...prev, username: trimmed, avatarSeed: seed }));
-    socket.emit("join_room", { room: finalRoom });
+    socket.emit("join_room", { room: finalRoom, userId: user.userId, username: trimmed });
   };
 
   // Handle Logout
@@ -547,12 +604,7 @@ function App() {
 
     // Force instant socket sync
     if (userLocation) {
-      socket.emit("send_location", {
-        id: user.userId,
-        name: trimmed,
-        avatarSeed: user.avatarSeed,
-        ...userLocation
-      });
+      emitLocationUpdate(userLocation, { name: trimmed });
     }
 
     showToast({
@@ -565,7 +617,11 @@ function App() {
   const handleToggleInvisible = (newValue) => {
     setIsInvisible(newValue);
     localStorage.setItem("invisibleMode", String(newValue));
-    socket.emit("set_invisible", { userId: user.userId, invisible: newValue });
+    socket.emit("set_invisible", {
+      userId: user.userId,
+      invisible: newValue,
+      room: currentRoomRef.current,
+    });
     showToast({
       message: newValue ? "You are now invisible" : "You are now visible",
       type: newValue ? "cancel" : "success"
@@ -606,7 +662,13 @@ function App() {
     const { roomName } = joinModal;
     setJoinModal(prev => ({ ...prev, loading: true, error: null }));
     pendingJoinRef.current = { isPrivate: true };
-    socket.emit("join_room", { room: roomName, isPrivate: true, passcode });
+    socket.emit("join_room", {
+      room: roomName,
+      isPrivate: true,
+      passcode,
+      userId: user.userId,
+      username: user.username,
+    });
   };
 
   const handlePasscodeCancel = () => {
@@ -620,6 +682,8 @@ function App() {
     socket.emit("create_room", {
       room: roomData.name,
       passcode: roomData.passcode,
+      userId: user.userId,
+      username: user.username,
     });
   };
 
@@ -698,8 +762,15 @@ function App() {
 
     if (isSOSActive) {
       // TELL SERVER YOU CANCELLED
-      console.info("[SOS][Trace] Socket.IO emit: sos_cancel", { id: user.userId });
-      socket.emit("sos_cancel", { id: user.userId });
+      const cancelData = {
+        id: user.userId,
+        name: user.username,
+        avatarSeed: user.avatarSeed,
+        room: currentRoomRef.current,
+        ...(userLocation || {}),
+      };
+      console.info("[SOS][Trace] Socket.IO emit: sos_cancel", cancelData);
+      socket.emit("sos_cancel", cancelData);
 
       // REMOVE LOCALLY
       setSosAlerts(prev => prev.filter(alert => alert.id !== user.userId));
@@ -711,6 +782,7 @@ function App() {
         id: user.userId,
         name: user.username,
         avatarSeed: user.avatarSeed,
+        room: currentRoomRef.current,
         ...userLocation,
       };
 
