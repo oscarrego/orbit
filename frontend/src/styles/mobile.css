@@ -227,7 +227,7 @@
 .orbit-app-shell {
   --chat-left: 0px;
   --chat-top: 0px;
-  --chat-width: clamp(340px, 25vw, 500px);
+  --chat-width: clamp(560px, 25vw, 500px);
   --chat-height: 100dvh;
   --chat-toggle-peek: 12px;
   --orbit-right-rail: max(24px, env(safe-area-inset-right));
