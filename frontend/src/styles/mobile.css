@@ -225,11 +225,13 @@
 }
 
 .orbit-app-shell {
-  --chat-left: max(20px, env(safe-area-inset-left));
-  --chat-top: max(22px, env(safe-area-inset-top));
+  --chat-left: 0px;
+  --chat-top: 0px;
   --chat-width: clamp(340px, 25vw, 500px);
-  --chat-height: calc(100dvh - var(--chat-top) - max(24px, env(safe-area-inset-bottom)));
-  --chat-toggle-peek: 10px;
+  --chat-height: 100dvh;
+  --chat-toggle-peek: 12px;
+  --orbit-right-rail: max(24px, env(safe-area-inset-right));
+  --orbit-bottom-rail: max(20px, env(safe-area-inset-bottom));
 }
 
 .orbit-app-shell .chat-dock {
@@ -238,6 +240,7 @@
   left: var(--chat-left);
   width: var(--chat-width);
   height: var(--chat-height);
+  min-height: 100vh;
   z-index: 10000;
   transform: translate3d(0, 0, 0);
   transition:
@@ -259,7 +262,8 @@
   width: 100% !important;
   height: 100% !important;
   max-height: none !important;
-  border-radius: 18px !important;
+  border-radius: 0 !important;
+  border-left-width: 0 !important;
   transform: none !important;
   opacity: 1 !important;
   pointer-events: auto;
@@ -336,8 +340,10 @@
   .orbit-app-shell .users-indicator {
     top: auto !important;
     left: auto !important;
-    right: max(24px, env(safe-area-inset-right)) !important;
-    bottom: calc(max(20px, env(safe-area-inset-bottom)) + 76px) !important;
+    right: var(--orbit-right-rail) !important;
+    bottom: var(--orbit-bottom-rail) !important;
+    min-height: 54px;
+    box-sizing: border-box;
     transform-origin: bottom right;
   }
 
@@ -348,8 +354,8 @@
   .orbit-app-shell .users-panel {
     top: auto !important;
     left: auto !important;
-    right: max(24px, env(safe-area-inset-right)) !important;
-    bottom: calc(max(20px, env(safe-area-inset-bottom)) + 132px) !important;
+    right: var(--orbit-right-rail) !important;
+    bottom: calc(var(--orbit-bottom-rail) + 68px) !important;
     width: min(300px, calc(100vw - 48px));
     max-height: min(42vh, 380px);
     animation: panelSlideUp 0.3s ease-out;
