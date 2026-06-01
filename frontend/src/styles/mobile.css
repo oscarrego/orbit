@@ -394,7 +394,7 @@
   .orbit-app-shell .chat-dock .chat-panel,
   .orbit-app-shell.dark-mode .chat-dock .chat-panel,
   .orbit-app-shell.light-mode .chat-dock .chat-panel {
-    border-radius: 15px 0 15px 15px !important;
+    border-radius: 15px 15px 15px 15px !important;
   }
 
   .orbit-app-shell .chat-dock .chat-toggle,
