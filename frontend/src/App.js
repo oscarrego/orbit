@@ -42,6 +42,15 @@ const getPersistentUser = () => {
   return { username: savedName, userId: savedId, avatarSeed: savedSeed || savedName };
 };
 
+const getIsMobileViewport = () =>
+  typeof window !== "undefined" &&
+  window.matchMedia("(max-width: 768px)").matches;
+
+const getStoredChatPosition = () =>
+  typeof window !== "undefined" && localStorage.getItem("chatPosition") === "right"
+    ? "right"
+    : "left";
+
 const CAMERA_MODES = {
   TOP: "top",
   CINEMATIC: "cinematic",
@@ -193,12 +202,14 @@ function App() {
   const [fabOpen, setFabOpen] = useState(false);
   const [activePanel, setActivePanel] = useState(null); // 'chat', 'users', or null
   const activePanelRef = useRef(activePanel);
+  const [isMobileViewport, setIsMobileViewport] = useState(getIsMobileViewport);
   const [showProfile, setShowProfile] = useState(false);
   const [showCreateRoomModal, setShowCreateRoomModal] = useState(false);
   const [showEasterEgg, setShowEasterEgg] = useState(false);
   const [cameraMode, setCameraMode] = useState(CAMERA_MODES.CINEMATIC);
   const [mapBearing, setMapBearing] = useState(0);
   const [isInvisible, setIsInvisible] = useState(() => localStorage.getItem("invisibleMode") === "true");
+  const [chatPosition, setChatPosition] = useState(getStoredChatPosition);
   const { deviceHeading, requestDeviceHeading } = useDeviceHeading();
 
   // Join-room passcode modal state
@@ -225,6 +236,22 @@ function App() {
   useEffect(() => {
     activePanelRef.current = activePanel;
   }, [activePanel]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+
+    const mediaQuery = window.matchMedia("(max-width: 768px)");
+    const handleViewportChange = () => setIsMobileViewport(mediaQuery.matches);
+
+    handleViewportChange();
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener("change", handleViewportChange);
+      return () => mediaQuery.removeEventListener("change", handleViewportChange);
+    }
+
+    mediaQuery.addListener(handleViewportChange);
+    return () => mediaQuery.removeListener(handleViewportChange);
+  }, []);
 
   const persistRoomSelection = useCallback((room, privateRoom) => {
     currentRoomRef.current = room;
@@ -646,6 +673,13 @@ function App() {
       type: nextState.enabled ? "success" : nextState.status === "denied" ? "error" : "cancel",
     });
   };
+
+  const handleChatPositionChange = (position) => {
+    const nextPosition = position === "right" ? "right" : "left";
+    setChatPosition(nextPosition);
+    localStorage.setItem("chatPosition", nextPosition);
+  };
+
   // Directly join a public room (no passcode required)
   // JOIN button handler: asks backend for room type first
   const handleSwitchRoom = () => {
@@ -865,6 +899,13 @@ function App() {
     }
   };
 
+  const isChatOpen = activePanel === "chat";
+  const isMobileChatRight = isMobileViewport && chatPosition === "right";
+  const chatDockPositionClass = isMobileChatRight ? "chat-dock--right" : "chat-dock--left";
+  const chatTogglePoints = isMobileChatRight
+    ? (isChatOpen ? "9 18 15 12 9 6" : "15 18 9 12 15 6")
+    : (isChatOpen ? "15 18 9 12 15 6" : "9 18 15 12 9 6");
+
   return (
     <div style={{ width: "100vw", height: "100vh", position: "relative", overflow: "hidden" }} className={`orbit-app-shell ${theme}-mode`}>
       <MapView
@@ -886,8 +927,8 @@ function App() {
       />
 
       {/* CHAT PANEL (Mica Dark) */}
-      <div className={`chat-dock ${activePanel === "chat" ? "open" : "closed"}`}>
-      <div className={`chat-panel ${activePanel === "chat" ? "open" : "closed"}`}>
+      <div className={`chat-dock ${chatDockPositionClass} ${isChatOpen ? "open" : "closed"}`}>
+      <div className={`chat-panel ${isChatOpen ? "open" : "closed"}`}>
         <div className="chat-header">
           <div className="online-dot"></div>
           <div className="header-text-container">
@@ -975,7 +1016,7 @@ function App() {
 
       {/* CHAT TOGGLE BUTTON */}
       <button
-        className={`chat-toggle ${activePanel === "chat" ? "open" : "closed"}`}
+        className={`chat-toggle ${isChatOpen ? "open" : "closed"}`}
         onClick={() => {
           setActivePanel(prev => {
             const next = prev === "chat" ? null : "chat";
@@ -985,14 +1026,10 @@ function App() {
             return next;
           });
         }}
-        title={activePanel === "chat" ? "Collapse Chat" : "Expand Chat"}
+        title={isChatOpen ? "Collapse Chat" : "Expand Chat"}
       >
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-          {activePanel === "chat" ? (
-            <polyline points="15 18 9 12 15 6"></polyline>
-          ) : (
-            <polyline points="9 18 15 12 9 6"></polyline>
-          )}
+          <polyline points={chatTogglePoints}></polyline>
         </svg>
         {activePanel !== "chat" && unreadCount > 0 && (
           <span className="unread-badge">{unreadCount}</span>
@@ -1350,6 +1387,9 @@ function App() {
           notificationPermission={notifications.permission}
           notificationsSupported={notifications.supported}
           onToggleNotifications={handleToggleNotifications}
+          isMobileViewport={isMobileViewport}
+          chatPosition={chatPosition}
+          onChatPositionChange={handleChatPositionChange}
           themeMode={theme}
           onThemeModeChange={setTheme}
           buildingsEnabled={buildingsEnabled}

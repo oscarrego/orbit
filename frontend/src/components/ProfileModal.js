@@ -13,6 +13,9 @@ const ProfileModal = ({
   notificationPermission = "default",
   notificationsSupported = true,
   onToggleNotifications,
+  isMobileViewport = false,
+  chatPosition = "left",
+  onChatPositionChange,
   themeMode = "dark",
   onThemeModeChange,
   buildingsEnabled = true,
@@ -169,7 +172,27 @@ const ProfileModal = ({
             <span className="pm-toggle-thumb"/>
           </button>
         </div>
-<div className="pm-bottom-row">
+
+        {isMobileViewport && (
+          <div className="pm-toggle-row pm-chat-position-row">
+            <div className="pm-toggle-info">
+              <span className="pm-toggle-label">Chat Position</span>
+              <span className="pm-toggle-desc">
+                {chatPosition === "right" ? "Opens from right" : "Opens from left"}
+              </span>
+            </div>
+            <button
+              type="button"
+              className={`pm-toggle-switch ${chatPosition === "right" ? "pm-toggle-switch--on" : ""}`}
+              onClick={() => onChatPositionChange?.(chatPosition === "right" ? "left" : "right")}
+              aria-pressed={chatPosition === "right"}
+              aria-label={`Open chat from ${chatPosition === "right" ? "left" : "right"}`}
+            >
+              <span className="pm-toggle-thumb"/>
+            </button>
+          </div>
+        )}
+        <div className="pm-bottom-row">
         {/* ── Interface Theme toggle ── */}
         
         <div className="pm-theme-row">

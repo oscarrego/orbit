@@ -225,10 +225,11 @@
 }
 
 .orbit-app-shell {
-  --chat-left: 18px;
-  --chat-top: 76px;
-  --chat-width: 306px;
-  --chat-height: min(82dvh, calc(100dvh - var(--chat-top) - 24px), 760px);
+  --chat-left: max(20px, env(safe-area-inset-left));
+  --chat-top: max(22px, env(safe-area-inset-top));
+  --chat-width: clamp(340px, 25vw, 500px);
+  --chat-height: calc(100dvh - var(--chat-top) - max(24px, env(safe-area-inset-bottom)));
+  --chat-toggle-peek: 10px;
 }
 
 .orbit-app-shell .chat-dock {
@@ -247,7 +248,7 @@
 }
 
 .orbit-app-shell .chat-dock.closed {
-  transform: translate3d(calc(-100% - var(--chat-left) + 9px), 0, 0);
+  transform: translate3d(calc(-100% - var(--chat-left) + var(--chat-toggle-peek)), 0, 0);
 }
 
 .orbit-app-shell .chat-dock .chat-panel,
@@ -258,7 +259,7 @@
   width: 100% !important;
   height: 100% !important;
   max-height: none !important;
-  border-radius: 16px 0 16px 16px !important;
+  border-radius: 18px !important;
   transform: none !important;
   opacity: 1 !important;
   pointer-events: auto;
@@ -273,24 +274,34 @@
 
 .orbit-app-shell .chat-dock .chat-header {
   flex: 0 0 auto;
-  padding: 15px 16px;
+  min-height: 58px;
+  padding: 18px 20px;
+}
+
+.orbit-app-shell .chat-dock .header-text-container {
+  min-width: 0;
 }
 
 .orbit-app-shell .chat-dock .room-controls {
   flex: 0 0 auto;
-  padding: 13px 16px 12px;
-  gap: 9px;
+  padding: 16px 20px 15px;
+  gap: 11px;
+}
+
+.orbit-app-shell .chat-dock .join-row,
+.orbit-app-shell .chat-dock .message-input-wrapper {
+  min-width: 0;
 }
 
 .orbit-app-shell .chat-dock .chat-messages {
   flex: 1 1 auto;
   min-height: 0;
-  padding: 16px 16px 14px;
+  padding: 18px 20px 16px;
 }
 
 .orbit-app-shell .chat-dock .chat-input-container {
   flex: 0 0 auto;
-  padding: 13px 14px 14px;
+  padding: 15px 18px 18px;
 }
 
 .orbit-app-shell .chat-dock.closed .chat-panel {
@@ -304,9 +315,9 @@
   position: absolute !important;
   top: 50% !important;
   left: calc(100% - 1px) !important;
-  width: 38px !important;
-  height: 62px !important;
-  border-radius: 0 15px 15px 0 !important;
+  width: 42px !important;
+  height: 72px !important;
+  border-radius: 0 16px 16px 0 !important;
   transform: translateY(-50%) !important;
   z-index: 2;
   pointer-events: auto;
@@ -319,6 +330,42 @@
 
 .orbit-app-shell .chat-dock .chat-toggle:hover {
   transform: translateY(-50%) scale(1.025) !important;
+}
+
+@media (min-width: 769px) {
+  .orbit-app-shell .users-indicator {
+    top: auto !important;
+    left: auto !important;
+    right: max(24px, env(safe-area-inset-right)) !important;
+    bottom: calc(max(20px, env(safe-area-inset-bottom)) + 76px) !important;
+    transform-origin: bottom right;
+  }
+
+  .orbit-app-shell .users-indicator:hover {
+    transform: translateY(-1px) scale(1.03);
+  }
+
+  .orbit-app-shell .users-panel {
+    top: auto !important;
+    left: auto !important;
+    right: max(24px, env(safe-area-inset-right)) !important;
+    bottom: calc(max(20px, env(safe-area-inset-bottom)) + 132px) !important;
+    width: min(300px, calc(100vw - 48px));
+    max-height: min(42vh, 380px);
+    animation: panelSlideUp 0.3s ease-out;
+    transform-origin: bottom right;
+  }
+}
+
+@keyframes panelSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @media (max-width: 768px) {
@@ -335,6 +382,7 @@
     --chat-top: calc(98px + env(safe-area-inset-top));
     --chat-width: min(82vw, 292px);
     --chat-height: min(72dvh, 650px);
+    --chat-toggle-peek: 9px;
   }
 
   .orbit-app-shell .chat-dock .chat-panel,
@@ -348,6 +396,29 @@
   .orbit-app-shell.light-mode .chat-dock .chat-toggle {
     width: 36px !important;
     height: 58px !important;
+  }
+
+  .orbit-app-shell .chat-dock.chat-dock--right {
+    left: auto;
+    right: var(--chat-left);
+  }
+
+  .orbit-app-shell .chat-dock.chat-dock--right.closed {
+    transform: translate3d(calc(100% + var(--chat-left) - var(--chat-toggle-peek)), 0, 0);
+  }
+
+  .orbit-app-shell .chat-dock.chat-dock--right .chat-panel,
+  .orbit-app-shell.dark-mode .chat-dock.chat-dock--right .chat-panel,
+  .orbit-app-shell.light-mode .chat-dock.chat-dock--right .chat-panel {
+    border-radius: 0 15px 15px 15px !important;
+  }
+
+  .orbit-app-shell .chat-dock.chat-dock--right .chat-toggle,
+  .orbit-app-shell.dark-mode .chat-dock.chat-dock--right .chat-toggle,
+  .orbit-app-shell.light-mode .chat-dock.chat-dock--right .chat-toggle {
+    left: auto !important;
+    right: calc(100% - 1px) !important;
+    border-radius: 15px 0 0 15px !important;
   }
 
   .orbit-app-shell .fab-container {
