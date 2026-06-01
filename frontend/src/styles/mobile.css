@@ -240,7 +240,7 @@
   left: var(--chat-left);
   width: var(--chat-width);
   height: var(--chat-height);
-  min-height: 65vh;
+  min-height: 60vh;
   z-index: 10000;
   transform: translate3d(0, 0, 0);
   transition:
