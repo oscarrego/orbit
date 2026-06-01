@@ -56,6 +56,55 @@ const persistStatus = (status) => {
   writeStorage(notificationConfig.storageKeys.lastStatus, status);
 };
 
+const getForegroundNotificationDetails = (payload) => {
+  const data = payload?.data || {};
+  const notification = payload?.notification || {};
+  const title = notification.title || data.title || (data.type === "sos_cancel" ? "SOS Cancelled" : "EMERGENCY SOS");
+  const body =
+    notification.body ||
+    data.body ||
+    (data.senderName ? `${data.senderName} has triggered an SOS alert!` : "New Orbit activity");
+
+  return {
+    title,
+    options: {
+      body,
+      icon: notification.icon || "/logo192.png",
+      badge: "/logo192.png",
+      tag: data.type ? `orbit-${data.type}-${data.senderId || "unknown"}` : "orbit-fcm-message",
+      requireInteraction: data.type === "sos_alert",
+      data,
+    },
+  };
+};
+
+const displayForegroundBrowserNotification = (payload) => {
+  if (typeof window === "undefined" || !("Notification" in window)) {
+    console.warn("[FCM] Foreground browser notification skipped: Notification API unavailable");
+    return null;
+  }
+
+  if (window.Notification.permission !== "granted") {
+    console.warn("[FCM] Foreground browser notification skipped: permission is not granted", {
+      permission: window.Notification.permission,
+    });
+    return null;
+  }
+
+  const { title, options } = getForegroundNotificationDetails(payload);
+  const notification = new window.Notification(title, options);
+  notification.onclick = () => {
+    window.focus();
+    notification.close();
+  };
+  console.info("[FCM] Browser notification displayed from foreground message", {
+    title,
+    tag: options.tag,
+    type: options.data?.type,
+  });
+  return notification;
+};
+
 export const notificationService = {
   getState() {
     currentState = createState(currentState);
@@ -71,6 +120,12 @@ export const notificationService = {
   async restore(user) {
     const savedEnabled = readStorage(notificationConfig.storageKeys.enabled) === "true";
     const permission = getBrowserNotificationPermission();
+    console.info("[FCM] Restoring notification state", {
+      savedEnabled,
+      permission,
+      userId: user?.userId,
+      username: user?.username,
+    });
     if (!savedEnabled || permission !== "granted") {
       emit({ enabled: savedEnabled, permission, status: savedEnabled ? "permission-needed" : "idle" });
       return this.getState();
@@ -88,9 +143,15 @@ export const notificationService = {
     }
 
     emit({ status: silent ? "restoring" : "requesting-permission", error: "" });
+    console.info("[FCM] Notification setup started", {
+      silent,
+      userId: user?.userId,
+      username: user?.username,
+    });
 
     const permission = silent ? getBrowserNotificationPermission() : await requestBrowserNotificationPermission();
     writeStorage(notificationConfig.storageKeys.permission, permission);
+    console.info("[FCM] Notification permission result", permission);
 
     if (permission !== "granted") {
       persistEnabled(false);
@@ -118,11 +179,18 @@ export const notificationService = {
       const tokenResult = await requestFirebaseMessagingToken();
       if (tokenResult.token) {
         writeStorage(notificationConfig.storageKeys.token, tokenResult.token);
-        await registerNotificationToken({ token: tokenResult.token, user });
+        const registrationResponse = await registerNotificationToken({ token: tokenResult.token, user });
+        console.info("[FCM] Token registration completed", registrationResponse);
+      } else {
+        console.warn("[FCM] Token registration skipped: no token generated", tokenResult);
       }
 
       await listenForForegroundMessages((payload) => {
-        console.info("Foreground notification received:", payload);
+        console.info("[FCM] Foreground message received", payload);
+        displayForegroundBrowserNotification(payload);
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("orbit:fcm-message", { detail: payload }));
+        }
       });
 
       persistStatus(tokenResult.status);

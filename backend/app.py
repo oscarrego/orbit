@@ -22,7 +22,10 @@ from firebase_admin import credentials, messaging
 # DATABASE
 # --------------------------------------------------
 MONGO_URI = os.environ.get("MONGO_URI")
-client    = MongoClient(MONGO_URI)
+MONGO_SERVER_SELECTION_TIMEOUT_MS = int(os.environ.get("MONGO_SERVER_SELECTION_TIMEOUT_MS", "5000"))
+if not MONGO_URI:
+    print("[MongoDB] MONGO_URI is not set; falling back to localhost:27017 for local debugging.")
+client    = MongoClient(MONGO_URI or "mongodb://localhost:27017", serverSelectionTimeoutMS=MONGO_SERVER_SELECTION_TIMEOUT_MS)
 db        = client["orbit"]
 
 messages_collection = db["messages"]
@@ -89,25 +92,210 @@ except Exception as e:
 # --------------------------------------------------
 # FIREBASE ADMIN & FCM
 # --------------------------------------------------
+DEBUG_FIREBASE_SERVICE_ACCOUNT = {
+    "type": "service_account",
+    "project_id": "orbit-d12e3",
+    "private_key_id": "dfc8f53fb0cd35ebb499fed0e0bf29bf24d65138",
+    "private_key": """-----BEGIN PRIVATE KEY-----
+MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQCpYbx88gRpmLA3
+XAl0Xu4hc6ihy96nE3Jf7jZAXE/LtwO4dxL2cmYVl9r6NqTQHrhgTkknpnxX+kv/
+5ZOqim7r8QiiMbuPG/BL48i8oL5AFfVwqAogx8aYbORnCuLhrXLkn0Sdd4HAgi51
+/knZxvYKmaGRD/egB5EChCeuTaHOqN79AvhzwrM5O0R6Y5GhrTZczpzUmNTXHNhY
+FM6hgMiS6uPKPmlcHONSWJ8a6DEofX/tLCaxGQFmsx5QkN8x4qvqD0IlvEO06MkK
+qy347Uc/VXEq9fTKYYUJp4pFgAVZY3OBRy+/AmtjMKSMBmZGNano6U7LJF476zNE
+APUAYDcRAgMBAAECggEAHk0JtyBkga969qxUVKkW2I0kQa2C60ijUV3//ouFCuB2
+ne1PSx8z+/Dqj5Bu83xLZ48ZryotXF++cMzVGdEh/rtj3AAhmXxaBHl/U5896aEE
+A19MUIjskiAIzBY6eDzbLOMBF1plr9aaESmodHkPUt4g9R5yIgK4gka6AoiIxbtN
+TDLw4Vd1NeSI8Dna17HCaqZF6uEBxPMZ7NKcJYwiIq38UJuKTKLds9RKDnr7pPaS
+//+VJ9cmgyIfRaofSsnIl76s0pSpsJ9zQNaUWiU6hSq0YNh82k8Twvhm19rcvSJx
+xKtMO6RdBeNFB2NNgNuqA1alpc2QeseLV5yN5Tp5sQKBgQDhXo5IpFqol93MGLvD
+ESGuxRnXAZUK3RheBb02QaiJO1i0DR4v0Bo1PVFih0pWAS97vKNJh+KVKDD+Lpvt
+WwfBWSRW+3jV2PqBWpEcWjXOO8k2SjJjxx3YYtqB9Xl5aDt0GrPURezYvc4QzDNq
+EyxN3qMJtjaHNq2bV/O1I8ZGRwKBgQDAZym5PKoEOZCA7KSu01lDBSGAXLCJpml4
+UH8NfzHHtYxxoCGlaSKu++rlhffyY0KppZqoEcxWiI+GEM6q/CB0RXhQMU5A7+hB
+kVE+PGwU9GksCiUtjmbqW5iADZu2071gdQ0Xt/Ung+02f0ViTIPWhAPeRSi+/m1p
+IAXK3yBL5wKBgQC3aLNUrOTW5djsW4iaxJtr1x4jWzdHQw2snvEQcbjODg0vYqmZ
+cbuSbleIXuABRC+3fJpKohqlFrNgeOAO95FFKd2oKDl7l3yuvtzvfP7i2sbytslx
+aD+CtVhsgTCdvFT+NSj6bPnGnhlQlE6XWgkpSjHXGoIf4kDA9n/wf6/BywKBgB5v
+c0MxHHfknz41sOtS1Xjrk9wZTXfI0kBNA3wgFcDQsDG9MfVXhzwE76h1I769AuuR
+HcDeZ+N8YK/FctvLXFroLlsJIabWDHhqw15D8pjx/L0RscXeE9uYt6vx+yLVpcxf
+V73bxLUGgnyvb0tYbTZ+1ZnQeNyVpLsPbLslxpcbAoGBALzewoQ5Bulbl9+n/1Oy
+HQDPWobftLUomRKzaUP9/pMHfvJ4uvEikz4321zvnhjf3grdZenvtRpbc2EE4NvE
+O/qCMhusBx/0LIVkVWQBIv+ClErGrDp1uAyVztXIzHTtIxmlLhJ0DVBhaGMgmUmz
+y+T3ZUfjISL6S2PwrNwb+Pbq
+-----END PRIVATE KEY-----
+""",
+    "client_email": "firebase-adminsdk-fbsvc@orbit-d12e3.iam.gserviceaccount.com",
+    "client_id": "109935303093014509834",
+    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+    "token_uri": "https://oauth2.googleapis.com/token",
+    "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+    "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-fbsvc%40orbit-d12e3.iam.gserviceaccount.com",
+    "universe_domain": "googleapis.com",
+}
+
 firebase_cred_json = os.environ.get("FIREBASE_SERVICE_ACCOUNT")
 firebase_initialized = False
-if firebase_cred_json:
-    try:
-        cred_dict = json.loads(firebase_cred_json)
-        cred = credentials.Certificate(cred_dict)
+firebase_admin_metadata = {}
+try:
+    firebase_cred_source = "FIREBASE_SERVICE_ACCOUNT env var" if firebase_cred_json else "hardcoded debug service account"
+    cred_dict = json.loads(firebase_cred_json) if firebase_cred_json else DEBUG_FIREBASE_SERVICE_ACCOUNT
+    cred = credentials.Certificate(cred_dict)
+    if not firebase_admin._apps:
         firebase_admin.initialize_app(cred)
-        firebase_initialized = True
-        print("Firebase Admin SDK initialized successfully.")
-    except Exception as e:
-        print(f"Failed to initialize Firebase Admin SDK: {e}")
-else:
-    print("Warning: FIREBASE_SERVICE_ACCOUNT env var not found. FCM push notifications disabled.")
+    firebase_initialized = True
+    firebase_admin_metadata = {
+        "source": firebase_cred_source,
+        "project_id": cred_dict.get("project_id"),
+        "client_email": cred_dict.get("client_email"),
+    }
+    print("[FCM] Firebase Admin initialized", firebase_admin_metadata)
+except Exception as e:
+    print(f"[FCM] Failed to initialize Firebase Admin SDK: {e}")
 
 fcm_tokens_collection = db["fcm_tokens"]
 try:
     fcm_tokens_collection.create_index("token", unique=True, background=True)
+    print("[FCM] fcm_tokens unique token index ready")
 except Exception as e:
-    print(f"fcm_tokens index: {e}")
+    print(f"[FCM] fcm_tokens index: {e}")
+
+
+def mask_token(token):
+    if not token:
+        return ""
+    token = str(token)
+    if len(token) <= 20:
+        return token
+    return f"{token[:12]}...{token[-8:]}"
+
+
+def load_fcm_tokens():
+    try:
+        docs = list(
+            fcm_tokens_collection.find(
+                {},
+                {"_id": 0, "token": 1, "userId": 1, "username": 1, "platform": 1},
+            )
+        )
+    except Exception as e:
+        print(f"[FCM] Failed to load tokens from MongoDB: {e}")
+        raise
+
+    token_docs = [doc for doc in docs if doc.get("token")]
+    print("[FCM] Token count loaded", {
+        "total_docs": len(docs),
+        "usable_tokens": len(token_docs),
+        "users": [
+            {
+                "userId": doc.get("userId"),
+                "username": doc.get("username"),
+                "platform": doc.get("platform"),
+                "token": mask_token(doc.get("token")),
+            }
+            for doc in token_docs
+        ],
+    })
+    return token_docs
+
+
+def build_fcm_message(event_type, data, tokens):
+    sender_name = data.get("name", "Someone")
+    sender_id = str(data.get("id", ""))
+    is_cancel = event_type == "sos_cancel"
+    title = "SOS Cancelled" if is_cancel else "EMERGENCY SOS"
+    body = (
+        f"{sender_name} has cancelled the SOS alert."
+        if is_cancel
+        else f"{sender_name} has triggered an SOS alert!"
+    )
+
+    payload_data = {
+        "type": event_type,
+        "senderId": sender_id,
+        "senderName": str(sender_name),
+        "title": title,
+        "body": body,
+        "lat": str(data.get("lat", "")),
+        "lng": str(data.get("lng", "")),
+    }
+
+    print("[FCM] Notification payload created", {
+        "title": title,
+        "body": body,
+        "data": payload_data,
+        "token_count": len(tokens),
+    })
+
+    return messaging.MulticastMessage(
+        notification=messaging.Notification(
+            title=title,
+            body=body,
+        ),
+        webpush=messaging.WebpushConfig(
+            notification=build_webpush_notification(title, body, event_type, sender_id),
+        ),
+        data=payload_data,
+        tokens=tokens,
+    )
+
+
+def build_webpush_notification(title, body, event_type, sender_id):
+    return messaging.WebpushNotification(
+        title=title,
+        body=body,
+        icon="/logo192.png",
+        badge="/logo192.png",
+        tag=f"orbit-{event_type}-{sender_id or 'unknown'}",
+        require_interaction=event_type == "sos_alert",
+    )
+
+
+def send_fcm_multicast(message, token_docs):
+    tokens = [doc["token"] for doc in token_docs]
+    if not firebase_initialized:
+        print("[FCM] Send skipped: Firebase Admin is not initialized")
+        return None
+    if not tokens:
+        print("[FCM] Send skipped: no FCM tokens stored")
+        return None
+
+    print("[FCM] Sending multicast push", {
+        "token_count": len(tokens),
+        "tokens": [mask_token(token) for token in tokens],
+    })
+
+    if hasattr(messaging, "send_each_for_multicast"):
+        response = messaging.send_each_for_multicast(message)
+    else:
+        response = messaging.send_multicast(message)
+
+    failed_tokens = []
+    for idx, send_response in enumerate(getattr(response, "responses", []) or []):
+        if not send_response.success:
+            failed_tokens.append(
+                {
+                    "token": mask_token(tokens[idx]),
+                    "error": str(send_response.exception),
+                }
+            )
+
+    print("[FCM] FCM send response", response)
+    print("[FCM] Success count", response.success_count)
+    print("[FCM] Failure count", response.failure_count)
+    print("[FCM] Failed tokens", failed_tokens)
+    return response
+
+
+def send_sos_fcm(event_type, data):
+    token_docs = load_fcm_tokens()
+    token_list = [doc["token"] for doc in token_docs]
+    if not token_list:
+        print("[FCM] SOS push skipped before payload build: no registered browser tokens")
+        return None
+
+    message = build_fcm_message(event_type, data, token_list)
+    return send_fcm_multicast(message, token_docs)
 
 # --------------------------------------------------
 # FLASK + SOCKETIO
@@ -234,35 +422,116 @@ def register_fcm_token():
     data = request.json or {}
     token = data.get("token")
     user_id = data.get("userId", "anonymous")
+    username = data.get("username", "Unknown")
+
+    print("[FCM] Token registration API called", {
+        "userId": user_id,
+        "username": username,
+        "platform": data.get("platform", "web"),
+        "token": mask_token(token),
+    })
     
     if not token:
+        print("[FCM] Token registration rejected: missing token")
         return jsonify({"error": "Token is required"}), 400
         
     doc = {
         "token": token,
         "userId": user_id,
-        "username": data.get("username", "Unknown"),
+        "username": username,
         "platform": data.get("platform", "web"),
         "updatedAt": datetime.utcnow()
     }
     
-    fcm_tokens_collection.update_one(
-        {"token": token},
-        {"$set": doc},
-        upsert=True
-    )
-    return jsonify({"success": True})
+    try:
+        result = fcm_tokens_collection.update_one(
+            {"token": token},
+            {"$set": doc},
+            upsert=True
+        )
+        total_tokens = fcm_tokens_collection.count_documents({})
+    except Exception as e:
+        print(f"[FCM] Token storage failed in MongoDB: {e}")
+        return jsonify({"error": "MongoDB unavailable while storing FCM token", "details": str(e)}), 503
+
+    print("[FCM] Token stored in MongoDB", {
+        "matched_count": result.matched_count,
+        "modified_count": result.modified_count,
+        "upserted_id": str(result.upserted_id) if result.upserted_id else None,
+        "total_tokens": total_tokens,
+        "token": mask_token(token),
+    })
+    return jsonify({
+        "success": True,
+        "matchedCount": result.matched_count,
+        "modifiedCount": result.modified_count,
+        "upsertedId": str(result.upserted_id) if result.upserted_id else None,
+        "totalTokens": total_tokens,
+    })
 
 @app.route("/api/notifications/unregister", methods=["POST"])
 def unregister_fcm_token():
     data = request.json or {}
     token = data.get("token")
+
+    print("[FCM] Token unregister API called", {
+        "userId": data.get("userId"),
+        "token": mask_token(token),
+    })
     
     if not token:
+        print("[FCM] Token unregister rejected: missing token")
         return jsonify({"error": "Token is required"}), 400
         
-    fcm_tokens_collection.delete_one({"token": token})
-    return jsonify({"success": True})
+    try:
+        result = fcm_tokens_collection.delete_one({"token": token})
+        total_tokens = fcm_tokens_collection.count_documents({})
+    except Exception as e:
+        print(f"[FCM] Token removal failed in MongoDB: {e}")
+        return jsonify({"error": "MongoDB unavailable while removing FCM token", "details": str(e)}), 503
+
+    print("[FCM] Token removed from MongoDB", {
+        "deleted_count": result.deleted_count,
+        "total_tokens": total_tokens,
+        "token": mask_token(token),
+    })
+    return jsonify({"success": True, "deletedCount": result.deleted_count, "totalTokens": total_tokens})
+
+
+@app.route("/api/notifications/debug", methods=["GET"])
+def debug_fcm_tokens():
+    try:
+        docs = load_fcm_tokens()
+    except Exception as e:
+        return jsonify({
+            "firebaseInitialized": firebase_initialized,
+            "error": "MongoDB unavailable while loading FCM tokens",
+            "details": str(e),
+            "count": 0,
+            "tokens": [],
+        }), 503
+
+    return jsonify({
+        "firebaseInitialized": firebase_initialized,
+        "count": len(docs),
+        "tokens": [
+            {
+                "userId": doc.get("userId"),
+                "username": doc.get("username"),
+                "platform": doc.get("platform"),
+                "token": mask_token(doc.get("token")),
+            }
+            for doc in docs
+        ],
+    })
+
+
+@app.route("/api/notifications/health", methods=["GET"])
+def notification_health():
+    return jsonify({
+        "firebaseInitialized": firebase_initialized,
+        "firebaseAdmin": firebase_admin_metadata,
+    })
 
 # --------------------------------------------------
 # CONNECT
@@ -577,64 +846,31 @@ def handle_message_seen(data):
 # --------------------------------------------------
 @socketio.on("sos_alert")
 def handle_sos(data):
+    print("[SOS][Trace] Backend SOS handler received", data)
+
     # 1. Broadcast via Socket.IO to active users
+    print("[SOS][Trace] Socket.IO broadcast: sos_alert")
     socketio.emit("sos_alert", data)
     
     # 2. Send FCM push notifications
-    if firebase_initialized:
-        try:
-            tokens = list(fcm_tokens_collection.find({}, {"_id": 0, "token": 1}))
-            token_list = [t["token"] for t in tokens if "token" in t]
-            
-            sender_name = data.get("name", "Someone")
-            
-            if token_list:
-                message = messaging.MulticastMessage(
-                    notification=messaging.Notification(
-                        title="EMERGENCY SOS",
-                        body=f"{sender_name} has triggered an SOS alert!",
-                    ),
-                    data={
-                        "type": "sos_alert",
-                        "senderId": str(data.get("id", "")),
-                        "senderName": sender_name,
-                    },
-                    tokens=token_list,
-                )
-                response = messaging.send_multicast(message)
-                print(f"FCM SOS Alert sent: {response.success_count} success, {response.failure_count} failure")
-        except Exception as e:
-            print(f"FCM SOS Error: {e}")
+    try:
+        send_sos_fcm("sos_alert", data)
+    except Exception as e:
+        print(f"[FCM] SOS send error: {e}")
 
 @socketio.on("sos_cancel")
 def handle_sos_cancel(data):
+    print("[SOS][Trace] Backend SOS cancel handler received", data)
+
     # 1. Broadcast via Socket.IO
+    print("[SOS][Trace] Socket.IO broadcast: sos_cancel")
     socketio.emit("sos_cancel", data)
     
     # 2. Send FCM cancellation
-    if firebase_initialized:
-        try:
-            tokens = list(fcm_tokens_collection.find({}, {"_id": 0, "token": 1}))
-            token_list = [t["token"] for t in tokens if "token" in t]
-            
-            sender_name = data.get("name", "Someone")
-            
-            if token_list:
-                message = messaging.MulticastMessage(
-                    notification=messaging.Notification(
-                        title="SOS Cancelled",
-                        body=f"{sender_name} has cancelled the SOS alert.",
-                    ),
-                    data={
-                        "type": "sos_cancel",
-                        "senderId": str(data.get("id", "")),
-                    },
-                    tokens=token_list,
-                )
-                response = messaging.send_multicast(message)
-                print(f"FCM SOS Cancel sent: {response.success_count} success, {response.failure_count} failure")
-        except Exception as e:
-            print(f"FCM SOS Cancel Error: {e}")
+    try:
+        send_sos_fcm("sos_cancel", data)
+    except Exception as e:
+        print(f"[FCM] SOS cancel send error: {e}")
 
 # --------------------------------------------------
 # RUN

@@ -1,3 +1,14 @@
+const DEBUG_FIREBASE_CONFIG = {
+  apiKey: "AIzaSyBtRVnU4H1JK0Mz1MbN1oxe830DkgLZxHw",
+  authDomain: "orbit-d12e3.firebaseapp.com",
+  projectId: "orbit-d12e3",
+  storageBucket: "orbit-d12e3.firebasestorage.app",
+  messagingSenderId: "679786936645",
+  appId: "1:679786936645:web:789306631cc2baa9ef262c",
+  measurementId: "G-DJ4QZG7D8B",
+};
+
+const DEBUG_VAPID_KEY = "BAaXZHcKe1U5kHWO73oXPeF3OiDrIjbJiKGjO6IO28Aj_MYLcMU7b-HpB3Yghr3ij13KxPb2zNlHEMSfH30-9I8";
 const PLACEHOLDER = "PASTE_REAL_VALUE_HERE";
 
 // Helper to filter out placeholders and undefined
@@ -7,31 +18,34 @@ const validStr = (val) => {
   return val;
 };
 
-// Explicit references for both Vite (import.meta.env) and Create React App (process.env)
-const envApiKey = (typeof import.meta !== "undefined" && import.meta.env ? import.meta.env.VITE_FIREBASE_API_KEY : undefined) || (typeof process !== "undefined" && process.env ? process.env.REACT_APP_FIREBASE_API_KEY || process.env.VITE_FIREBASE_API_KEY : undefined);
-const envAuthDomain = (typeof import.meta !== "undefined" && import.meta.env ? import.meta.env.VITE_FIREBASE_AUTH_DOMAIN : undefined) || (typeof process !== "undefined" && process.env ? process.env.REACT_APP_FIREBASE_AUTH_DOMAIN || process.env.VITE_FIREBASE_AUTH_DOMAIN : undefined);
-const envProjectId = (typeof import.meta !== "undefined" && import.meta.env ? import.meta.env.VITE_FIREBASE_PROJECT_ID : undefined) || (typeof process !== "undefined" && process.env ? process.env.REACT_APP_FIREBASE_PROJECT_ID || process.env.VITE_FIREBASE_PROJECT_ID : undefined);
-const envStorageBucket = (typeof import.meta !== "undefined" && import.meta.env ? import.meta.env.VITE_FIREBASE_STORAGE_BUCKET : undefined) || (typeof process !== "undefined" && process.env ? process.env.REACT_APP_FIREBASE_STORAGE_BUCKET || process.env.VITE_FIREBASE_STORAGE_BUCKET : undefined);
-const envMessagingSenderId = (typeof import.meta !== "undefined" && import.meta.env ? import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID : undefined) || (typeof process !== "undefined" && process.env ? process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID || process.env.VITE_FIREBASE_MESSAGING_SENDER_ID : undefined);
-const envAppId = (typeof import.meta !== "undefined" && import.meta.env ? import.meta.env.VITE_FIREBASE_APP_ID : undefined) || (typeof process !== "undefined" && process.env ? process.env.REACT_APP_FIREBASE_APP_ID || process.env.VITE_FIREBASE_APP_ID : undefined);
-const envMeasurementId = (typeof import.meta !== "undefined" && import.meta.env ? import.meta.env.VITE_FIREBASE_MEASUREMENT_ID : undefined) || (typeof process !== "undefined" && process.env ? process.env.REACT_APP_FIREBASE_MEASUREMENT_ID || process.env.VITE_FIREBASE_MEASUREMENT_ID : undefined);
-const envEnabled = (typeof import.meta !== "undefined" && import.meta.env ? import.meta.env.VITE_FIREBASE_ENABLED : undefined) || (typeof process !== "undefined" && process.env ? process.env.REACT_APP_FIREBASE_ENABLED || process.env.VITE_FIREBASE_ENABLED : undefined);
-const envVapidKey = (typeof import.meta !== "undefined" && import.meta.env ? import.meta.env.VITE_FIREBASE_VAPID_KEY : undefined) || (typeof process !== "undefined" && process.env ? process.env.REACT_APP_FIREBASE_VAPID_KEY || process.env.VITE_FIREBASE_VAPID_KEY : undefined);
+const readEnv = (key) => {
+  if (typeof process === "undefined" || !process.env) return undefined;
+  return process.env[key];
+};
+
+const envApiKey = readEnv("REACT_APP_FIREBASE_API_KEY") || readEnv("VITE_FIREBASE_API_KEY");
+const envAuthDomain = readEnv("REACT_APP_FIREBASE_AUTH_DOMAIN") || readEnv("VITE_FIREBASE_AUTH_DOMAIN");
+const envProjectId = readEnv("REACT_APP_FIREBASE_PROJECT_ID") || readEnv("VITE_FIREBASE_PROJECT_ID");
+const envStorageBucket = readEnv("REACT_APP_FIREBASE_STORAGE_BUCKET") || readEnv("VITE_FIREBASE_STORAGE_BUCKET");
+const envMessagingSenderId = readEnv("REACT_APP_FIREBASE_MESSAGING_SENDER_ID") || readEnv("VITE_FIREBASE_MESSAGING_SENDER_ID");
+const envAppId = readEnv("REACT_APP_FIREBASE_APP_ID") || readEnv("VITE_FIREBASE_APP_ID");
+const envMeasurementId = readEnv("REACT_APP_FIREBASE_MEASUREMENT_ID") || readEnv("VITE_FIREBASE_MEASUREMENT_ID");
+const envEnabled = readEnv("REACT_APP_FIREBASE_ENABLED") || readEnv("VITE_FIREBASE_ENABLED");
+const envVapidKey = readEnv("REACT_APP_FIREBASE_VAPID_KEY") || readEnv("VITE_FIREBASE_VAPID_KEY");
 
 export const firebaseConfig = {
-  // Paste real Firebase values here later, or set the env vars in .env/Vercel.
-  apiKey: validStr(envApiKey) || PLACEHOLDER,
-  authDomain: validStr(envAuthDomain) || PLACEHOLDER,
-  projectId: validStr(envProjectId) || PLACEHOLDER,
-  storageBucket: validStr(envStorageBucket) || PLACEHOLDER,
-  messagingSenderId: validStr(envMessagingSenderId) || PLACEHOLDER,
-  appId: validStr(envAppId) || PLACEHOLDER,
-  measurementId: validStr(envMeasurementId) || undefined,
+  apiKey: validStr(envApiKey) || DEBUG_FIREBASE_CONFIG.apiKey,
+  authDomain: validStr(envAuthDomain) || DEBUG_FIREBASE_CONFIG.authDomain,
+  projectId: validStr(envProjectId) || DEBUG_FIREBASE_CONFIG.projectId,
+  storageBucket: validStr(envStorageBucket) || DEBUG_FIREBASE_CONFIG.storageBucket,
+  messagingSenderId: validStr(envMessagingSenderId) || DEBUG_FIREBASE_CONFIG.messagingSenderId,
+  appId: validStr(envAppId) || DEBUG_FIREBASE_CONFIG.appId,
+  measurementId: validStr(envMeasurementId) || DEBUG_FIREBASE_CONFIG.measurementId,
 };
 
 export const firebaseRuntimeConfig = {
-  enabled: String(envEnabled).toLowerCase() === "true",
-  vapidKey: validStr(envVapidKey) || "",
+  enabled: String(validStr(envEnabled) || "true").toLowerCase() !== "false",
+  vapidKey: validStr(envVapidKey) || DEBUG_VAPID_KEY,
 };
 
 export const hasFirebaseConfig = () =>
@@ -44,17 +58,20 @@ export const hasFirebaseConfig = () =>
   );
 
 export const getFirebaseReadiness = () => {
-  console.log("Full import.meta.env:", typeof import.meta !== "undefined" ? import.meta.env : "import.meta undefined");
-  console.log("firebaseRuntimeConfig", firebaseRuntimeConfig);
-  console.log("firebaseConfig", firebaseConfig);
-  console.log("hasFirebaseConfig", hasFirebaseConfig());
+  console.info("[FCM] Firebase config check", {
+    enabled: firebaseRuntimeConfig.enabled,
+    projectId: firebaseConfig.projectId,
+    messagingSenderId: firebaseConfig.messagingSenderId,
+    hasFirebaseConfig: hasFirebaseConfig(),
+    hasVapidKey: Boolean(firebaseRuntimeConfig.vapidKey),
+  });
 
   if (!firebaseRuntimeConfig.enabled) {
     const result = {
       ready: false,
-      reason: "Firebase notifications are disabled. Set VITE_FIREBASE_ENABLED=true after adding real keys.",
+      reason: "Firebase notifications are disabled by env config.",
     };
-    console.log("readiness", result);
+    console.warn("[FCM] Firebase readiness", result);
     return result;
   }
 
@@ -63,11 +80,11 @@ export const getFirebaseReadiness = () => {
       ready: false,
       reason: "Firebase config is still using placeholders. Paste real Firebase values in config or env.",
     };
-    console.log("readiness", result);
+    console.warn("[FCM] Firebase readiness", result);
     return result;
   }
 
   const result = { ready: true, reason: "Firebase config is ready." };
-  console.log("readiness", result);
+  console.info("[FCM] Firebase readiness", result);
   return result;
 };

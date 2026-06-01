@@ -1,6 +1,9 @@
 import { io } from "socket.io-client";
+import { backendConfig } from "../config/backendConfig";
 
-const socket = io("https://orbit-g4ah.onrender.com", {
+console.info("[Socket.IO] Connecting", { url: backendConfig.baseUrl });
+
+const socket = io(backendConfig.baseUrl, {
   transports: ["polling", "websocket"], // VERY IMPORTANT
   reconnection: true,
   reconnectionAttempts: 10,
@@ -8,11 +11,11 @@ const socket = io("https://orbit-g4ah.onrender.com", {
 });
 
 socket.on("connect", () => {
-  console.log("CONNECTED:", socket.id);
+  console.log("[Socket.IO] CONNECTED:", socket.id);
 });
 
 socket.on("connect_error", (err) => {
-  console.log("CONNECTION ERROR:", err.message);
+  console.log("[Socket.IO] CONNECTION ERROR:", err.message);
 });
 
 export default socket;

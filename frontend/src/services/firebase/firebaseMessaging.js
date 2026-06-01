@@ -7,34 +7,49 @@ let messagingInstance = null;
 let foregroundUnsubscribe = null;
 
 const getServiceWorkerRegistration = async () => {
-  if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) return null;
+  if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) {
+    console.warn("[FCM] Service worker registration skipped: navigator.serviceWorker unavailable");
+    return null;
+  }
 
-  const existing = await navigator.serviceWorker.getRegistration(notificationConfig.serviceWorkerPath);
-  if (existing) return existing;
-
-  return navigator.serviceWorker.register(notificationConfig.serviceWorkerPath);
+  console.info("[FCM] Registering service worker", { path: notificationConfig.serviceWorkerPath });
+  const registration = await navigator.serviceWorker.register(notificationConfig.serviceWorkerPath, { scope: "/" });
+  await navigator.serviceWorker.ready;
+  console.info("[FCM] Service worker registered", {
+    scope: registration.scope,
+    active: registration.active?.scriptURL || null,
+    installing: registration.installing?.scriptURL || null,
+    waiting: registration.waiting?.scriptURL || null,
+  });
+  return registration;
 };
 
 export const initializeFirebaseMessaging = async () => {
+  console.info("[FCM] Checking Firebase Messaging browser support");
   const supported = await isSupported();
   if (!supported) {
+    console.warn("[FCM] Firebase messaging unsupported in this browser");
     return { messaging: null, status: "unsupported", reason: "Firebase messaging is not supported in this browser." };
   }
 
   const { app, readiness } = initializeFirebaseApp();
   if (!app) {
+    console.warn("[FCM] Firebase messaging init skipped", { reason: readiness.reason });
     return { messaging: null, status: "placeholder", reason: readiness.reason };
   }
 
   messagingInstance = messagingInstance || getMessaging(app);
+  console.info("[FCM] Firebase Messaging initialized");
   return { messaging: messagingInstance, status: "ready", reason: readiness.reason };
 };
 
 export const requestFirebaseMessagingToken = async () => {
+  console.info("[FCM] Requesting Firebase messaging token");
   const { messaging, status, reason } = await initializeFirebaseMessaging();
   if (!messaging) return { token: null, status, reason };
 
   if (!firebaseRuntimeConfig.vapidKey) {
+    console.warn("[FCM] Token request blocked: missing VAPID key");
     return {
       token: null,
       status: "missing-vapid-key",
@@ -48,15 +63,23 @@ export const requestFirebaseMessagingToken = async () => {
     serviceWorkerRegistration,
   });
 
+  if (token) {
+    console.info("[FCM] FCM token generated", token);
+  } else {
+    console.warn("[FCM] FCM token request returned an empty token");
+  }
+
   return { token, status: token ? "token-ready" : "token-empty", reason: token ? "FCM token prepared." : "No FCM token returned." };
 };
 
 export const listenForForegroundMessages = async (handler) => {
+  console.info("[FCM] Installing foreground message listener");
   const { messaging } = await initializeFirebaseMessaging();
   if (!messaging || typeof handler !== "function") return () => {};
 
   if (foregroundUnsubscribe) foregroundUnsubscribe();
   foregroundUnsubscribe = onMessage(messaging, handler);
+  console.info("[FCM] Foreground message listener ready");
   return foregroundUnsubscribe;
 };
 

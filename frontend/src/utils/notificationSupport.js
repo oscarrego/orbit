@@ -16,10 +16,13 @@ export const requestBrowserNotificationPermission = async () => {
   if (!isNotificationSupported()) return "unsupported";
 
   const current = getBrowserNotificationPermission();
+  console.info("[FCM] Current notification permission", current);
   if (current !== "default") return current;
 
   try {
-    return await window.Notification.requestPermission();
+    const permission = await window.Notification.requestPermission();
+    console.info("[FCM] Notification permission result", permission);
+    return permission;
   } catch (error) {
     console.warn("Unable to request notification permission:", error);
     return "denied";

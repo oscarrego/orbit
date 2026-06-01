@@ -1,5 +1,9 @@
-// Explicit Vite and CRA env variable references
-const envApiBaseUrl = (typeof import.meta !== "undefined" && import.meta.env ? import.meta.env.VITE_NOTIFICATION_API_BASE_URL : undefined) || (typeof process !== "undefined" && process.env ? process.env.REACT_APP_NOTIFICATION_API_BASE_URL || process.env.VITE_NOTIFICATION_API_BASE_URL : undefined);
+import { backendConfig } from "./backendConfig";
+
+const envApiBaseUrl =
+  typeof process !== "undefined" && process.env
+    ? process.env.REACT_APP_NOTIFICATION_API_BASE_URL || process.env.VITE_NOTIFICATION_API_BASE_URL
+    : undefined;
 
 export const notificationConfig = {
   storageKeys: {
@@ -9,5 +13,5 @@ export const notificationConfig = {
     lastStatus: "orbit.notifications.status",
   },
   serviceWorkerPath: "/firebase-messaging-sw.js",
-  apiBaseUrl: envApiBaseUrl || "https://orbit-g4ah.onrender.com/api",
+  apiBaseUrl: envApiBaseUrl || backendConfig.apiBaseUrl,
 };

@@ -275,7 +275,7 @@ function App() {
     });
 
     socket.on("sos_alert", (data) => {
-      console.log("ALERT RECEIVED:", data);
+      console.info("[SOS][Trace] Socket.IO event received: sos_alert", data);
       setSosAlerts(prev => [...prev.filter(alert => String(alert.id) !== String(data.id)), data]);
 
       // Show clickable toast for other users' SOS
@@ -291,7 +291,7 @@ function App() {
     });
 
     socket.on("sos_cancel", (data) => {
-      console.log("CANCEL RECEIVED:", data);
+      console.info("[SOS][Trace] Socket.IO event received: sos_cancel", data);
       setSosAlerts(prev => prev.filter(alert => String(alert.id) !== String(data.id)));
     });
 
@@ -687,10 +687,18 @@ function App() {
   ).length;
 
   const handleSOS = () => {
+    console.info("[SOS][Trace] SOS Button Click", {
+      active: isSOSActive,
+      hasLocation: Boolean(userLocation),
+      userId: user.userId,
+      username: user.username,
+    });
+
     if (!userLocation || !user.username) return;
 
     if (isSOSActive) {
       // TELL SERVER YOU CANCELLED
+      console.info("[SOS][Trace] Socket.IO emit: sos_cancel", { id: user.userId });
       socket.emit("sos_cancel", { id: user.userId });
 
       // REMOVE LOCALLY
@@ -707,6 +715,7 @@ function App() {
       };
 
       socket.emit("sos_alert", data);
+      console.info("[SOS][Trace] Socket.IO emit: sos_alert", data);
       setIsSOSActive(true);
       showToast({
         message: `${user.username} needs help`,
