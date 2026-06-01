@@ -240,7 +240,7 @@
   left: var(--chat-left);
   width: var(--chat-width);
   height: var(--chat-height);
-  min-height: 100vh;
+  min-height: 65vh;
   z-index: 10000;
   transform: translate3d(0, 0, 0);
   transition:
@@ -387,7 +387,7 @@
     --chat-left: max(12px, env(safe-area-inset-left));
     --chat-top: calc(98px + env(safe-area-inset-top));
     --chat-width: min(82vw, 292px);
-    --chat-height: min(65dvh, 650px);
+    --chat-height: min(15dvh, 650px);
     --chat-toggle-peek: 9px;
   }
 
@@ -725,7 +725,7 @@
 @media (max-height: 620px) and (max-width: 768px) {
   .orbit-app-shell {
     --chat-top: calc(84px + env(safe-area-inset-top));
-    --chat-height: min(55dvh, 360px);
+    --chat-height: min(50dvh, 360px);
   }
 
   .orbit-app-shell .chat-dock .chat-header {
