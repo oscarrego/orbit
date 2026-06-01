@@ -387,7 +387,7 @@
     --chat-left: max(12px, env(safe-area-inset-left));
     --chat-top: calc(98px + env(safe-area-inset-top));
     --chat-width: min(82vw, 292px);
-    --chat-height: min(72dvh, 650px);
+    --chat-height: min(65dvh, 650px);
     --chat-toggle-peek: 9px;
   }
 
