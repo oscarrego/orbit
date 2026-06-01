@@ -465,7 +465,7 @@ const MapView = forwardRef(({
         <div class="pulse-ring pulse-ring--secondary"></div>
         <div class="glow-ring"></div>
         <div class="glow-halo"></div>
-        <div class="direction-cone"></div>
+        
         <div class="center-dot">
           <div class="center-dot__inner"></div>
         </div>
@@ -479,7 +479,7 @@ const MapView = forwardRef(({
     }
 
     const el   = userMarker.current.getElement();
-    const cone = el.querySelector(".direction-cone");
+    
     const dot  = el.querySelector(".center-dot");
     const glow = el.querySelector(".glow-ring");
     const pulse = el.querySelector(".pulse-ring");
@@ -487,14 +487,9 @@ const MapView = forwardRef(({
     if (dot)  { dot.style.backgroundColor = color; dot.style.borderColor = "white"; dot.style.boxShadow = `0 0 12px ${color}, 0 0 24px ${color}55`; }
     if (glow) glow.style.backgroundColor = color;
     if (pulse) pulse.style.backgroundColor = color;
-    if (cone) cone.style.borderBottomColor = color;
+    
 
-    if (effectiveHeading !== null && effectiveHeading !== undefined) {
-      cone.style.transform = `rotate(${effectiveHeading - map.current.getBearing()}deg)`;
-      cone.style.display = "block";
-    } else {
-      cone.style.display = "none";
-    }
+   
 
     if (!initialCenterSet.current) {
       map.current.jumpTo({ center: [targetLng, targetLat] });
