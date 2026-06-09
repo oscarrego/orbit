@@ -17,7 +17,7 @@ IGNORE_FOLDERS = {
 IGNORE_EXTENSIONS = {
     ".png", ".jpg", ".jpeg", ".gif", ".bmp",
     ".mp4", ".mp3", ".zip", ".exe", ".dll",
-    ".pdf", ".ico", ".woff", ".woff2"
+    ".pdf", ".ico", ".woff", ".woff2", ".svg"
 }
 
 
