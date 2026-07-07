@@ -2,7 +2,7 @@
 
 Orbit is a web and mobile-capable real-time tracking, chat, and safety tracking application. It enables users to share their live location on an interactive 3D map, communicate in room-based chat channels, and trigger instant distress signals (SOS) with automated push notifications. 
 
-**Live Deployment URL:** [https://orbit-g4ah.onrender.com](https://orbit-g4ah.onrender.com)
+**Live Deployment URL:** [https://orbit-g4ah.onrender.com](orbit-bice-gamma.vercel.app)
 
 ---
 
