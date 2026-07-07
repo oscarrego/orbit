@@ -2,8 +2,9 @@ import eventlet
 eventlet.monkey_patch()
 
 import os
+import sys
 import json
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from flask_socketio import SocketIO, emit, join_room, leave_room
 import time
@@ -356,7 +357,13 @@ def send_sos_fcm(event_type, data, room):
 # --------------------------------------------------
 # FLASK + SOCKETIO
 # --------------------------------------------------
-app = Flask(__name__)
+# Resolve static folder path for frontend assets
+if getattr(sys, 'frozen', False):
+    static_dir = os.path.join(sys._MEIPASS, 'frontend', 'build')
+else:
+    static_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'frontend', 'build'))
+
+app = Flask(__name__, static_folder=static_dir, static_url_path='/')
 CORS(app)
 
 socketio = SocketIO(
@@ -1032,7 +1039,27 @@ def handle_sos_cancel(data):
         print(f"[FCM] SOS cancel send error: {e}")
 
 # --------------------------------------------------
+# SERVE FRONTEND (React Static Assets & Catch-All Routing)
+# --------------------------------------------------
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def serve_frontend(path):
+    if path != "" and os.path.exists(os.path.join(app.static_folder, path)):
+        return send_from_directory(app.static_folder, path)
+    else:
+        return send_from_directory(app.static_folder, 'index.html')
+
+
+# --------------------------------------------------
 # RUN
 # --------------------------------------------------
 if __name__ == "__main__":
+    if getattr(sys, 'frozen', False):
+        import threading
+        import webbrowser
+        def open_browser():
+            time.sleep(1.5)
+            webbrowser.open("http://127.0.0.1:5000")
+        threading.Thread(target=open_browser, daemon=True).start()
+
     socketio.run(app, host="0.0.0.0", port=5000)
