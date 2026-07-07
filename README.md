@@ -1,6 +1,6 @@
 # Orbit — Real-Time Tracking, Chat, and Safety App
 
-Orbit is a web and mobile-capable real-time tracking, chat, and safety tracking application. It enables users to share their live location on an interactive 3D map, communicate in room-based chat channels, and trigger instant distress signals (SOS) with automated push notifications. 
+Orbit is a web, app and mobile-capable real-time tracking, chat, and safety tracking application. It enables users to share their live location on an interactive 3D map, communicate in room-based chat channels, and trigger instant distress signals (SOS) with automated push notifications. 
 
 **Live Deployment URL:** [orbit-bice-gamma.vercel.app](orbit-bice-gamma.vercel.app)
 
